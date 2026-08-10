@@ -1,7 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
+
+/// Примитивная операция ввода: либо текст, либо нажатие клавиши N раз.
+class _Op {
+  String? text;
+  String? key;
+  int count;
+  _Op.text(this.text) : count = 1;
+  _Op.key(this.key, this.count);
+}
 
 /// Печать с телефона прямо на ПК. Работает в двух режимах:
 /// — «вживую»: каждый символ уходит на ПК сразу (ydotool печатает);
@@ -31,8 +41,14 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
   List<Peer> _pcPeers() =>
       _app.peers.where((p) => p.online && p.platform == 'linux').toList();
 
+  // Очередь операций + дебаунс, чтобы не слать HTTP-запрос на каждый символ.
+  final List<_Op> _queue = [];
+  Timer? _debounce;
+  bool _sending = false;
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -52,23 +68,51 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
     final additions = next.substring(common);
     _prev = next;
 
-    for (var i = 0; i < deletions; i++) {
-      _app.client.sendTyping(_target!, key: 'backspace');
+    if (deletions > 0) _enqueueKey('backspace', deletions);
+    if (additions.isNotEmpty) {
+      final parts = additions.split('\n');
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].isNotEmpty) _enqueueText(parts[i]);
+        if (i < parts.length - 1) _enqueueKey('enter', 1);
+      }
     }
-    _sendAdditions(additions);
+
+    // Батчим: собираем ввод за короткое окно и шлём пачкой.
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 45), _flush);
   }
 
-  Future<void> _sendAdditions(String s) async {
-    if (s.isEmpty) return;
-    // Разбиваем по переводам строки, чтобы слать Enter отдельной клавишей.
-    final parts = s.split('\n');
-    for (var i = 0; i < parts.length; i++) {
-      if (parts[i].isNotEmpty) {
-        await _app.client.sendTyping(_target!, text: parts[i]);
+  void _enqueueText(String s) {
+    if (_queue.isNotEmpty && _queue.last.text != null) {
+      _queue.last.text = _queue.last.text! + s; // склеиваем соседний текст
+    } else {
+      _queue.add(_Op.text(s));
+    }
+  }
+
+  void _enqueueKey(String key, int count) {
+    if (_queue.isNotEmpty && _queue.last.key == key) {
+      _queue.last.count += count; // склеиваем повторы одной клавиши
+    } else {
+      _queue.add(_Op.key(key, count));
+    }
+  }
+
+  Future<void> _flush() async {
+    if (_sending || _target == null) return;
+    _sending = true;
+    try {
+      while (_queue.isNotEmpty) {
+        final op = _queue.removeAt(0);
+        if (op.text != null) {
+          await _app.client.sendTyping(_target!, text: op.text);
+        } else {
+          await _app.client
+              .sendTyping(_target!, key: op.key, count: op.count);
+        }
       }
-      if (i < parts.length - 1) {
-        await _app.client.sendTyping(_target!, key: 'enter');
-      }
+    } finally {
+      _sending = false;
     }
   }
 
