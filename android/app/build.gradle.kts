@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "app.texfi.texfi_files"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
