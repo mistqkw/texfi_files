@@ -42,13 +42,10 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      - name: Publish APK to "latest-apk" release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest-apk
-          name: TexFi files APK (свежая сборка)
-          prerelease: true
-          files: build/app/outputs/flutter-apk/app-release.apk
+      - name: Attach APK to v1.0.0 release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload v1.0.0 build/app/outputs/flutter-apk/app-release.apk --clobber
 
   build-windows:
     runs-on: windows-latest
@@ -83,10 +80,3 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload v1.0.0 TexFi-files-windows-x64.zip --clobber
-
-      - name: Publish Windows to "latest-apk" release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest-apk
-          prerelease: true
-          files: TexFi-files-windows-x64.zip
