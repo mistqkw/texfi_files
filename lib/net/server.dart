@@ -19,9 +19,25 @@ class ReceiveServer {
   /// Вызывается при получении текста/файла (для уведомления в UI).
   void Function(SavedItem item)? onReceived;
 
+  // Предпочтительный фиксированный порт — чтобы легко открыть в фаерволе.
+  // Если занят, пробуем следующие, и лишь потом произвольный.
+  static const preferredPort = 45889;
+  static const _portRange = 11; // 45889..45899
+
   Future<void> start() async {
     await stop();
-    _server = await HttpServer.bind(InternetAddress.anyIPv4, 0, shared: true);
+    for (var i = 0; i < _portRange; i++) {
+      try {
+        _server = await HttpServer.bind(
+            InternetAddress.anyIPv4, preferredPort + i,
+            shared: true);
+        break;
+      } catch (_) {
+        // порт занят — пробуем следующий
+      }
+    }
+    // Крайний случай: любой свободный порт.
+    _server ??= await HttpServer.bind(InternetAddress.anyIPv4, 0, shared: true);
     debugPrint('ReceiveServer слушает на :$port');
     _server!.listen(_handle, onError: (e) => debugPrint('server err: $e'));
   }
