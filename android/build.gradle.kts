@@ -14,21 +14,18 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-subprojects {
-    project.evaluationDependsOn(":app")
-}
 
-// Форсируем compileSdk=36 для всех плагинов (некоторые пинят 34,
-// а flutter_plugin_android_lifecycle требует минимум 36).
-subprojects {
+    // Форсируем compileSdk=36 для всех плагинов (некоторые пинят 34,
+    // а flutter_plugin_android_lifecycle требует минимум 36).
+    // Регистрируем afterEvaluate ДО evaluationDependsOn, иначе Gradle
+    // ругается «project is already evaluated».
     afterEvaluate {
         extensions.findByName("android")?.let { ext ->
-            (ext as com.android.build.gradle.BaseExtension).apply {
-                compileSdkVersion(36)
-            }
+            (ext as com.android.build.gradle.BaseExtension).compileSdkVersion(36)
         }
     }
+
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register<Delete>("clean") {
