@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <circle cx="512" cy="512" r="512" fill="#0a0a0c"/>
+  <!-- две «строки списка» -->
+  <rect x="258" y="360" width="486" height="74" rx="26" fill="#ffffff"/>
+  <rect x="360" y="470" width="384" height="74" rx="26" fill="#ffffff"/>
+  <!-- надпись files -->
+  <text x="150" y="662" font-family="Liberation Serif, DejaVu Serif, serif"
+        font-size="250" fill="#ffffff" letter-spacing="6">files</text>
+  <!-- синий квадрат-точка -->
+  <rect x="672" y="586" width="74" height="74" rx="14" fill="#3b6cf0"/>
+</svg>
