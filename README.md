@@ -21,8 +21,8 @@ No cloud, no sign-up, no size limits.
 
 | Platform | File | Link |
 |----------|------|------|
-| **Android** | `app-release.apk` | [Download APK](https://github.com/mistqkw/texfi_files/releases/download/v1.0.0/app-release.apk) |
-| **Windows** | `TexFi-files-windows-x64.zip` | [Download for Windows](https://github.com/mistqkw/texfi_files/releases/download/v1.0.0/TexFi-files-windows-x64.zip) |
+| **Android** | `app-release.apk` | [Download APK](https://github.com/mistqkw/texfi_files/releases/latest/download/app-release.apk) |
+| **Windows** | `TexFi-files-windows-x64.zip` | [Download for Windows](https://github.com/mistqkw/texfi_files/releases/latest/download/TexFi-files-windows-x64.zip) |
 | **Linux** | build from source | [See below](#-build-from-source) |
 
 All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistqkw/texfi_files/releases)
