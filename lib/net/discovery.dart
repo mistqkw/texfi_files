@@ -33,12 +33,21 @@ class Discovery extends ChangeNotifier {
     if (!settings.autoDiscovery) return;
     final port = settings.discoveryPort;
     try {
-      _socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        port,
-        reuseAddress: true,
-        reusePort: true,
-      );
+      try {
+        _socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          port,
+          reuseAddress: true,
+          reusePort: true,
+        );
+      } catch (_) {
+        // Windows не поддерживает reusePort — пробуем без него.
+        _socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          port,
+          reuseAddress: true,
+        );
+      }
       _socket!.broadcastEnabled = true;
       _socket!.multicastLoopback = true;
       try {
