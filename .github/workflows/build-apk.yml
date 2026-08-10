@@ -1,9 +1,11 @@
 name: Build APK & Windows
 
-# Собирает Android APK и Windows .exe в облаке GitHub.
+# Сборки собираются на каждый пуш и кладутся в артефакты.
+# Релиз создаётся автоматически при пуше тега vX.Y.Z (например: git tag v1.0.2 && git push origin v1.0.2).
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
     paths-ignore:
       - "**.md"
       - "assets/**"
@@ -17,70 +19,66 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build release APK
-        run: flutter build apk --release
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
         with:
           name: texfi-files-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      - name: Attach APK to v1.0.0 release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload v1.0.0 build/app/outputs/flutter-apk/app-release.apk --clobber
-
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build release Windows
-        run: flutter build windows --release
-
-      - name: Zip Windows build
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath TexFi-files-windows-x64.zip -Force
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath TexFi-files-windows-x64.zip -Force
+      - uses: actions/upload-artifact@v4
         with:
           name: texfi-files-windows
           path: TexFi-files-windows-x64.zip
           if-no-files-found: error
 
-      - name: Attach Windows build to v1.0.0 release
+  # Создаёт GitHub Release только при пуше тега vX.Y.Z.
+  release:
+    needs: [build-apk, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: texfi-files-apk
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: texfi-files-windows
+          path: dist
+      - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload v1.0.0 TexFi-files-windows-x64.zip --clobber
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/app-release.apk \
+            dist/TexFi-files-windows-x64.zip \
+            -R "${GITHUB_REPOSITORY}" \
+            --title "TexFi files ${GITHUB_REF_NAME}" \
+            --notes "TexFi files — local 'Saved Messages' for Android, Linux and Windows.
+
+          Install (Android): download app-release.apk, open on your phone, allow installation from unknown sources.
+          Windows: download and unzip TexFi-files-windows-x64.zip, run texfi_files.exe."
