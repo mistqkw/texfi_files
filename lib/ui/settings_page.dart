@@ -16,13 +16,20 @@ class _SettingsPageState extends State<SettingsPage> {
     0xFFE84393, 0xFFFDCB6E, 0xFFEE5253, 0xFF576574,
   ];
 
-  bool? _ydotool;
+  bool? _ydotool; // доступен ли хоть какой-то движок ввода
+  String _engine = '';
 
   @override
   void initState() {
     super.initState();
-    RemoteInput.check().then((v) {
-      if (mounted) setState(() => _ydotool = v);
+    RemoteInput.check().then((v) async {
+      final e = await RemoteInput.engine();
+      if (mounted) {
+        setState(() {
+          _ydotool = v;
+          _engine = e;
+        });
+      }
     });
   }
 
@@ -140,7 +147,8 @@ class _SettingsPageState extends State<SettingsPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  'Установите ydotool и запустите демон ydotoold, чтобы принимать ввод с телефона.',
+                  'Установите wtype (sudo pacman -S wtype), чтобы печатать с телефона '
+                  'на ПК с поддержкой кириллицы.',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error, fontSize: 12),
                 ),
@@ -187,8 +195,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String _ydotoolStatus() {
     if (!RemoteInput.supported) return 'Доступно только на Linux (ПК)';
-    if (_ydotool == null) return 'Проверка ydotool…';
-    return _ydotool! ? 'ydotool найден' : 'ydotool не установлен';
+    if (_ydotool == null) return 'Проверка…';
+    return 'Движок: $_engine';
   }
 
   Widget _header(String t) => Padding(

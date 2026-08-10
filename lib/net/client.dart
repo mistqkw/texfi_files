@@ -57,7 +57,8 @@ class SendClient {
     }
   }
 
-  Future<bool> sendTyping(Peer peer, {String? text, String? key}) async {
+  Future<bool> sendTyping(Peer peer,
+      {String? text, String? key, int count = 1}) async {
     try {
       final req = await _http.postUrl(Uri.parse('${peer.baseUrl}/key'));
       req.headers.contentType = ContentType.json;
@@ -65,6 +66,7 @@ class SendClient {
         'type': key != null ? 'key' : 'text',
         if (text != null) 'text': text,
         if (key != null) 'key': key,
+        if (key != null) 'count': count,
       })));
       final resp = await req.close();
       await resp.drain();

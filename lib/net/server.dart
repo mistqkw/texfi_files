@@ -170,7 +170,9 @@ class ReceiveServer {
       if (type == 'text') {
         ok = await RemoteInput.typeText(j['text'] as String? ?? '');
       } else if (type == 'key') {
-        ok = await RemoteInput.pressKey(j['key'] as String? ?? '');
+        final count = (j['count'] as num?)?.toInt() ?? 1;
+        ok = await RemoteInput.pressKey(j['key'] as String? ?? '',
+            count: count);
       }
     } catch (e) {
       debugPrint('key parse err: $e');
