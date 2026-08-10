@@ -4,6 +4,10 @@ name: Build APK & Windows
 on:
   push:
     branches: ["**"]
+    paths-ignore:
+      - "**.md"
+      - "assets/**"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:

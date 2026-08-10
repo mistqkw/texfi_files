@@ -1,89 +1,101 @@
+<div align="center">
+
+![TexFi files](assets/promo.png)
+
 # TexFi files
 
-Своё «Избранное» как в Telegram, только локальное: пересылка текста и файлов
-любого размера между телефоном и ПК по Wi‑Fi/локальной сети, без облака и лимитов.
-Плюс встроенный красивый плеер и режим «клавиатура телефона → печатает на ПК».
+**Своё «Избранное», как в Telegram — только локальное и без лимитов.**
+Пересылка текста и файлов любого размера между телефоном и компьютером
+напрямую по Wi-Fi. Без облака, без регистрации, без ограничений на размер.
 
-Flutter, один код на **Android** и **Linux** (Arch/Hyprland/EndeavourOS).
+![Platform](https://img.shields.io/badge/платформы-Android%20%7C%20Linux%20%7C%20Windows-4f7cff)
+![Release](https://img.shields.io/github/v/release/mistqkw/texfi_files?label=релиз)
+![Flutter](https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter)
+![License](https://img.shields.io/badge/лицензия-open%20source-green)
 
-## Возможности
+</div>
 
-- **Лента «Избранное»** — как Saved Messages: текст (с кнопкой копирования), файлы,
-  картинки, аудио, видео. Всё хранится локально.
-- **Передача по сети** — потоковая, файлы любого размера (проверено на 60 МБ,
-  память не забивается — стриминг чанками).
-- **Авто‑поиск устройств** в одной Wi‑Fi сети (UDP multicast + broadcast) и
-  **ручное подключение по IP** (гарантированный путь, если сеть капризная).
-- **Встроенный плеер** (media_kit) — аудио с обложкой‑градиентом и видео,
-  перемотка ±10 c, громкость, автоплей.
-- **Клавиатура на ПК** — печатаешь на телефоне, символы уходят на ПК в реальном
-  времени (ydotool). Есть спец‑клавиши: ⌫ ⏎ Tab Esc.
-- **Много настроек**: тема (свет/тёмная/системная), OLED‑чёрный, акцентный цвет,
-  масштаб UI, порт поиска, авто‑приём, уведомления, громкость плеера и т.д.
+---
 
-## Запуск на Linux (ПК)
+## ⬇️ Скачать
 
-```bash
-export PATH="$HOME/flutter/bin:$PATH"
-cd ~/Проекты/texfi_files
-flutter run -d linux           # или: flutter build linux
-```
+| Платформа | Файл | Ссылка |
+|-----------|------|--------|
+| **Android** | `app-release.apk` | [Скачать APK](https://github.com/mistqkw/texfi_files/releases/download/v1.0.0/app-release.apk) |
+| **Windows** | `TexFi-files-windows-x64.zip` | [Скачать для Windows](https://github.com/mistqkw/texfi_files/releases/download/v1.0.0/TexFi-files-windows-x64.zip) |
+| **Linux** | сборка из исходников | [Инструкция ниже](#-сборка-из-исходников) |
 
-### Клавиатура на ПК (ydotool)
+Все релизы: [github.com/mistqkw/texfi_files/releases](https://github.com/mistqkw/texfi_files/releases)
 
-Для приёма ввода с телефона на Wayland/Hyprland нужен демон `ydotoold`:
+---
 
-```bash
-sudo pacman -S ydotool
-systemctl --user enable --now ydotool     # поднимает ydotoold + сокет
-```
+## ✨ Возможности
 
-Приложение само находит сокет `/run/user/<uid>/.ydotool_socket`.
-В «Настройки → Удалённый ввод» будет статус «ydotool найден».
+- 📁 **Файлы любого размера** — потоковая передача по локальной сети, память не забивается
+- ⚡ **Мгновенно и напрямую** — текст, картинки, аудио, видео летят между устройствами
+- 🎵 **Встроенный плеер** — слушай музыку и смотри видео прямо в приложении
+- ⌨️ **Клавиатура телефона печатает на ПК** — с поддержкой русского (через `wtype`)
+- 💾 **Скачивание принятых файлов** в пару тапов
+- 🔍 **Авто-поиск устройств** в одной Wi-Fi сети + подключение по IP вручную
+- 🎨 **Material 3**, тёмная и OLED-тема, акцентные цвета, настройки
 
-## Сборка под Android (телефон)
+---
 
-Нужен установленный Android SDK (на dev‑машине его сейчас нет):
+## 📱 Как пользоваться
 
-```bash
-flutter build apk            # или flutter run -d <device>
-```
-
-Разрешения уже прописаны в манифесте (INTERNET, multicast, уведомления, медиа).
-
-## Как соединить телефон и ПК
-
-1. Оба устройства в одной Wi‑Fi сети, TexFi files запущен на обоих.
-2. Обычно они находят друг друга сами (вкладка «Устройства»).
-3. Если не нашли — на ПК открой «Устройства», посмотри строку
-   `Это устройство · 192.168.x.x:ПОРТ`, и на телефоне нажми **«По IP»**,
-   введи этот адрес и порт.
-4. Выбери адресата в панели ввода и шли текст/файлы. Либо «Сохранить здесь» —
+1. Установи TexFi files на телефон и на компьютер.
+2. Подключи оба устройства к одной Wi-Fi сети.
+3. Обычно они находят друг друга сами — смотри вкладку **«Устройства»**.
+4. Если не нашли — открой «Устройства» на ПК, посмотри строку
+   `Это устройство · 192.168.x.x:ПОРТ`, и на телефоне нажми **«По IP»**.
+5. Выбери адресата в панели ввода и шли текст/файлы. Либо **«Сохранить здесь»** —
    локально, без отправки.
 
-## Известные ограничения / следующие шаги
+> **Linux + брандмауэр:** если ПК не видит телефон, открой порты:
+> ```bash
+> sudo firewall-cmd --permanent --add-port=45888/udp
+> sudo firewall-cmd --permanent --add-port=45889-45899/tcp
+> sudo firewall-cmd --reload
+> ```
 
-- **Авто‑поиск на одной машине** (два экземпляра на одном ПК) не работает:
-  Wi‑Fi‑драйвер режет loopback multicast/broadcast. Между **разными**
-  устройствами (телефон ↔ ПК) поиск работает штатно. На одной машине тестируйте
-  подключением по IP.
-- **Android + multicast**: чтобы телефон *принимал* multicast‑анонсы, нужен
-  `MulticastLock` (нативный канал, ещё не добавлен). Пока на Android надёжнее
-  ручное подключение по IP; передача файлов/текста и плеер работают полностью.
-- Уведомления о приёме — флаг в настройках есть, системные пуш‑уведомления
-  (plugin) ещё не подключены.
+> **Клавиатура на ПК (Linux):** нужен `wtype` — `sudo pacman -S wtype`.
 
-## Архитектура
+---
 
+## 🛠 Сборка из исходников
+
+Нужен [Flutter](https://flutter.dev) 3.44+.
+
+```bash
+git clone https://github.com/mistqkw/texfi_files.git
+cd texfi_files
+flutter pub get
+
+# Linux
+flutter build linux --release
+bash packaging/install-linux.sh   # установить как нативное приложение
+
+# Android
+flutter build apk --release
+
+# Windows
+flutter build windows --release
 ```
-lib/
-  core/       models.dart, settings.dart      — модели и настройки
-  store/      store.dart                       — персистентная лента + файлы
-  net/        discovery.dart  — UDP авто‑поиск (multicast+broadcast) + добавление по IP
-              server.dart     — HttpServer приём: /message /file /key /info
-              client.dart     — отправка: текст, файл потоком, клавиши
-              remote_input.dart — ydotool (печать/клавиши на ПК)
-  ui/         home_page, peers_page, settings_page,
-              remote_keyboard_page, player_page, item_bubble
-  app_state.dart, app.dart, main.dart
-```
+
+Готовые APK и Windows-сборки собираются автоматически через **GitHub Actions**
+при каждом пуше и кладутся в релиз.
+
+---
+
+## 🧩 Технологии
+
+- **Flutter** — один код на Android, Linux и Windows
+- **dart:io** — HTTP-сервер приёма и UDP-поиск устройств (multicast + broadcast)
+- **media_kit** — встроенный аудио/видео плеер
+- **wtype / ydotool** — эмуляция ввода на ПК для «клавиатуры телефона»
+
+---
+
+<div align="center">
+Сделано с ❤️ на Flutter · open source
+</div>
