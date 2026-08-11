@@ -216,7 +216,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_app, _app.store, _app.discovery]),
+      listenable:
+          Listenable.merge([_app, _app.store, _app.discovery, _app.auth]),
       builder: (context, _) {
         // авто-выбор адресата
         _target ??= _app.preferredPeer;
@@ -271,7 +272,11 @@ class _HomePageState extends State<HomePage> {
           const Text('TexFi files',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
           Text(
-            online > 0 ? '$online устройств рядом' : 'Ищу устройства…',
+            !_app.auth.isLoggedIn
+                ? 'Войдите в аккаунт'
+                : online > 0
+                    ? '$online устройств в аккаунте'
+                    : 'Ищу устройства аккаунта…',
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],

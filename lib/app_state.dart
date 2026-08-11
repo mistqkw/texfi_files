@@ -25,10 +25,10 @@ class AppState extends ChangeNotifier {
 
   AppState(this.settings, this.store, this.auth) {
     server = ReceiveServer(settings, store);
-    discovery = Discovery(settings, () => server.port, () => auth.accountId);
+    discovery = Discovery(settings, () => server.port, auth);
     client = SendClient(settings.deviceName);
-    // Смена аккаунта → обновить анонсы.
-    auth.addListener(() => discovery.notifyListeners());
+    // Вход/выход из аккаунта → перезапустить поиск через аккаунт.
+    auth.addListener(() => discovery.start());
     server.onReceived = (item) {
       lastReceived = item;
       notifyListeners();

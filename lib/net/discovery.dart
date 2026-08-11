@@ -3,25 +3,28 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../core/auth_service.dart';
 import '../core/models.dart';
 import '../core/settings.dart';
 
-/// Авто-поиск устройств в локальной сети через UDP-broadcast.
+/// Поиск устройств ЧЕРЕЗ АККАУНТ (без локального broadcast).
 ///
-/// Каждое устройство периодически рассылает анонс со своим id/именем/портом
-/// HTTP-сервера и слушает анонсы других. Пиры с давним lastSeen отсеиваются.
+/// Устройства одного GitHub-аккаунта публикуют свой адрес в приватный Gist
+/// и находят друг друга через него — GitHub служит точкой встречи, свой сервер
+/// не нужен. В одной сети соединяются напрямую по опубликованному IP.
 class Discovery extends ChangeNotifier {
-  static final _group = InternetAddress('239.255.42.99');
+  static const _gistDescription = 'TexFi files — реестр устройств (не удалять)';
+  static const _registryMarker = 'texfi-registry.json';
 
   final Settings settings;
   final int Function() httpPortProvider;
-  final String? Function() accountIdProvider;
-  Discovery(this.settings, this.httpPortProvider, this.accountIdProvider);
+  final AuthService auth;
+  Discovery(this.settings, this.httpPortProvider, this.auth);
 
-  RawDatagramSocket? _socket;
-  Timer? _announceTimer;
-  Timer? _reapTimer;
   final Map<String, Peer> _peers = {};
+  Timer? _timer;
+  String? _gistId;
+  bool _busy = false;
 
   List<Peer> get peers {
     final list = _peers.values.toList()
@@ -29,79 +32,163 @@ class Discovery extends ChangeNotifier {
     return list;
   }
 
+  Map<String, String> get _headers => {
+        'Authorization': 'Bearer ${auth.token}',
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'TexFi-files',
+      };
+
   Future<void> start() async {
     await stop();
-    if (!settings.autoDiscovery) return;
-    final port = settings.discoveryPort;
-    try {
-      try {
-        _socket = await RawDatagramSocket.bind(
-          InternetAddress.anyIPv4,
-          port,
-          reuseAddress: true,
-          reusePort: true,
-        );
-      } catch (_) {
-        // Windows не поддерживает reusePort — пробуем без него.
-        _socket = await RawDatagramSocket.bind(
-          InternetAddress.anyIPv4,
-          port,
-          reuseAddress: true,
-        );
-      }
-      _socket!.broadcastEnabled = true;
-      _socket!.multicastLoopback = true;
-      try {
-        _socket!.joinMulticast(_group);
-      } catch (e) {
-        debugPrint('Discovery: joinMulticast — $e');
-      }
-      _socket!.listen(_onEvent);
-    } catch (e) {
-      debugPrint('Discovery: не смог открыть сокет :$port — $e');
+    if (!auth.isLoggedIn || auth.token == null) {
+      // Вышли из аккаунта — очищаем список (кроме добавленных вручную).
+      _peers.removeWhere((id, p) => p.accountId != 'manual');
+      notifyListeners();
       return;
     }
-    _announce();
-    _announceTimer =
-        Timer.periodic(const Duration(seconds: 3), (_) => _announce());
-    _reapTimer = Timer.periodic(const Duration(seconds: 4), (_) => _reap());
+    _sync();
+    _timer = Timer.periodic(const Duration(seconds: 12), (_) => _sync());
   }
 
   Future<void> stop() async {
-    _announceTimer?.cancel();
-    _reapTimer?.cancel();
-    _socket?.close();
-    _socket = null;
+    _timer?.cancel();
+    _timer = null;
   }
 
-  void _onEvent(RawSocketEvent event) {
-    if (event != RawSocketEvent.read) return;
-    final dg = _socket?.receive();
-    if (dg == null) return;
+  Future<void> _sync() async {
+    if (_busy || auth.token == null) return;
+    _busy = true;
     try {
-      final msg = jsonDecode(utf8.decode(dg.data)) as Map<String, dynamic>;
-      if (msg['t'] != 'texfi') return;
-      final id = msg['id'] as String?;
-      if (id == null || id == settings.deviceId) return; // не считаем себя
-      final peer = Peer(
-        id: id,
-        name: (msg['name'] as String?) ?? 'Устройство',
-        platform: (msg['platform'] as String?) ?? '?',
-        address: dg.address.address,
-        httpPort: (msg['httpPort'] as num?)?.toInt() ?? 0,
-        accountId: msg['acc'] as String?,
-        lastSeen: DateTime.now(),
-      );
-      final existed = _peers.containsKey(id);
-      _peers[id] = peer;
-      if (!existed) notifyListeners();
-    } catch (_) {
-      // мусорный пакет — игнор
+      await _ensureGist();
+      if (_gistId == null) return;
+      await _publishSelf();
+      await _fetchPeers();
+    } catch (e) {
+      debugPrint('Discovery(gist): $e');
+    } finally {
+      _busy = false;
     }
   }
 
-  /// Ручное добавление устройства по IP (handshake /info).
-  /// Возвращает имя устройства при успехе, иначе null.
+  /// Найти или создать приватный gist-реестр.
+  Future<void> _ensureGist() async {
+    if (_gistId != null) return;
+    // Ищем среди своих гистов.
+    final list = await http.get(
+      Uri.parse('https://api.github.com/gists?per_page=100'),
+      headers: _headers,
+    );
+    if (list.statusCode == 200) {
+      final arr = jsonDecode(list.body) as List<dynamic>;
+      for (final g in arr) {
+        final files = (g['files'] as Map<String, dynamic>?) ?? {};
+        if (g['description'] == _gistDescription ||
+            files.containsKey(_registryMarker)) {
+          _gistId = g['id'] as String?;
+          if (_gistId != null) return;
+        }
+      }
+    }
+    // Не нашли — создаём.
+    final create = await http.post(
+      Uri.parse('https://api.github.com/gists'),
+      headers: _headers,
+      body: jsonEncode({
+        'description': _gistDescription,
+        'public': false,
+        'files': {
+          _registryMarker: {'content': '{"app":"texfi-files"}'},
+        },
+      }),
+    );
+    if (create.statusCode == 201) {
+      _gistId = (jsonDecode(create.body) as Map<String, dynamic>)['id']
+          as String?;
+    }
+  }
+
+  Future<String?> _localIp() async {
+    try {
+      final ifs = await NetworkInterface.list(type: InternetAddressType.IPv4);
+      for (final i in ifs) {
+        for (final a in i.addresses) {
+          if (!a.isLoopback) return a.address;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Опубликовать свой адрес в реестр.
+  Future<void> _publishSelf() async {
+    final ip = await _localIp();
+    if (ip == null) return;
+    final content = jsonEncode({
+      'id': settings.deviceId,
+      'name': settings.deviceName,
+      'platform': Platform.isAndroid ? 'android' : 'linux',
+      'ip': ip,
+      'port': httpPortProvider(),
+      'updatedAt': DateTime.now().toUtc().toIso8601String(),
+    });
+    await http.patch(
+      Uri.parse('https://api.github.com/gists/$_gistId'),
+      headers: _headers,
+      body: jsonEncode({
+        'files': {
+          'device-${settings.deviceId}.json': {'content': content},
+        },
+      }),
+    );
+  }
+
+  /// Прочитать реестр и собрать список пиров.
+  Future<void> _fetchPeers() async {
+    final resp = await http.get(
+      Uri.parse('https://api.github.com/gists/$_gistId'),
+      headers: _headers,
+    );
+    if (resp.statusCode != 200) return;
+    final files =
+        (jsonDecode(resp.body) as Map<String, dynamic>)['files'] as Map;
+    var changed = false;
+    final seen = <String>{};
+    for (final entry in files.entries) {
+      final fname = entry.key as String;
+      if (!fname.startsWith('device-')) continue;
+      try {
+        final content = (entry.value as Map)['content'] as String;
+        final j = jsonDecode(content) as Map<String, dynamic>;
+        final id = j['id'] as String?;
+        if (id == null || id == settings.deviceId) continue; // не считаем себя
+        final updated =
+            DateTime.tryParse(j['updatedAt'] as String? ?? '')?.toLocal();
+        // Отсеиваем давно неактивные (>5 мин).
+        if (updated != null &&
+            DateTime.now().difference(updated) > const Duration(minutes: 5)) {
+          continue;
+        }
+        seen.add(id);
+        _peers[id] = Peer(
+          id: id,
+          name: (j['name'] as String?) ?? 'Устройство',
+          platform: (j['platform'] as String?) ?? '?',
+          address: (j['ip'] as String?) ?? '',
+          httpPort: (j['port'] as num?)?.toInt() ?? 0,
+          accountId: auth.accountId, // все из реестра — свой аккаунт
+          lastSeen: updated ?? DateTime.now(),
+        );
+        changed = true;
+      } catch (_) {}
+    }
+    // Убираем исчезнувшие (кроме добавленных вручную).
+    _peers.removeWhere(
+        (id, p) => !seen.contains(id) && p.accountId != 'manual');
+    if (changed) notifyListeners();
+    notifyListeners();
+  }
+
+  /// Ручное подключение по IP (fallback, handshake /info).
   Future<String?> addManual(String host, int port) async {
     try {
       final resp = await http
@@ -110,13 +197,14 @@ class Discovery extends ChangeNotifier {
       if (resp.statusCode != 200) return null;
       final j = jsonDecode(resp.body) as Map<String, dynamic>;
       final id = j['id'] as String? ?? '$host:$port';
-      if (id == settings.deviceId) return null; // это мы сами
+      if (id == settings.deviceId) return null;
       _peers[id] = Peer(
         id: id,
         name: (j['name'] as String?) ?? host,
         platform: (j['platform'] as String?) ?? '?',
         address: host,
         httpPort: port,
+        accountId: 'manual',
         lastSeen: DateTime.now(),
       );
       notifyListeners();
@@ -125,36 +213,6 @@ class Discovery extends ChangeNotifier {
       debugPrint('addManual err: $e');
       return null;
     }
-  }
-
-  void _announce() {
-    final sock = _socket;
-    if (sock == null) return;
-    final payload = utf8.encode(jsonEncode({
-      't': 'texfi',
-      'id': settings.deviceId,
-      'name': settings.deviceName,
-      'platform': Platform.isAndroid ? 'android' : 'linux',
-      'httpPort': httpPortProvider(),
-      if (accountIdProvider() != null) 'acc': accountIdProvider(),
-    }));
-    try {
-      sock.send(payload, _group, settings.discoveryPort);
-      // Дублируем limited broadcast — на случай сетей без multicast.
-      sock.send(payload, InternetAddress('255.255.255.255'),
-          settings.discoveryPort);
-    } catch (e) {
-      debugPrint('Discovery: анонс не ушёл — $e');
-    }
-  }
-
-  void _reap() {
-    final before = _peers.length;
-    _peers.removeWhere((_, p) =>
-        DateTime.now().difference(p.lastSeen) > const Duration(seconds: 15));
-    if (_peers.length != before) notifyListeners();
-    // Периодически обновляем «online» индикаторы.
-    notifyListeners();
   }
 
   @override
