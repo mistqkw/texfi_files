@@ -258,6 +258,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 onSelectionChanged: (v) => s.weather = v.first,
               ),
             ),
+            if (s.weather != 0) ...[
+              _slider(context, t.wSize, s.weatherSize, 0.5, 2.5,
+                  (v) => s.weatherSize = v),
+              _slider(context, t.wDensity, s.weatherDensity, 0.3, 2.5,
+                  (v) => s.weatherDensity = v),
+              _slider(context, t.wSpeed, s.weatherSpeed, 0.3, 2.5,
+                  (v) => s.weatherSpeed = v),
+            ],
             ListTile(
               leading: const Icon(Icons.chat_bubble_outline_rounded),
               title: Text(t.msgColors),
@@ -722,6 +730,22 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Text(t.selectAction),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _slider(BuildContext context, String label, double value, double min,
+      double max, ValueChanged<double> onChanged) {
+    return ListTile(
+      dense: true,
+      title: Text(label),
+      subtitle: Slider(
+        value: value.clamp(min, max),
+        min: min,
+        max: max,
+        divisions: ((max - min) / 0.1).round(),
+        label: value.toStringAsFixed(1),
+        onChanged: onChanged,
       ),
     );
   }

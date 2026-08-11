@@ -19,6 +19,11 @@ class PlayerService extends ChangeNotifier {
   String? title;
   String? artist;
 
+  // Плейлист (для экрана «Музыка»).
+  List<SavedItem> queue = [];
+  int qIndex = 0;
+  double _volume = 100;
+
   Player get raw => _player;
 
   PlayerService() {
@@ -34,9 +39,44 @@ class PlayerService extends ChangeNotifier {
       playing = p;
       notifyListeners();
     }));
+    // Автопереход к следующему треку.
+    _subs.add(_player.stream.completed.listen((done) {
+      if (done && queue.isNotEmpty) next();
+    }));
   }
 
-  Future<void> playItem(SavedItem item, {double volume = 100}) async {
+  /// Проиграть плейлист начиная с index.
+  Future<void> playQueue(List<SavedItem> list, int index,
+      {double volume = 100}) async {
+    queue = List.of(list);
+    qIndex = index.clamp(0, list.length - 1);
+    await playItem(queue[qIndex], volume: volume, keepQueue: true);
+  }
+
+  Future<void> next() async {
+    if (queue.isEmpty) return;
+    if (qIndex < queue.length - 1) {
+      qIndex++;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+    }
+  }
+
+  Future<void> previous() async {
+    if (queue.isEmpty) return;
+    if (pos.inSeconds > 3) {
+      seek(Duration.zero);
+      return;
+    }
+    if (qIndex > 0) {
+      qIndex--;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+    }
+  }
+
+  Future<void> playItem(SavedItem item,
+      {double volume = 100, bool keepQueue = false}) async {
+    if (!keepQueue) queue = [];
+    _volume = volume;
     current = item;
     art = null;
     title = item.fileName;

@@ -1,10 +1,19 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Погодный оверлей: снег или дождь поверх ленты.
+/// Погодный оверлей: снег или дождь. Настраиваемые размер/частота/скорость.
 class WeatherOverlay extends StatefulWidget {
   final int type; // 1=снег, 2=дождь
-  const WeatherOverlay({super.key, required this.type});
+  final double sizeScale; // 0.5..2
+  final double density; // 0.3..2 (множитель кол-ва)
+  final double speedScale; // 0.3..2
+  const WeatherOverlay({
+    super.key,
+    required this.type,
+    this.sizeScale = 1,
+    this.density = 1,
+    this.speedScale = 1,
+  });
 
   @override
   State<WeatherOverlay> createState() => _WeatherOverlayState();
@@ -17,21 +26,37 @@ class _WeatherOverlayState extends State<WeatherOverlay>
     duration: const Duration(seconds: 10),
   )..repeat();
   final _rnd = Random(42);
-  late final List<_P> _particles;
+  late List<_P> _particles;
 
   @override
   void initState() {
     super.initState();
-    final n = widget.type == 1 ? 90 : 140;
+    _build();
+  }
+
+  @override
+  void didUpdateWidget(WeatherOverlay old) {
+    super.didUpdateWidget(old);
+    if (old.type != widget.type ||
+        old.sizeScale != widget.sizeScale ||
+        old.density != widget.density) {
+      _build();
+    }
+  }
+
+  void _build() {
+    final base = widget.type == 1 ? 90 : 140;
+    final n = (base * widget.density).round().clamp(10, 400);
     _particles = List.generate(
       n,
       (_) => _P(
         x: _rnd.nextDouble(),
         y: _rnd.nextDouble(),
-        speed: 0.4 + _rnd.nextDouble() * 0.8,
-        size: widget.type == 1
-            ? 1.5 + _rnd.nextDouble() * 3
-            : 6 + _rnd.nextDouble() * 10,
+        speed: (0.4 + _rnd.nextDouble() * 0.8),
+        size: (widget.type == 1
+                ? 1.5 + _rnd.nextDouble() * 3
+                : 6 + _rnd.nextDouble() * 10) *
+            widget.sizeScale,
         drift: (_rnd.nextDouble() - 0.5) * 0.4,
       ),
     );
@@ -46,11 +71,14 @@ class _WeatherOverlayState extends State<WeatherOverlay>
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) => CustomPaint(
-          size: Size.infinite,
-          painter: _WeatherPainter(_particles, _c.value, widget.type),
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => CustomPaint(
+            size: Size.infinite,
+            painter: _WeatherPainter(
+                _particles, _c.value * widget.speedScale, widget.type),
+          ),
         ),
       ),
     );
