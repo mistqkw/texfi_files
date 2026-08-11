@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'core/settings.dart';
 import 'ui/home_page.dart';
+import 'ui/onboarding_screen.dart';
 
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
@@ -43,7 +44,9 @@ class TexfiApp extends StatelessWidget {
                 child: child!,
               );
             },
-            home: const HomePage(),
+            home: s.onboardingSeen
+                ? const HomePage()
+                : const OnboardingScreen(),
           );
         },
       ),
