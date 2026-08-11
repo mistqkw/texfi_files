@@ -184,60 +184,81 @@ class MiniPlayer extends StatelessWidget {
         final max = player.dur.inMilliseconds.toDouble();
         final value =
             player.pos.inMilliseconds.clamp(0, max <= 0 ? 1 : max).toDouble();
-        return Material(
-          color: cs.surfaceContainerHighest,
-          child: InkWell(
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const AudioPlayerScreen())),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LinearProgressIndicator(
-                  value: max <= 0 ? null : value / max,
-                  minHeight: 2,
-                  backgroundColor: Colors.transparent,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
-                  child: Row(
-                    children: [
-                      _thumb(player, cs),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(player.title ?? tr(context).audioWord,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
-                            if (player.artist != null &&
-                                player.artist!.trim().isNotEmpty)
-                              Text(player.artist!,
+        final progress = max <= 0 ? 0.0 : value / max;
+        // Компактная «плавающая» плашка с полями и скруглением.
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+          child: Material(
+            color: cs.surfaceContainerHigh,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const AudioPlayerScreen())),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+                    child: Row(
+                      children: [
+                        _thumb(player, cs),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(player.title ?? tr(context).audioWord,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: cs.onSurfaceVariant)),
-                          ],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13.5)),
+                              if (player.artist != null &&
+                                  player.artist!.trim().isNotEmpty)
+                                Text(player.artist!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: cs.onSurfaceVariant)),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: player.toggle,
-                        icon: Icon(player.playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded),
-                      ),
-                      IconButton(
-                        onPressed: player.stop,
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
+                        if (player.queue.isNotEmpty)
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            onPressed: player.next,
+                            icon: const Icon(Icons.skip_next_rounded),
+                          ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: player.toggle,
+                          icon: Icon(player.playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: player.stop,
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  // Тонкая полоска прогресса снизу.
+                  SizedBox(
+                    height: 3,
+                    child: LinearProgressIndicator(
+                      value: progress == 0 ? null : progress,
+                      minHeight: 3,
+                      backgroundColor: cs.surfaceContainerHighest,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -247,13 +268,13 @@ class MiniPlayer extends StatelessWidget {
 
   Widget _thumb(PlayerService p, ColorScheme cs) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 42,
+      height: 42,
       decoration: BoxDecoration(
         gradient: p.art == null
             ? LinearGradient(colors: [cs.primary, cs.tertiary])
             : null,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
       child: p.art != null

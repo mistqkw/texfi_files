@@ -13,6 +13,7 @@ import 'format.dart';
 import 'item_bubble.dart';
 import 'music_screen.dart';
 import 'peers_page.dart';
+import 'smooth_scroll.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
 
@@ -472,11 +473,14 @@ class _HomePageState extends State<HomePage> {
   Widget _timeline(List<SavedItem> items) {
     // items идут от новых к старым (store.items = reversed). Развернём для ленты.
     final ordered = items.reversed.toList();
-    return ListView.builder(
+    return SmoothScroll(
       controller: _scroll,
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      itemCount: ordered.length,
-      itemBuilder: (context, i) {
+      builder: (physics) => ListView.builder(
+        controller: _scroll,
+        physics: physics,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        itemCount: ordered.length,
+        itemBuilder: (context, i) {
         final item = ordered[i];
         final showDay = i == 0 ||
             !_sameDay(ordered[i - 1].createdAt, item.createdAt);
@@ -498,7 +502,8 @@ class _HomePageState extends State<HomePage> {
                 durationMs: _app.settings.animDurationMs,
                 child: row)
             : row;
-      },
+        },
+      ),
     );
   }
 
