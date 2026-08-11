@@ -76,403 +76,510 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final s = app.settings;
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(t.settings)),
       body: ListenableBuilder(
-        listenable: s,
+        listenable: Listenable.merge([s, app.auth, app.cloud]),
         builder: (context, _) => ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
-            _header(tr(context).hLanguage),
-            _languageTile(context, s),
-            const Divider(height: 1),
-            _header(tr(context).hAccount),
-            _accountTile(context, app),
-            _cloudStatus(context, app),
-            const Divider(height: 1),
-            _header(t.hDevice),
-            ListTile(
-              leading: const Icon(Icons.badge_outlined),
-              title: Text(t.deviceName),
-              subtitle: Text(s.deviceName),
-              onTap: () => _editName(context, s),
-            ),
-            const Divider(height: 1),
-            _header(t.hDesign),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (var i = 0; i < DesignPreset.all.length; i++)
-                    ChoiceChip(
-                      label: Text(DesignPreset.all[i].name),
-                      selected: s.designPreset == i,
-                      onSelected: (_) => s.designPreset = i,
-                    ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.font_download_outlined),
-              title: Text(t.font),
-              trailing: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 0, label: Text(t.fontNormal)),
-                  ButtonSegment(value: 1, label: Text('Serif')),
-                  ButtonSegment(value: 2, label: Text('Mono')),
-                ],
-                selected: {s.fontChoice},
-                showSelectedIcon: false,
-                onSelectionChanged: (v) => s.fontChoice = v.first,
-              ),
-            ),
-            const Divider(height: 1),
-            _header(t.hAppearance),
-            ListTile(
-              leading: const Icon(Icons.brightness_6_outlined),
-              title: Text(t.theme),
-              trailing: SegmentedButton<ThemeMode>(
-                segments: [
-                  ButtonSegment(
-                      value: ThemeMode.light, icon: Icon(Icons.light_mode)),
-                  ButtonSegment(
-                      value: ThemeMode.system, icon: Icon(Icons.brightness_auto)),
-                  ButtonSegment(
-                      value: ThemeMode.dark, icon: Icon(Icons.dark_mode)),
-                ],
-                selected: {s.themeMode},
-                onSelectionChanged: (v) => s.themeMode = v.first,
-              ),
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.contrast_rounded),
-              title: Text(t.oledBg),
-              subtitle: Text(t.oledBgSub),
-              value: s.pureBlack,
-              onChanged: (v) => s.pureBlack = v,
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(t.accentColor,
-                  style: Theme.of(context).textTheme.labelLarge),
-            ),
-            SizedBox(
-              height: 56,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  for (final c in _seeds) _colorDot(s, c),
-                  _customColorDot(context, s),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.format_size_rounded),
-              title: Text(t.uiScale),
-              subtitle: Slider(
-                value: s.uiScale,
-                min: 0.8,
-                max: 1.4,
-                divisions: 6,
-                label: '${(s.uiScale * 100).toStringAsFixed(0)}%',
-                onChanged: (v) => s.uiScale = v,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.rounded_corner_rounded),
-              title: Text(t.bubbleStyle),
-              trailing: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 0, label: Text(t.bubbleSoft)),
-                  ButtonSegment(value: 1, label: Text(t.bubbleRound)),
-                  ButtonSegment(value: 2, label: Text(t.bubbleSharp)),
-                ],
-                selected: {s.bubbleStyle},
-                showSelectedIcon: false,
-                onSelectionChanged: (v) => s.bubbleStyle = v.first,
-              ),
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.gradient_rounded),
-              title: Text(t.gradientBg),
-              value: s.chatBackground == 1,
-              onChanged: (v) => s.chatBackground = v ? 1 : 0,
-            ),
-            ListTile(
-              leading: const Icon(Icons.wallpaper_rounded),
-              title: Text(t.chatPhoto),
-              subtitle: s.chatBgImage != null ? Text(t.pickPhoto) : null,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (s.chatBgImage != null)
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => s.chatBgImage = null,
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    onPressed: () => _pickBgImage(s),
-                  ),
-                ],
-              ),
-            ),
-            if (s.chatBgImage != null) ...[
-              ListTile(
-                leading: const Icon(Icons.blur_on_rounded),
-                title: Text(t.bgEffectLabel),
-                trailing: SegmentedButton<int>(
-                  segments: [
-                    ButtonSegment(value: 0, label: Text(t.effectNone)),
-                    ButtonSegment(value: 1, label: Text(t.effectBlur)),
-                    ButtonSegment(value: 2, label: Text(t.effectPixel)),
-                  ],
-                  selected: {s.bgEffect},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (v) => s.bgEffect = v.first,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.brightness_2_outlined),
-                title: Text(t.dimLabel),
-                subtitle: Slider(
-                  value: s.bgDim,
-                  max: 0.8,
-                  divisions: 8,
-                  onChanged: (v) => s.bgDim = v,
-                ),
-              ),
-            ],
-            ListTile(
-              leading: const Icon(Icons.ac_unit_rounded),
-              title: Text(t.weatherLabel),
-              trailing: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 0, label: Text(t.effectNone)),
-                  ButtonSegment(value: 1, label: Text(t.snow)),
-                  ButtonSegment(value: 2, label: Text(t.rain)),
-                ],
-                selected: {s.weather},
-                showSelectedIcon: false,
-                onSelectionChanged: (v) => s.weather = v.first,
-              ),
-            ),
-            if (s.weather != 0) ...[
-              _slider(context, t.wSize, s.weatherSize, 0.5, 2.5,
-                  (v) => s.weatherSize = v),
-              _slider(context, t.wDensity, s.weatherDensity, 0.3, 2.5,
-                  (v) => s.weatherDensity = v),
-              _slider(context, t.wSpeed, s.weatherSpeed, 0.3, 2.5,
-                  (v) => s.weatherSpeed = v),
-            ],
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_outline_rounded),
-              title: Text(t.msgColors),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _msgColorDot(context, s, true),
-                  const SizedBox(width: 8),
-                  _msgColorDot(context, s, false),
-                  IconButton(
-                    tooltip: t.reset,
-                    icon: const Icon(Icons.format_color_reset_rounded),
-                    onPressed: () {
-                      s.msgOutColor = -1;
-                      s.msgInColor = -1;
-                    },
-                  ),
-                ],
-              ),
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.density_small_rounded),
-              title: Text(t.compact),
-              subtitle: Text(t.compactSub),
-              value: s.compact,
-              onChanged: (v) => s.compact = v,
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.animation_rounded),
-              title: Text(t.animations),
-              subtitle: Text(t.animationsSub),
-              value: s.animations,
-              onChanged: (v) => s.animations = v,
-            ),
-            if (s.animations) ...[
-              ListTile(
-                leading: const Icon(Icons.auto_awesome_motion_rounded),
-                title: Text(t.animStyle),
-                trailing: DropdownButton<int>(
-                  value: s.animStyle,
-                  underline: const SizedBox(),
-                  items: [
-                    DropdownMenuItem(value: 0, child: Text('Fade')),
-                    DropdownMenuItem(value: 1, child: Text(t.animRise)),
-                    DropdownMenuItem(value: 2, child: Text(t.animScale)),
-                    DropdownMenuItem(value: 3, child: Text(t.animRiseFade)),
-                  ],
-                  onChanged: (v) => s.animStyle = v ?? 3,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.speed_rounded),
-                title: Text(t.animSpeed),
-                trailing: SegmentedButton<int>(
-                  segments: [
-                    ButtonSegment(value: 0, label: Text(t.speedSlow)),
-                    ButtonSegment(value: 1, label: Text(t.speedNormal)),
-                    ButtonSegment(value: 2, label: Text(t.speedFast)),
-                  ],
-                  selected: {s.animSpeed},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (v) => s.animSpeed = v.first,
-                ),
-              ),
-            ],
-            const Divider(height: 1),
-            _header(t.hNetwork),
-            SwitchListTile(
-              secondary: const Icon(Icons.wifi_find_rounded),
-              title: Text(t.autoDiscovery),
-              subtitle: Text(t.autoDiscoverySub),
-              value: s.autoDiscovery,
-              onChanged: (v) {
-                s.autoDiscovery = v;
-                app.discovery.start();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings_ethernet_rounded),
-              title: Text(t.discoveryPort),
-              subtitle: Text('${s.discoveryPort}'),
-              onTap: () => _editPort(context, s, app),
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.download_done_rounded),
-              title: Text(t.autoAccept),
-              value: s.autoAcceptFiles,
-              onChanged: (v) => s.autoAcceptFiles = v,
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.notifications_active_outlined),
-              title: Text(t.notifyReceive),
-              value: s.notifyOnReceive,
-              onChanged: (v) => s.notifyOnReceive = v,
-            ),
-            if (Platform.isAndroid)
-              SwitchListTile(
-                secondary: const Icon(Icons.cloud_sync_rounded),
-                title: Text(t.backgroundReceive),
-                subtitle: Text(t.backgroundReceiveSub),
-                value: s.backgroundReceive,
-                onChanged: (v) {
-                  s.backgroundReceive = v;
-                  if (v) {
-                    Background.start(t.bgTitle, t.bgText);
-                  } else {
-                    Background.stop();
-                  }
-                },
-              ),
-            const Divider(height: 1),
-            _header(t.hRemoteInput),
-            SwitchListTile(
-              secondary: const Icon(Icons.keyboard_rounded),
-              title: Text(t.allowTyping),
-              subtitle: Text(_ydotoolStatus()),
-              value: s.remoteInputEnabled,
-              onChanged: RemoteInput.supported && (_ydotool ?? false)
-                  ? (v) => s.remoteInputEnabled = v
-                  : null,
-            ),
-            if (RemoteInput.supported && _ydotool == false)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Text(
-                  t.wtypeHint,
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.error, fontSize: 12),
-                ),
-              ),
-            const Divider(height: 1),
-            _header(t.hPlayer),
-            SwitchListTile(
-              secondary: const Icon(Icons.play_circle_outline_rounded),
-              title: Text(t.autoplay),
-              value: s.autoplayMedia,
-              onChanged: (v) => s.autoplayMedia = v,
-            ),
-            ListTile(
-              leading: const Icon(Icons.volume_up_rounded),
-              title: Text(t.playerVolume),
-              subtitle: Slider(
-                value: s.playerVolume,
-                max: 100,
-                divisions: 20,
-                label: '${s.playerVolume.toStringAsFixed(0)}%',
-                onChanged: (v) => s.playerVolume = v,
-              ),
-            ),
-            const Divider(height: 1),
-            _header(t.hAbout),
-            ListTile(
-              leading: const Icon(Icons.slideshow_rounded),
-              title: Text(t.showOnboarding),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-              ),
-            ),
-            const Divider(height: 1),
-            _header(t.hData),
-            ListTile(
-              leading: Icon(Icons.delete_sweep_outlined,
-                  color: Theme.of(context).colorScheme.error),
-              title: Text(t.clearAll),
-              onTap: () => _confirmClear(context, app),
-            ),
-            const SizedBox(height: 24),
+            // Аккаунт — крупной карточкой сверху.
+            _accountCard(context, app),
+            const SizedBox(height: 8),
+            _card(cs, Icons.language_rounded, t.hLanguage,
+                _langName(s), () => _open(t.hLanguage, _sectionLanguage)),
+            _card(cs, Icons.palette_outlined, t.hAppearance,
+                t.catAppearanceSub, () => _open(t.hAppearance, _sectionAppearance)),
+            _card(cs, Icons.wallpaper_rounded, t.hBackground,
+                t.catBackgroundSub, () => _open(t.hBackground, _sectionBackground)),
+            _card(cs, Icons.wifi_rounded, t.hNetwork, t.catNetworkSub,
+                () => _open(t.hNetwork, _sectionNetwork)),
+            if (RemoteInput.supported)
+              _card(cs, Icons.keyboard_rounded, t.hRemoteInput,
+                  t.catRemoteSub, () => _open(t.hRemoteInput, _sectionRemote)),
+            _card(cs, Icons.play_circle_outline_rounded, t.hPlayer,
+                t.catPlayerSub, () => _open(t.hPlayer, _sectionPlayer)),
+            _card(cs, Icons.badge_outlined, t.hDevice, t.catDeviceSub,
+                () => _open(t.hDevice, _sectionDevice)),
+            _card(cs, Icons.info_outline_rounded, t.hAbout, t.catAboutSub,
+                () => _open(t.hAbout, _sectionAbout)),
+            const SizedBox(height: 16),
             Center(
               child: TextButton(
                 onPressed: () => _onVersionTap(context, s),
                 child: Text('TexFi files $kAppVersion',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    style: TextStyle(color: cs.onSurfaceVariant)),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _languageTile(BuildContext context, Settings s) {
+  String _langName(Settings s) => switch (s.localeCode) {
+        'en' => 'English',
+        'ru' => 'Русский',
+        'de' => 'Deutsch',
+        'pl' => 'Polski',
+        _ => t.systemLang,
+      };
+
+  // Карточка-категория в стиле TexFi.
+  Widget _card(ColorScheme cs, IconData icon, String title, String subtitle,
+      VoidCallback onTap) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: ListTile(
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration:
+              BoxDecoration(color: cs.primaryContainer, shape: BoxShape.circle),
+          child: Icon(icon, color: cs.onPrimaryContainer, size: 22),
+        ),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _accountCard(BuildContext context, AppState app) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: Column(
+        children: [
+          _accountTile(context, app),
+          _cloudStatus(context, app),
+        ],
+      ),
+    );
+  }
+
+  // Открыть под-экран категории.
+  void _open(String title, List<Widget> Function(BuildContext) body) {
+    final app = AppScope.of(context);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (ctx) => Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: ListenableBuilder(
+          listenable: Listenable.merge([app.settings, app.auth, app.cloud]),
+          builder: (ctx, _) => ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: body(ctx),
+          ),
+        ),
+      ),
+    ));
+  }
+
+  // ── Секции ──
+  List<Widget> _sectionLanguage(BuildContext context) {
+    final s = AppScope.of(context).settings;
     const names = {
-      'system': null, // берётся из перевода
+      'system': null,
       'en': 'English',
       'ru': 'Русский',
       'de': 'Deutsch',
       'pl': 'Polski',
     };
-    return ListTile(
-      leading: const Icon(Icons.language_rounded),
-      title: Text(tr(context).hLanguage),
-      trailing: DropdownButton<String>(
-        value: s.localeCode,
-        underline: const SizedBox(),
-        items: [
-          for (final e in names.entries)
-            DropdownMenuItem(
-              value: e.key,
-              child: Text(e.value ?? tr(context).systemLang),
-            ),
-        ],
-        onChanged: (v) => s.localeCode = v ?? 'system',
-      ),
-    );
+    final cs = Theme.of(context).colorScheme;
+    return [
+      for (final e in names.entries)
+        ListTile(
+          title: Text(e.value ?? t.systemLang),
+          trailing: s.localeCode == e.key
+              ? Icon(Icons.check_rounded, color: cs.primary)
+              : null,
+          onTap: () => s.localeCode = e.key,
+        ),
+    ];
   }
+
+  List<Widget> _sectionAppearance(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      _sub(t.hDesign),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Wrap(
+          spacing: 8,
+          children: [
+            for (var i = 0; i < DesignPreset.all.length; i++)
+              ChoiceChip(
+                label: Text(DesignPreset.all[i].name),
+                selected: s.designPreset == i,
+                onSelected: (_) => s.designPreset = i,
+              ),
+          ],
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.brightness_6_outlined),
+        title: Text(t.theme),
+        trailing: SegmentedButton<ThemeMode>(
+          segments: [
+            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode)),
+            ButtonSegment(
+                value: ThemeMode.system, icon: Icon(Icons.brightness_auto)),
+            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode)),
+          ],
+          selected: {s.themeMode},
+          onSelectionChanged: (v) => s.themeMode = v.first,
+        ),
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.contrast_rounded),
+        title: Text(t.oledBg),
+        subtitle: Text(t.oledBgSub),
+        value: s.pureBlack,
+        onChanged: (v) => s.pureBlack = v,
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Text(t.accentColor,
+            style: Theme.of(context).textTheme.labelLarge),
+      ),
+      SizedBox(
+        height: 56,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          children: [
+            for (final c in _seeds) _colorDot(s, c),
+            _customColorDot(context, s),
+          ],
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.font_download_outlined),
+        title: Text(t.font),
+        trailing: SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 0, label: Text(t.fontNormal)),
+            ButtonSegment(value: 1, label: Text('Serif')),
+            ButtonSegment(value: 2, label: Text('Mono')),
+          ],
+          selected: {s.fontChoice},
+          showSelectedIcon: false,
+          onSelectionChanged: (v) => s.fontChoice = v.first,
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.format_size_rounded),
+        title: Text(t.uiScale),
+        subtitle: Slider(
+          value: s.uiScale,
+          min: 0.8,
+          max: 1.4,
+          divisions: 6,
+          label: '${(s.uiScale * 100).toStringAsFixed(0)}%',
+          onChanged: (v) => s.uiScale = v,
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.rounded_corner_rounded),
+        title: Text(t.bubbleStyle),
+        trailing: SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 0, label: Text(t.bubbleSoft)),
+            ButtonSegment(value: 1, label: Text(t.bubbleRound)),
+            ButtonSegment(value: 2, label: Text(t.bubbleSharp)),
+          ],
+          selected: {s.bubbleStyle},
+          showSelectedIcon: false,
+          onSelectionChanged: (v) => s.bubbleStyle = v.first,
+        ),
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.density_small_rounded),
+        title: Text(t.compact),
+        subtitle: Text(t.compactSub),
+        value: s.compact,
+        onChanged: (v) => s.compact = v,
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.animation_rounded),
+        title: Text(t.animations),
+        subtitle: Text(t.animationsSub),
+        value: s.animations,
+        onChanged: (v) => s.animations = v,
+      ),
+      if (s.animations) ...[
+        ListTile(
+          leading: const Icon(Icons.auto_awesome_motion_rounded),
+          title: Text(t.animStyle),
+          trailing: DropdownButton<int>(
+            value: s.animStyle,
+            underline: const SizedBox(),
+            items: [
+              const DropdownMenuItem(value: 0, child: Text('Fade')),
+              DropdownMenuItem(value: 1, child: Text(t.animRise)),
+              DropdownMenuItem(value: 2, child: Text(t.animScale)),
+              DropdownMenuItem(value: 3, child: Text(t.animRiseFade)),
+            ],
+            onChanged: (v) => s.animStyle = v ?? 3,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.speed_rounded),
+          title: Text(t.animSpeed),
+          trailing: SegmentedButton<int>(
+            segments: [
+              ButtonSegment(value: 0, label: Text(t.speedSlow)),
+              ButtonSegment(value: 1, label: Text(t.speedNormal)),
+              ButtonSegment(value: 2, label: Text(t.speedFast)),
+            ],
+            selected: {s.animSpeed},
+            showSelectedIcon: false,
+            onSelectionChanged: (v) => s.animSpeed = v.first,
+          ),
+        ),
+      ],
+    ];
+  }
+
+  List<Widget> _sectionBackground(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      SwitchListTile(
+        secondary: const Icon(Icons.gradient_rounded),
+        title: Text(t.gradientBg),
+        value: s.chatBackground == 1,
+        onChanged: (v) => s.chatBackground = v ? 1 : 0,
+      ),
+      ListTile(
+        leading: const Icon(Icons.wallpaper_rounded),
+        title: Text(t.chatPhoto),
+        subtitle: s.chatBgImage != null ? Text(t.pickPhoto) : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (s.chatBgImage != null)
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => s.chatBgImage = null,
+              ),
+            IconButton(
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              onPressed: () => _pickBgImage(s),
+            ),
+          ],
+        ),
+      ),
+      if (s.chatBgImage != null) ...[
+        ListTile(
+          leading: const Icon(Icons.blur_on_rounded),
+          title: Text(t.bgEffectLabel),
+          trailing: SegmentedButton<int>(
+            segments: [
+              ButtonSegment(value: 0, label: Text(t.effectNone)),
+              ButtonSegment(value: 1, label: Text(t.effectBlur)),
+              ButtonSegment(value: 2, label: Text(t.effectPixel)),
+            ],
+            selected: {s.bgEffect},
+            showSelectedIcon: false,
+            onSelectionChanged: (v) => s.bgEffect = v.first,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.brightness_2_outlined),
+          title: Text(t.dimLabel),
+          subtitle: Slider(
+            value: s.bgDim,
+            max: 0.8,
+            divisions: 8,
+            onChanged: (v) => s.bgDim = v,
+          ),
+        ),
+      ],
+      ListTile(
+        leading: const Icon(Icons.ac_unit_rounded),
+        title: Text(t.weatherLabel),
+        trailing: SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 0, label: Text(t.effectNone)),
+            ButtonSegment(value: 1, label: Text(t.snow)),
+            ButtonSegment(value: 2, label: Text(t.rain)),
+          ],
+          selected: {s.weather},
+          showSelectedIcon: false,
+          onSelectionChanged: (v) => s.weather = v.first,
+        ),
+      ),
+      if (s.weather != 0) ...[
+        _slider(context, t.wSize, s.weatherSize, 0.5, 2.5,
+            (v) => s.weatherSize = v),
+        _slider(context, t.wDensity, s.weatherDensity, 0.3, 2.5,
+            (v) => s.weatherDensity = v),
+        _slider(context, t.wSpeed, s.weatherSpeed, 0.3, 2.5,
+            (v) => s.weatherSpeed = v),
+      ],
+      ListTile(
+        leading: const Icon(Icons.chat_bubble_outline_rounded),
+        title: Text(t.msgColors),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _msgColorDot(context, s, true),
+            const SizedBox(width: 8),
+            _msgColorDot(context, s, false),
+            IconButton(
+              tooltip: t.reset,
+              icon: const Icon(Icons.format_color_reset_rounded),
+              onPressed: () {
+                s.msgOutColor = -1;
+                s.msgInColor = -1;
+              },
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _sectionNetwork(BuildContext context) {
+    final app = AppScope.of(context);
+    final s = app.settings;
+    return [
+      SwitchListTile(
+        secondary: const Icon(Icons.wifi_find_rounded),
+        title: Text(t.autoDiscovery),
+        subtitle: Text(t.autoDiscoverySub),
+        value: s.autoDiscovery,
+        onChanged: (v) {
+          s.autoDiscovery = v;
+          app.discovery.start();
+        },
+      ),
+      ListTile(
+        leading: const Icon(Icons.settings_ethernet_rounded),
+        title: Text(t.discoveryPort),
+        subtitle: Text('${s.discoveryPort}'),
+        onTap: () => _editPort(context, s, app),
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.download_done_rounded),
+        title: Text(t.autoAccept),
+        value: s.autoAcceptFiles,
+        onChanged: (v) => s.autoAcceptFiles = v,
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.notifications_active_outlined),
+        title: Text(t.notifyReceive),
+        value: s.notifyOnReceive,
+        onChanged: (v) => s.notifyOnReceive = v,
+      ),
+      if (Platform.isAndroid)
+        SwitchListTile(
+          secondary: const Icon(Icons.cloud_sync_rounded),
+          title: Text(t.backgroundReceive),
+          subtitle: Text(t.backgroundReceiveSub),
+          value: s.backgroundReceive,
+          onChanged: (v) {
+            s.backgroundReceive = v;
+            if (v) {
+              Background.start(t.bgTitle, t.bgText);
+            } else {
+              Background.stop();
+            }
+          },
+        ),
+    ];
+  }
+
+  List<Widget> _sectionRemote(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      SwitchListTile(
+        secondary: const Icon(Icons.keyboard_rounded),
+        title: Text(t.allowTyping),
+        subtitle: Text(_ydotoolStatus()),
+        value: s.remoteInputEnabled,
+        onChanged: RemoteInput.supported && (_ydotool ?? false)
+            ? (v) => s.remoteInputEnabled = v
+            : null,
+      ),
+      if (RemoteInput.supported && _ydotool == false)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Text(t.wtypeHint,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 12)),
+        ),
+    ];
+  }
+
+  List<Widget> _sectionPlayer(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      SwitchListTile(
+        secondary: const Icon(Icons.play_circle_outline_rounded),
+        title: Text(t.autoplay),
+        value: s.autoplayMedia,
+        onChanged: (v) => s.autoplayMedia = v,
+      ),
+      ListTile(
+        leading: const Icon(Icons.volume_up_rounded),
+        title: Text(t.playerVolume),
+        subtitle: Slider(
+          value: s.playerVolume,
+          max: 100,
+          divisions: 20,
+          label: '${s.playerVolume.toStringAsFixed(0)}%',
+          onChanged: (v) => s.playerVolume = v,
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _sectionDevice(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      ListTile(
+        leading: const Icon(Icons.badge_outlined),
+        title: Text(t.deviceName),
+        subtitle: Text(s.deviceName),
+        onTap: () => _editName(context, s),
+      ),
+    ];
+  }
+
+  List<Widget> _sectionAbout(BuildContext context) {
+    final app = AppScope.of(context);
+    return [
+      ListTile(
+        leading: const Icon(Icons.slideshow_rounded),
+        title: Text(t.showOnboarding),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        ),
+      ),
+      ListTile(
+        leading: Icon(Icons.delete_sweep_outlined,
+            color: Theme.of(context).colorScheme.error),
+        title: Text(t.clearAll),
+        onTap: () => _confirmClear(context, app),
+      ),
+    ];
+  }
+
+  Widget _sub(String s) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Text(s,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12)),
+      );
 
   Widget _accountTile(BuildContext context, AppState app) {
     return ListenableBuilder(
@@ -638,15 +745,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_ydotool == null) return t.checking;
     return t.engineLabel(_engine);
   }
-
-  Widget _header(String t) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
-        child: Text(t,
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 13)),
-      );
 
   Widget _colorDot(Settings s, int c) {
     final selected = s.seedColor == c;
