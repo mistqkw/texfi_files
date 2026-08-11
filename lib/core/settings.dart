@@ -104,6 +104,26 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Стиль анимации появления: 0=fade, 1=подъём, 2=масштаб, 3=подъём+fade.
+  int get animStyle => _p.getInt('animStyle') ?? 3;
+  set animStyle(int v) {
+    _p.setInt('animStyle', v.clamp(0, 3));
+    notifyListeners();
+  }
+
+  // Скорость анимаций: 0=медленно, 1=обычно, 2=быстро.
+  int get animSpeed => _p.getInt('animSpeed') ?? 1;
+  set animSpeed(int v) {
+    _p.setInt('animSpeed', v.clamp(0, 2));
+    notifyListeners();
+  }
+
+  int get animDurationMs => switch (animSpeed) {
+        0 => 520,
+        2 => 180,
+        _ => 320,
+      };
+
   /// Радиус пузыря по выбранному стилю.
   double get bubbleRadius => switch (bubbleStyle) {
         1 => 26,
