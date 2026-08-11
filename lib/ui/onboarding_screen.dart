@@ -12,7 +12,7 @@ class _Slide {
 const _slides = <_Slide>[
   _Slide(Icons.bookmark_rounded, 'TexFi files',
       'Ваше «Избранное» — как в Telegram, только своё и без лимитов.',
-      image: 'assets/brand/circle-icon.png'),
+      image: 'assets/logo.png'),
   _Slide(Icons.send_rounded, 'Шлите что угодно',
       'Текст, фото, видео и файлы любого размера — между вашими устройствами.'),
   _Slide(Icons.cloud_done_rounded, 'Аккаунт — ваше облако',
