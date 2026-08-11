@@ -17,6 +17,11 @@ class Store extends ChangeNotifier {
   bool get ready => _ready;
   Directory get filesDir => _filesDir;
 
+  /// Вызывается при локальном добавлении (для отправки в облако).
+  void Function(SavedItem item)? onItemAdded;
+
+  bool has(String id) => _items.any((e) => e.id == id);
+
   Future<void> init() async {
     final base = await getApplicationSupportDirectory();
     _root = Directory('${base.path}/texfi');
@@ -45,7 +50,20 @@ class Store extends ChangeNotifier {
     _items.add(item);
     notifyListeners();
     await _persist();
+    onItemAdded?.call(item);
   }
+
+  /// Добавить элемент, пришедший из облака (без повторной отправки в облако).
+  Future<void> addRemote(SavedItem item) async {
+    if (has(item.id)) return;
+    _items.add(item);
+    _items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    notifyListeners();
+    await _persist();
+  }
+
+  /// Сохранить изменения (например, после пометки cloud=true).
+  Future<void> persist() => _persist();
 
   Future<void> remove(SavedItem item) async {
     _items.removeWhere((e) => e.id == item.id);
