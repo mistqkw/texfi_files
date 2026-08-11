@@ -222,6 +222,16 @@ class AppStrings {
       'Akceptuj pliki automatycznie');
   String get notifyReceive => _('Уведомлять о приёме', 'Notify on receive',
       'Bei Empfang benachrichtigen', 'Powiadom o odbiorze');
+  String get backgroundReceive => _('Работать в фоне', 'Run in background',
+      'Im Hintergrund laufen', 'Działaj w tle');
+  String get backgroundReceiveSub => _(
+      'Принимать файлы, даже когда приложение свёрнуто',
+      'Receive files even when the app is minimized',
+      'Dateien empfangen, auch wenn die App minimiert ist',
+      'Odbieraj pliki, nawet gdy aplikacja jest zminimalizowana');
+  String get bgTitle => 'TexFi files';
+  String get bgText => _('Приём файлов активен', 'Receiving files',
+      'Dateiempfang aktiv', 'Odbiór plików aktywny');
 
   // Удалённый ввод
   String get allowTyping => _('Разрешить печать с телефона',

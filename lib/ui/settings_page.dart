@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/auth_service.dart';
+import '../core/background.dart';
 import '../core/settings.dart';
 import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
@@ -243,6 +245,21 @@ class _SettingsPageState extends State<SettingsPage> {
               value: s.notifyOnReceive,
               onChanged: (v) => s.notifyOnReceive = v,
             ),
+            if (Platform.isAndroid)
+              SwitchListTile(
+                secondary: const Icon(Icons.cloud_sync_rounded),
+                title: Text(t.backgroundReceive),
+                subtitle: Text(t.backgroundReceiveSub),
+                value: s.backgroundReceive,
+                onChanged: (v) {
+                  s.backgroundReceive = v;
+                  if (v) {
+                    Background.start(t.bgTitle, t.bgText);
+                  } else {
+                    Background.stop();
+                  }
+                },
+              ),
             const Divider(height: 1),
             _header(t.hRemoteInput),
             SwitchListTile(

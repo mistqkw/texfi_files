@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'app.dart';
 import 'app_state.dart';
 import 'core/auth_service.dart';
+import 'core/background.dart';
 import 'core/settings.dart';
+import 'l10n/app_strings.dart';
 import 'store/store.dart';
 
 Future<void> main() async {
@@ -17,6 +20,12 @@ Future<void> main() async {
 
   final state = AppState(settings, store, auth);
   await state.startNetwork();
+
+  // Фоновый приём на Android — foreground service.
+  if (Platform.isAndroid && settings.backgroundReceive) {
+    final t = AppStrings(settings.effectiveLanguageCode);
+    await Background.start(t.bgTitle, t.bgText);
+  }
 
   runApp(TexfiApp(state: state));
 }

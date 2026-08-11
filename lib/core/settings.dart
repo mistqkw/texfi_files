@@ -179,6 +179,13 @@ class Settings extends ChangeNotifier {
   }
 
   // --- Приём ---
+  // Работать в фоне (Android foreground service).
+  bool get backgroundReceive => _p.getBool('backgroundReceive') ?? true;
+  set backgroundReceive(bool v) {
+    _p.setBool('backgroundReceive', v);
+    notifyListeners();
+  }
+
   bool get notifyOnReceive => _p.getBool('notifyOnReceive') ?? true;
   set notifyOnReceive(bool v) {
     _p.setBool('notifyOnReceive', v);
