@@ -6,6 +6,7 @@ import '../app_state.dart';
 import '../core/auth_service.dart';
 import '../core/settings.dart';
 import '../net/remote_input.dart';
+import 'onboarding_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -275,6 +276,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 divisions: 20,
                 label: '${s.playerVolume.toStringAsFixed(0)}%',
                 onChanged: (v) => s.playerVolume = v,
+              ),
+            ),
+            const Divider(height: 1),
+            _header('О приложении'),
+            ListTile(
+              leading: const Icon(Icons.slideshow_rounded),
+              title: const Text('Показать приветствие'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
               ),
             ),
             const Divider(height: 1),

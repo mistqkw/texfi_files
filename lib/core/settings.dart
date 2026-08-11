@@ -30,6 +30,13 @@ class Settings extends ChangeNotifier {
 
   String get deviceId => _p.getString('deviceId')!;
 
+  // Показан ли приветственный экран (онбординг).
+  bool get onboardingSeen => _p.getBool('onboardingSeen') ?? false;
+  set onboardingSeen(bool v) {
+    _p.setBool('onboardingSeen', v);
+    notifyListeners();
+  }
+
   String get deviceName => _p.getString('deviceName')!;
   set deviceName(String v) {
     _p.setString('deviceName', v.trim().isEmpty ? _defaultName() : v.trim());
