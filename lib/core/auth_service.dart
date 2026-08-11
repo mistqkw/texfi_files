@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,9 +132,16 @@ class AuthService extends ChangeNotifier {
             notifyListeners();
           }
         } catch (e) {
-          status = AuthStatus.error;
-          error = '$e';
-          notifyListeners();
+          // Кратковременный сетевой сбой (DNS/соединение) — не отменяем вход,
+          // а повторяем попытку.
+          if (_isNetworkError(e)) {
+            seconds = 5;
+            schedule();
+          } else {
+            status = AuthStatus.error;
+            error = '$e';
+            notifyListeners();
+          }
         }
       });
     }
@@ -141,17 +149,37 @@ class AuthService extends ChangeNotifier {
     schedule();
   }
 
+  bool _isNetworkError(Object e) {
+    if (e is SocketException) return true;
+    final s = e.toString();
+    return s.contains('Failed host lookup') ||
+        s.contains('SocketException') ||
+        s.contains('Connection closed') ||
+        s.contains('Connection reset') ||
+        s.contains('timed out');
+  }
+
   Future<void> _onToken(String token) async {
     _token = token;
-    final resp = await http.get(
-      Uri.parse('https://api.github.com/user'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'TexFi-files',
-      },
-    );
-    final j = jsonDecode(resp.body) as Map<String, dynamic>;
+    // Профиль тянем с повторами — на случай сетевого моргания.
+    http.Response? resp;
+    for (var attempt = 0; attempt < 5; attempt++) {
+      try {
+        resp = await http.get(
+          Uri.parse('https://api.github.com/user'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'TexFi-files',
+          },
+        );
+        break;
+      } catch (e) {
+        if (!_isNetworkError(e) || attempt == 4) rethrow;
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+    final j = jsonDecode(resp!.body) as Map<String, dynamic>;
     _account = GithubAccount(
       id: (j['id'] as num).toInt(),
       login: j['login'] as String,
