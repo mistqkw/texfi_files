@@ -1,14 +1,19 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/auth_service.dart';
 import '../core/background.dart';
 import '../core/settings.dart';
+import '../core/version.dart';
 import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
+import 'admin_page.dart';
 import 'onboarding_screen.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -28,6 +33,30 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool? _ydotool; // доступен ли хоть какой-то движок ввода
   String _engine = '';
+  int _versionTaps = 0;
+
+  void _onVersionTap(BuildContext context, Settings s) {
+    if (s.adminUnlocked) {
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AdminPage()));
+      return;
+    }
+    _versionTaps++;
+    if (_versionTaps >= 7) {
+      s.adminUnlocked = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin settings unlocked')),
+      );
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AdminPage()));
+    } else if (_versionTaps >= 4) {
+      final left = 7 - _versionTaps;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$left…'),
+        duration: const Duration(milliseconds: 500),
+      ));
+    }
+  }
 
   @override
   void initState() {
@@ -169,6 +198,85 @@ class _SettingsPageState extends State<SettingsPage> {
               title: Text(t.gradientBg),
               value: s.chatBackground == 1,
               onChanged: (v) => s.chatBackground = v ? 1 : 0,
+            ),
+            ListTile(
+              leading: const Icon(Icons.wallpaper_rounded),
+              title: Text(t.chatPhoto),
+              subtitle: s.chatBgImage != null ? Text(t.pickPhoto) : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (s.chatBgImage != null)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => s.chatBgImage = null,
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    onPressed: () => _pickBgImage(s),
+                  ),
+                ],
+              ),
+            ),
+            if (s.chatBgImage != null) ...[
+              ListTile(
+                leading: const Icon(Icons.blur_on_rounded),
+                title: Text(t.bgEffectLabel),
+                trailing: SegmentedButton<int>(
+                  segments: [
+                    ButtonSegment(value: 0, label: Text(t.effectNone)),
+                    ButtonSegment(value: 1, label: Text(t.effectBlur)),
+                    ButtonSegment(value: 2, label: Text(t.effectPixel)),
+                  ],
+                  selected: {s.bgEffect},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (v) => s.bgEffect = v.first,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.brightness_2_outlined),
+                title: Text(t.dimLabel),
+                subtitle: Slider(
+                  value: s.bgDim,
+                  max: 0.8,
+                  divisions: 8,
+                  onChanged: (v) => s.bgDim = v,
+                ),
+              ),
+            ],
+            ListTile(
+              leading: const Icon(Icons.ac_unit_rounded),
+              title: Text(t.weatherLabel),
+              trailing: SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(value: 0, label: Text(t.effectNone)),
+                  ButtonSegment(value: 1, label: Text(t.snow)),
+                  ButtonSegment(value: 2, label: Text(t.rain)),
+                ],
+                selected: {s.weather},
+                showSelectedIcon: false,
+                onSelectionChanged: (v) => s.weather = v.first,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline_rounded),
+              title: Text(t.msgColors),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _msgColorDot(context, s, true),
+                  const SizedBox(width: 8),
+                  _msgColorDot(context, s, false),
+                  IconButton(
+                    tooltip: t.reset,
+                    icon: const Icon(Icons.format_color_reset_rounded),
+                    onPressed: () {
+                      s.msgOutColor = -1;
+                      s.msgInColor = -1;
+                    },
+                  ),
+                ],
+              ),
             ),
             SwitchListTile(
               secondary: const Icon(Icons.density_small_rounded),
@@ -318,9 +426,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 24),
             Center(
-              child: Text('TexFi files · 1.0.0',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              child: TextButton(
+                onPressed: () => _onVersionTap(context, s),
+                child: Text('TexFi files $kAppVersion',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ),
             ),
             const SizedBox(height: 24),
           ],
@@ -609,6 +720,87 @@ class _SettingsPageState extends State<SettingsPage> {
               Navigator.pop(context);
             },
             child: Text(t.selectAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickBgImage(Settings s) async {
+    try {
+      String? src;
+      if (Platform.isAndroid || Platform.isIOS) {
+        final x = await ImagePicker()
+            .pickImage(source: ImageSource.gallery, imageQuality: 90);
+        src = x?.path;
+      } else {
+        final r = await FilePicker.platform.pickFiles(type: FileType.image);
+        src = r?.files.single.path;
+      }
+      if (src == null) return;
+      final dir = await getApplicationSupportDirectory();
+      final dst =
+          '${dir.path}/chat_bg_${DateTime.now().millisecondsSinceEpoch}.img';
+      await File(src).copy(dst);
+      s.chatBgImage = dst;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
+  Widget _msgColorDot(BuildContext context, Settings s, bool outgoing) {
+    final cs = Theme.of(context).colorScheme;
+    final v = outgoing ? s.msgOutColor : s.msgInColor;
+    final color = v != -1
+        ? Color(v)
+        : (outgoing ? cs.primaryContainer : cs.surfaceContainerHighest);
+    return GestureDetector(
+      onTap: () => _pickMsgColor(context, s, outgoing, color),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: cs.outlineVariant),
+        ),
+      ),
+    );
+  }
+
+  void _pickMsgColor(
+      BuildContext context, Settings s, bool outgoing, Color initial) {
+    Color picked = initial;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(outgoing ? tr(context).outgoing : tr(context).incoming),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: picked,
+            onColorChanged: (c) => picked = c,
+            enableAlpha: false,
+            labelTypes: const [],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(tr(context).cancel)),
+          FilledButton(
+            onPressed: () {
+              final argb = picked.toARGB32() | 0xFF000000;
+              if (outgoing) {
+                s.msgOutColor = argb;
+              } else {
+                s.msgInColor = argb;
+              }
+              Navigator.pop(context);
+            },
+            child: Text(tr(context).selectAction),
           ),
         ],
       ),

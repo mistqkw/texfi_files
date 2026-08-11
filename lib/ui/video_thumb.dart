@@ -19,7 +19,6 @@ class VideoThumb extends StatefulWidget {
 
 class _VideoThumbState extends State<VideoThumb> {
   String? _thumbPath;
-  bool _tried = false;
 
   bool get _canThumb => Platform.isAndroid || Platform.isIOS;
 
@@ -48,7 +47,7 @@ class _VideoThumbState extends State<VideoThumb> {
       );
       if (mounted) setState(() => _thumbPath = res.path);
     } catch (_) {
-      if (mounted) setState(() => _tried = true);
+      // не удалось сгенерировать — покажем фолбэк-плашку
     }
   }
 
