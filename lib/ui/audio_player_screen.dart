@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app.dart';
 import '../core/player_service.dart';
+import '../l10n/app_strings.dart';
 
 String _fmt(Duration d) {
   final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -18,16 +19,16 @@ class AudioPlayerScreen extends StatelessWidget {
     final player = AppScope.of(context).player;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Сейчас играет')),
+      appBar: AppBar(title: Text(tr(context).nowPlaying)),
       body: ListenableBuilder(
         listenable: player,
         builder: (context, _) {
           if (player.current == null) {
-            return const Center(child: Text('Ничего не играет'));
+            return Center(child: Text(tr(context).nothingPlaying));
           }
           return Column(
             children: [
-              Expanded(child: Center(child: _art(player, cs))),
+              Expanded(child: Center(child: _art(context, player, cs))),
               _controls(context, player, cs),
             ],
           );
@@ -36,7 +37,7 @@ class AudioPlayerScreen extends StatelessWidget {
     );
   }
 
-  Widget _art(PlayerService p, ColorScheme cs) {
+  Widget _art(BuildContext context, PlayerService p, ColorScheme cs) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -71,7 +72,7 @@ class AudioPlayerScreen extends StatelessWidget {
         const SizedBox(height: 32),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(p.title ?? 'Аудио',
+          child: Text(p.title ?? tr(context).audioWord,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -195,7 +196,7 @@ class MiniPlayer extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(player.title ?? 'Аудио',
+                            Text(player.title ?? tr(context).audioWord,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(

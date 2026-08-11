@@ -30,6 +30,27 @@ class Settings extends ChangeNotifier {
 
   String get deviceId => _p.getString('deviceId')!;
 
+  // Язык интерфейса: 'system' | 'en' | 'ru' | 'de' | 'pl'.
+  String get localeCode => _p.getString('localeCode') ?? 'system';
+  set localeCode(String v) {
+    _p.setString('localeCode', v);
+    notifyListeners();
+  }
+
+  static const supportedLangs = ['en', 'ru', 'de', 'pl'];
+
+  /// Фактический код языка с учётом системного.
+  String get effectiveLanguageCode {
+    if (localeCode != 'system') return localeCode;
+    try {
+      final sys =
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      return supportedLangs.contains(sys) ? sys : 'en';
+    } catch (_) {
+      return 'en';
+    }
+  }
+
   // Показан ли приветственный экран (онбординг).
   bool get onboardingSeen => _p.getBool('onboardingSeen') ?? false;
   set onboardingSeen(bool v) {

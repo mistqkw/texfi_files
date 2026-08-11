@@ -5,6 +5,7 @@ import '../app.dart';
 import '../app_state.dart';
 import '../core/auth_service.dart';
 import '../core/settings.dart';
+import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
 import 'onboarding_screen.dart';
 
@@ -16,6 +17,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  AppStrings get t => AppStrings(AppScope.of(context).settings.effectiveLanguageCode);
   static const _seeds = <int>[
     0xFF4C7CFF, 0xFF2A63FF, 0xFF6C5CE7, 0xFF0984E3,
     0xFF00B894, 0xFF00CEC9, 0xFFE17055, 0xFFE84393,
@@ -44,24 +46,27 @@ class _SettingsPageState extends State<SettingsPage> {
     final app = AppScope.of(context);
     final s = app.settings;
     return Scaffold(
-      appBar: AppBar(title: const Text('Настройки')),
+      appBar: AppBar(title: Text(t.settings)),
       body: ListenableBuilder(
         listenable: s,
         builder: (context, _) => ListView(
           children: [
-            _header('Аккаунт'),
+            _header(tr(context).hLanguage),
+            _languageTile(context, s),
+            const Divider(height: 1),
+            _header(tr(context).hAccount),
             _accountTile(context, app),
             _cloudStatus(context, app),
             const Divider(height: 1),
-            _header('Устройство'),
+            _header(t.hDevice),
             ListTile(
               leading: const Icon(Icons.badge_outlined),
-              title: const Text('Имя устройства'),
+              title: Text(t.deviceName),
               subtitle: Text(s.deviceName),
               onTap: () => _editName(context, s),
             ),
             const Divider(height: 1),
-            _header('Дизайн'),
+            _header(t.hDesign),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Wrap(
@@ -78,10 +83,10 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             ListTile(
               leading: const Icon(Icons.font_download_outlined),
-              title: const Text('Шрифт'),
+              title: Text(t.font),
               trailing: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('Обычный')),
+                segments: [
+                  ButtonSegment(value: 0, label: Text(t.fontNormal)),
                   ButtonSegment(value: 1, label: Text('Serif')),
                   ButtonSegment(value: 2, label: Text('Mono')),
                 ],
@@ -91,12 +96,12 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const Divider(height: 1),
-            _header('Внешний вид'),
+            _header(t.hAppearance),
             ListTile(
               leading: const Icon(Icons.brightness_6_outlined),
-              title: const Text('Тема'),
+              title: Text(t.theme),
               trailing: SegmentedButton<ThemeMode>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                       value: ThemeMode.light, icon: Icon(Icons.light_mode)),
                   ButtonSegment(
@@ -110,14 +115,14 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             SwitchListTile(
               secondary: const Icon(Icons.contrast_rounded),
-              title: const Text('Чёрный фон (OLED)'),
-              subtitle: const Text('Чистый чёрный в тёмной теме'),
+              title: Text(t.oledBg),
+              subtitle: Text(t.oledBgSub),
               value: s.pureBlack,
               onChanged: (v) => s.pureBlack = v,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text('Акцентный цвет',
+              child: Text(t.accentColor,
                   style: Theme.of(context).textTheme.labelLarge),
             ),
             SizedBox(
@@ -133,7 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             ListTile(
               leading: const Icon(Icons.format_size_rounded),
-              title: const Text('Масштаб интерфейса'),
+              title: Text(t.uiScale),
               subtitle: Slider(
                 value: s.uiScale,
                 min: 0.8,
@@ -145,12 +150,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             ListTile(
               leading: const Icon(Icons.rounded_corner_rounded),
-              title: const Text('Стиль пузырей'),
+              title: Text(t.bubbleStyle),
               trailing: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('Мягкий')),
-                  ButtonSegment(value: 1, label: Text('Круглый')),
-                  ButtonSegment(value: 2, label: Text('Острый')),
+                segments: [
+                  ButtonSegment(value: 0, label: Text(t.bubbleSoft)),
+                  ButtonSegment(value: 1, label: Text(t.bubbleRound)),
+                  ButtonSegment(value: 2, label: Text(t.bubbleSharp)),
                 ],
                 selected: {s.bubbleStyle},
                 showSelectedIcon: false,
@@ -159,48 +164,48 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             SwitchListTile(
               secondary: const Icon(Icons.gradient_rounded),
-              title: const Text('Градиентный фон ленты'),
+              title: Text(t.gradientBg),
               value: s.chatBackground == 1,
               onChanged: (v) => s.chatBackground = v ? 1 : 0,
             ),
             SwitchListTile(
               secondary: const Icon(Icons.density_small_rounded),
-              title: const Text('Компактный режим'),
-              subtitle: const Text('Плотнее, меньше отступов'),
+              title: Text(t.compact),
+              subtitle: Text(t.compactSub),
               value: s.compact,
               onChanged: (v) => s.compact = v,
             ),
             SwitchListTile(
               secondary: const Icon(Icons.animation_rounded),
-              title: const Text('Анимации'),
-              subtitle: const Text('Плавное появление и переходы'),
+              title: Text(t.animations),
+              subtitle: Text(t.animationsSub),
               value: s.animations,
               onChanged: (v) => s.animations = v,
             ),
             if (s.animations) ...[
               ListTile(
                 leading: const Icon(Icons.auto_awesome_motion_rounded),
-                title: const Text('Стиль анимации'),
+                title: Text(t.animStyle),
                 trailing: DropdownButton<int>(
                   value: s.animStyle,
                   underline: const SizedBox(),
-                  items: const [
+                  items: [
                     DropdownMenuItem(value: 0, child: Text('Fade')),
-                    DropdownMenuItem(value: 1, child: Text('Подъём')),
-                    DropdownMenuItem(value: 2, child: Text('Масштаб')),
-                    DropdownMenuItem(value: 3, child: Text('Подъём+Fade')),
+                    DropdownMenuItem(value: 1, child: Text(t.animRise)),
+                    DropdownMenuItem(value: 2, child: Text(t.animScale)),
+                    DropdownMenuItem(value: 3, child: Text(t.animRiseFade)),
                   ],
                   onChanged: (v) => s.animStyle = v ?? 3,
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.speed_rounded),
-                title: const Text('Скорость анимаций'),
+                title: Text(t.animSpeed),
                 trailing: SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 0, label: Text('Медл.')),
-                    ButtonSegment(value: 1, label: Text('Обычно')),
-                    ButtonSegment(value: 2, label: Text('Быстро')),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text(t.speedSlow)),
+                    ButtonSegment(value: 1, label: Text(t.speedNormal)),
+                    ButtonSegment(value: 2, label: Text(t.speedFast)),
                   ],
                   selected: {s.animSpeed},
                   showSelectedIcon: false,
@@ -209,11 +214,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
             const Divider(height: 1),
-            _header('Сеть'),
+            _header(t.hNetwork),
             SwitchListTile(
               secondary: const Icon(Icons.wifi_find_rounded),
-              title: const Text('Авто-поиск устройств'),
-              subtitle: const Text('Находить устройства в Wi-Fi автоматически'),
+              title: Text(t.autoDiscovery),
+              subtitle: Text(t.autoDiscoverySub),
               value: s.autoDiscovery,
               onChanged: (v) {
                 s.autoDiscovery = v;
@@ -222,27 +227,27 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             ListTile(
               leading: const Icon(Icons.settings_ethernet_rounded),
-              title: const Text('Порт поиска'),
+              title: Text(t.discoveryPort),
               subtitle: Text('${s.discoveryPort}'),
               onTap: () => _editPort(context, s, app),
             ),
             SwitchListTile(
               secondary: const Icon(Icons.download_done_rounded),
-              title: const Text('Принимать файлы автоматически'),
+              title: Text(t.autoAccept),
               value: s.autoAcceptFiles,
               onChanged: (v) => s.autoAcceptFiles = v,
             ),
             SwitchListTile(
               secondary: const Icon(Icons.notifications_active_outlined),
-              title: const Text('Уведомлять о приёме'),
+              title: Text(t.notifyReceive),
               value: s.notifyOnReceive,
               onChanged: (v) => s.notifyOnReceive = v,
             ),
             const Divider(height: 1),
-            _header('Удалённый ввод (клавиатура на ПК)'),
+            _header(t.hRemoteInput),
             SwitchListTile(
               secondary: const Icon(Icons.keyboard_rounded),
-              title: const Text('Разрешить печать с телефона'),
+              title: Text(t.allowTyping),
               subtitle: Text(_ydotoolStatus()),
               value: s.remoteInputEnabled,
               onChanged: RemoteInput.supported && (_ydotool ?? false)
@@ -253,23 +258,22 @@ class _SettingsPageState extends State<SettingsPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  'Установите wtype (sudo pacman -S wtype), чтобы печатать с телефона '
-                  'на ПК с поддержкой кириллицы.',
+                  t.wtypeHint,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error, fontSize: 12),
                 ),
               ),
             const Divider(height: 1),
-            _header('Плеер'),
+            _header(t.hPlayer),
             SwitchListTile(
               secondary: const Icon(Icons.play_circle_outline_rounded),
-              title: const Text('Автовоспроизведение'),
+              title: Text(t.autoplay),
               value: s.autoplayMedia,
               onChanged: (v) => s.autoplayMedia = v,
             ),
             ListTile(
               leading: const Icon(Icons.volume_up_rounded),
-              title: const Text('Громкость плеера'),
+              title: Text(t.playerVolume),
               subtitle: Slider(
                 value: s.playerVolume,
                 max: 100,
@@ -279,20 +283,20 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const Divider(height: 1),
-            _header('О приложении'),
+            _header(t.hAbout),
             ListTile(
               leading: const Icon(Icons.slideshow_rounded),
-              title: const Text('Показать приветствие'),
+              title: Text(t.showOnboarding),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const OnboardingScreen()),
               ),
             ),
             const Divider(height: 1),
-            _header('Данные'),
+            _header(t.hData),
             ListTile(
               leading: Icon(Icons.delete_sweep_outlined,
                   color: Theme.of(context).colorScheme.error),
-              title: const Text('Очистить всё «Избранное»'),
+              title: Text(t.clearAll),
               onTap: () => _confirmClear(context, app),
             ),
             const SizedBox(height: 24),
@@ -308,6 +312,32 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _languageTile(BuildContext context, Settings s) {
+    const names = {
+      'system': null, // берётся из перевода
+      'en': 'English',
+      'ru': 'Русский',
+      'de': 'Deutsch',
+      'pl': 'Polski',
+    };
+    return ListTile(
+      leading: const Icon(Icons.language_rounded),
+      title: Text(tr(context).hLanguage),
+      trailing: DropdownButton<String>(
+        value: s.localeCode,
+        underline: const SizedBox(),
+        items: [
+          for (final e in names.entries)
+            DropdownMenuItem(
+              value: e.key,
+              child: Text(e.value ?? tr(context).systemLang),
+            ),
+        ],
+        onChanged: (v) => s.localeCode = v ?? 'system',
+      ),
+    );
+  }
+
   Widget _accountTile(BuildContext context, AppState app) {
     return ListenableBuilder(
       listenable: app.auth,
@@ -316,9 +346,9 @@ class _SettingsPageState extends State<SettingsPage> {
         if (acc == null) {
           return ListTile(
             leading: const Icon(Icons.account_circle_outlined),
-            title: const Text('Войти через GitHub'),
-            subtitle: const Text(
-                'Устройства одного аккаунта соединяются автоматически'),
+            title: Text(t.signInGitHub),
+            subtitle: Text(
+                t.signInSubtitle),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => _loginDialog(context, app),
           );
@@ -336,7 +366,7 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: Text('@${acc.login} · GitHub'),
           trailing: TextButton(
             onPressed: () => app.auth.logout(),
-            child: const Text('Выйти'),
+            child: Text(t.signOut),
           ),
         );
       },
@@ -352,20 +382,20 @@ class _SettingsPageState extends State<SettingsPage> {
         if (app.cloud.needsReauth) {
           return ListTile(
             leading: Icon(Icons.cloud_off_rounded, color: cs.error),
-            title: const Text('Облако недоступно'),
-            subtitle: const Text('Войдите заново, чтобы выдать доступ (repo)'),
+            title: Text(t.cloudOff),
+            subtitle: Text(t.cloudReauth),
             trailing: FilledButton(
               onPressed: () => _loginDialog(context, app),
-              child: const Text('Войти заново'),
+              child: Text(t.signInAgain),
             ),
           );
         }
         return ListTile(
           leading: Icon(Icons.cloud_done_rounded, color: cs.primary),
-          title: const Text('Облако аккаунта включено'),
+          title: Text(t.cloudOn),
           subtitle: Text(app.cloud.syncing
-              ? 'Синхронизация…'
-              : 'Файлы до ~90 МБ доступны с любого устройства'),
+              ? t.cloudSyncing
+              : t.cloudOnSub),
           trailing: app.cloud.syncing
               ? const SizedBox(
                   width: 18,
@@ -395,7 +425,7 @@ class _SettingsPageState extends State<SettingsPage> {
             });
           }
           return AlertDialog(
-            title: const Text('Вход через GitHub'),
+            title: Text(t.loginTitle),
             content: _loginBody(context, auth),
             actions: [
               TextButton(
@@ -403,7 +433,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   auth.cancel();
                   Navigator.pop(context);
                 },
-                child: const Text('Закрыть'),
+                child: Text(t.close),
               ),
             ],
           );
@@ -415,11 +445,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _loginBody(BuildContext context, AuthService auth) {
     final cs = Theme.of(context).colorScheme;
     if (auth.status == AuthStatus.error) {
-      return Text('Ошибка: ${auth.error}',
+      return Text(t.loginError(auth.error ?? ''),
           style: TextStyle(color: cs.error));
     }
     if (auth.status == AuthStatus.success) {
-      return const Text('Готово! Вы вошли.');
+      return Text(t.loginDone);
     }
     if (auth.userCode == null) {
       return const SizedBox(
@@ -430,7 +460,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('1. Скопируй код:'),
+        Text(t.loginStep1),
         const SizedBox(height: 8),
         SelectableText(
           auth.userCode!,
@@ -442,7 +472,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text('2. Открой страницу и вставь код:'),
+        Text(t.loginStep2),
         const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: () => launchUrl(
@@ -450,7 +480,7 @@ class _SettingsPageState extends State<SettingsPage> {
             mode: LaunchMode.externalApplication,
           ),
           icon: const Icon(Icons.open_in_new_rounded),
-          label: const Text('Открыть github.com/login/device'),
+          label: Text(t.loginOpen),
         ),
         const SizedBox(height: 16),
         Row(
@@ -459,7 +489,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(
                 width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
             const SizedBox(width: 10),
-            Text('Ждём подтверждения…',
+            Text(t.loginWaiting,
                 style: TextStyle(color: cs.onSurfaceVariant)),
           ],
         ),
@@ -468,9 +498,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _ydotoolStatus() {
-    if (!RemoteInput.supported) return 'Доступно только на Linux (ПК)';
-    if (_ydotool == null) return 'Проверка…';
-    return 'Движок: $_engine';
+    if (!RemoteInput.supported) return t.inputOnlyLinux;
+    if (_ydotool == null) return t.checking;
+    return t.engineLabel(_engine);
   }
 
   Widget _header(String t) => Padding(
@@ -542,7 +572,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Любой цвет'),
+        title: Text(t.anyColor),
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor: picked,
@@ -555,13 +585,13 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена')),
+              child: Text(t.cancel)),
           FilledButton(
             onPressed: () {
               s.seedColor = (picked.toARGB32() | 0xFF000000);
               Navigator.pop(context);
             },
-            child: const Text('Выбрать'),
+            child: Text(t.selectAction),
           ),
         ],
       ),
@@ -573,12 +603,12 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Имя устройства'),
+        title: Text(t.deviceName),
         content: TextField(controller: c, autofocus: true),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена')),
+              child: Text(t.cancel)),
           FilledButton(
             onPressed: () {
               s.deviceName = c.text;
@@ -596,7 +626,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Порт поиска'),
+        title: Text(t.discoveryPort),
         content: TextField(
           controller: c,
           keyboardType: TextInputType.number,
@@ -605,7 +635,7 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена')),
+              child: Text(t.cancel)),
           FilledButton(
             onPressed: () {
               final p = int.tryParse(c.text);
@@ -626,13 +656,13 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Очистить всё?'),
-        content: const Text(
-            'Все сообщения и полученные файлы будут удалены безвозвратно.'),
+        title: Text(t.clearConfirmTitle),
+        content: Text(
+            t.clearConfirmText),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена')),
+              child: Text(t.cancel)),
           FilledButton(
             style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error),
@@ -640,7 +670,7 @@ class _SettingsPageState extends State<SettingsPage> {
               app.store.clearAll();
               Navigator.pop(context);
             },
-            child: const Text('Очистить'),
+            child: Text(t.clearBtn),
           ),
         ],
       ),

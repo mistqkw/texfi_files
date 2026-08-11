@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
+import '../l10n/app_strings.dart';
 
 /// Примитивная операция ввода: либо текст, либо нажатие клавиши N раз.
 class _Op {
@@ -30,6 +31,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
   String _prev = '';
 
   late AppState _app;
+  AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
 
   @override
   void didChangeDependencies() {
@@ -121,7 +123,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
     final ok = await _app.client.sendTyping(_target!, text: _controller.text);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Отправлено на ${_target!.name}' : 'Не получилось'),
+        content: Text(ok ? t.sentToName(_target!.name) : t.notSent),
       ));
     }
     _controller.clear();
@@ -135,7 +137,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Клавиатура на ПК')),
+      appBar: AppBar(title: Text(t.keyboardTitle)),
       body: ListenableBuilder(
         listenable: _app.discovery,
         builder: (context, _) {
@@ -166,13 +168,13 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
           Icon(Icons.desktop_access_disabled_rounded,
               size: 64, color: cs.onSurfaceVariant),
           const SizedBox(height: 16),
-          const Text('Нет ПК в сети',
+          Text(t.noPcTitle,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
-              'Запустите TexFi files на компьютере (Linux) в той же Wi-Fi сети.',
+              t.noPcText,
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
@@ -202,7 +204,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
                   () => _target = pcs.firstWhere((p) => p.id == id)),
             ),
           ),
-          const Text('Вживую'),
+          Text(t.live),
           Switch(
             value: _live,
             onChanged: (v) => setState(() {
@@ -227,8 +229,8 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
         onChanged: _onChanged,
         decoration: InputDecoration(
           hintText: _live
-              ? 'Печатайте — символы уходят на ПК сразу'
-              : 'Напишите текст и нажмите «Отправить»',
+              ? t.typeLiveHint
+              : t.typeSendHint,
         ),
       ),
     );
@@ -250,7 +252,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
               FilledButton.icon(
                 onPressed: _sendAll,
                 icon: const Icon(Icons.send_rounded),
-                label: const Text('Отправить'),
+                label: Text(t.send),
               ),
           ],
         ),

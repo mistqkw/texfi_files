@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_state.dart';
 import 'core/settings.dart';
 import 'ui/home_page.dart';
@@ -32,6 +33,18 @@ class TexfiApp extends StatelessWidget {
           return MaterialApp(
             title: 'TexFi files',
             debugShowCheckedModeBanner: false,
+            locale: s.localeCode == 'system' ? null : Locale(s.localeCode),
+            supportedLocales: const [
+              Locale('en'),
+              Locale('ru'),
+              Locale('de'),
+              Locale('pl'),
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
             themeMode: s.themeMode,
             theme: _buildTheme(seed, Brightness.light, s),
             darkTheme: _buildTheme(seed, Brightness.dark, s),

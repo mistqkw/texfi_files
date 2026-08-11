@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app.dart';
+import '../l10n/app_strings.dart';
 import '../app_state.dart';
 import '../core/models.dart';
 
@@ -14,6 +15,7 @@ class PeersPage extends StatefulWidget {
 class _PeersPageState extends State<PeersPage> {
   String? _localIp;
   late AppState _app;
+  AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
 
   @override
   void didChangeDependencies() {
@@ -39,11 +41,11 @@ class _PeersPageState extends State<PeersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Устройства рядом')),
+      appBar: AppBar(title: Text(t.devicesTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addByIp,
         icon: const Icon(Icons.add_link_rounded),
-        label: const Text('По IP'),
+        label: Text(t.byIp),
       ),
       body: ListenableBuilder(
         listenable:
@@ -83,8 +85,8 @@ class _PeersPageState extends State<PeersPage> {
       title: Text(_app.settings.deviceName,
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(_localIp != null
-          ? 'Это устройство · $_localIp:$port'
-          : 'Это устройство · порт $port'),
+          ? '${t.thisDevice} · $_localIp:$port'
+          : '${t.thisDevice} · $port'),
       trailing: const Icon(Icons.circle, size: 10, color: Colors.green),
     );
   }
@@ -100,12 +102,11 @@ class _PeersPageState extends State<PeersPage> {
             const SizedBox(
                 width: 28, height: 28, child: CircularProgressIndicator()),
             const SizedBox(height: 16),
-            Text('Ищу устройства вашего аккаунта…',
+            Text(t.searchingAccount,
                 style: TextStyle(color: cs.onSurfaceVariant)),
             const SizedBox(height: 4),
             Text(
-              'Войдите этим же GitHub-аккаунтом на другом устройстве. '
-              'Для передачи они должны быть в одной сети.',
+              t.searchingAccountSub,
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),
@@ -126,12 +127,11 @@ class _PeersPageState extends State<PeersPage> {
             Icon(Icons.account_circle_outlined,
                 size: 64, color: cs.onSurfaceVariant),
             const SizedBox(height: 16),
-            const Text('Войдите в аккаунт',
+            Text(t.needLoginTitle,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text(
-              'Устройства теперь находят друг друга через ваш GitHub-аккаунт. '
-              'Войдите в Настройках → Аккаунт.',
+              t.needLoginText,
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
@@ -164,8 +164,8 @@ class _PeersPageState extends State<PeersPage> {
         ],
       ),
       subtitle: Text(_app.isTrusted(p)
-          ? '${p.address} · ваш аккаунт'
-          : '${p.address} · ${p.online ? "онлайн" : "не в сети"}'),
+          ? '${p.address} · ${t.yourAccount}'
+          : '${p.address} · ${p.online ? t.online : t.offline}'),
       trailing: Icon(Icons.circle,
           size: 10, color: p.online ? Colors.green : cs.outline),
     );
@@ -180,7 +180,7 @@ class _PeersPageState extends State<PeersPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Подключиться по IP'),
+        title: Text(t.connectByIp),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -188,22 +188,22 @@ class _PeersPageState extends State<PeersPage> {
               controller: ipC,
               autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'IP адрес', hintText: '192.168.0.50'),
+              decoration: InputDecoration(
+                  labelText: t.ipAddress, hintText: '192.168.0.50'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: portC,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Порт', hintText: 'из строки «Это устройство»'),
+              decoration: InputDecoration(
+                  labelText: t.port, hintText: '…'),
             ),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена')),
+              child: Text(t.cancel)),
           FilledButton(
             onPressed: () async {
               final ip = ipC.text.trim();
@@ -214,11 +214,11 @@ class _PeersPageState extends State<PeersPage> {
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(name != null
-                    ? 'Подключено: $name'
-                    : 'Не удалось подключиться к $ip:$port'),
+                    ? t.connectedTo(name)
+                    : t.connectFail('$ip:$port')),
               ));
             },
-            child: const Text('Подключить'),
+            child: Text(t.connect),
           ),
         ],
       ),
