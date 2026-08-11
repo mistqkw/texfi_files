@@ -11,6 +11,7 @@ import '../app_state.dart';
 import '../core/models.dart';
 import 'format.dart';
 import 'item_bubble.dart';
+import 'music_screen.dart';
 import 'peers_page.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
@@ -241,14 +242,20 @@ class _HomePageState extends State<HomePage> {
                 child: Stack(
                   children: [
                     Positioned.fill(child: _bgLayer(cs)),
+                    // Снег/дождь — ЗА сообщениями (между фоном и лентой).
+                    if (_app.settings.weather != 0)
+                      Positioned.fill(
+                        child: WeatherOverlay(
+                          type: _app.settings.weather,
+                          sizeScale: _app.settings.weatherSize,
+                          density: _app.settings.weatherDensity,
+                          speedScale: _app.settings.weatherSpeed,
+                        ),
+                      ),
                     Positioned.fill(
                       child:
                           items.isEmpty ? _empty(context) : _timeline(items),
                     ),
-                    if (_app.settings.weather != 0)
-                      Positioned.fill(
-                        child: WeatherOverlay(type: _app.settings.weather),
-                      ),
                   ],
                 ),
               ),
@@ -310,6 +317,12 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: t.music,
+          icon: const Icon(Icons.library_music_outlined),
+          onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MusicScreen())),
+        ),
         IconButton(
           tooltip: t.ttKeyboard,
           icon: const Icon(Icons.keyboard_alt_outlined),

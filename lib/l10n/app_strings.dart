@@ -204,6 +204,13 @@ class AppStrings {
       _('Погода', 'Weather', 'Wetter', 'Pogoda');
   String get snow => _('Снег', 'Snow', 'Schnee', 'Śnieg');
   String get rain => _('Дождь', 'Rain', 'Regen', 'Deszcz');
+  String get wSize => _('Размер', 'Size', 'Größe', 'Rozmiar');
+  String get wDensity => _('Частота', 'Density', 'Dichte', 'Gęstość');
+  String get wSpeed => _('Скорость', 'Speed', 'Geschwindigkeit', 'Prędkość');
+  String get music => _('Музыка', 'Music', 'Musik', 'Muzyka');
+  String get noMusic => _('Пока нет музыки в ленте', 'No music in the chat yet',
+      'Noch keine Musik', 'Brak muzyki');
+  String get playAll => _('Играть всё', 'Play all', 'Alle abspielen', 'Odtwórz wszystko');
   String get msgColors => _('Цвет сообщений', 'Message colors',
       'Nachrichtenfarben', 'Kolory wiadomości');
   String get outgoing =>

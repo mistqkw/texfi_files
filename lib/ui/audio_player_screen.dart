@@ -125,12 +125,18 @@ class AudioPlayerScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (p.queue.isNotEmpty)
+                IconButton(
+                  iconSize: 32,
+                  onPressed: p.previous,
+                  icon: const Icon(Icons.skip_previous_rounded),
+                ),
               IconButton(
                 iconSize: 36,
                 onPressed: () => p.nudge(-10),
                 icon: const Icon(Icons.replay_10_rounded),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Container(
                 decoration:
                     BoxDecoration(color: cs.primary, shape: BoxShape.circle),
@@ -143,12 +149,18 @@ class AudioPlayerScreen extends StatelessWidget {
                       : Icons.play_arrow_rounded),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               IconButton(
                 iconSize: 36,
                 onPressed: () => p.nudge(10),
                 icon: const Icon(Icons.forward_10_rounded),
               ),
+              if (p.queue.isNotEmpty)
+                IconButton(
+                  iconSize: 32,
+                  onPressed: p.next,
+                  icon: const Icon(Icons.skip_next_rounded),
+                ),
             ],
           ),
         ],

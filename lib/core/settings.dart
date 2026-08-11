@@ -157,6 +157,24 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  double get weatherSize => _p.getDouble('weatherSize') ?? 1.0;
+  set weatherSize(double v) {
+    _p.setDouble('weatherSize', v.clamp(0.5, 2.5));
+    notifyListeners();
+  }
+
+  double get weatherDensity => _p.getDouble('weatherDensity') ?? 1.0;
+  set weatherDensity(double v) {
+    _p.setDouble('weatherDensity', v.clamp(0.3, 2.5));
+    notifyListeners();
+  }
+
+  double get weatherSpeed => _p.getDouble('weatherSpeed') ?? 1.0;
+  set weatherSpeed(double v) {
+    _p.setDouble('weatherSpeed', v.clamp(0.3, 2.5));
+    notifyListeners();
+  }
+
   // Цвет пузырей: -1 = по теме, иначе ARGB.
   int get msgOutColor => _p.getInt('msgOutColor') ?? -1;
   set msgOutColor(int v) {
