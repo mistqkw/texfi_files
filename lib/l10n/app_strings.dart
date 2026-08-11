@@ -187,6 +187,30 @@ class AppStrings {
   String get bubbleSharp => _('Острый', 'Sharp', 'Kantig', 'Ostry');
   String get gradientBg => _('Градиентный фон ленты', 'Gradient chat background',
       'Verlaufshintergrund', 'Gradientowe tło');
+  String get chatPhoto => _('Фото-фон ленты', 'Chat photo background',
+      'Foto-Hintergrund', 'Zdjęcie w tle');
+  String get pickPhoto =>
+      _('Выбрать фото', 'Pick photo', 'Foto wählen', 'Wybierz zdjęcie');
+  String get removePhoto =>
+      _('Убрать фото', 'Remove photo', 'Foto entfernen', 'Usuń zdjęcie');
+  String get bgEffectLabel =>
+      _('Эффект фона', 'Background effect', 'Hintergrundeffekt', 'Efekt tła');
+  String get effectNone => _('Нет', 'None', 'Kein', 'Brak');
+  String get effectBlur => _('Блюр', 'Blur', 'Unschärfe', 'Rozmycie');
+  String get effectPixel => _('Пиксели', 'Pixels', 'Pixel', 'Piksele');
+  String get dimLabel =>
+      _('Затемнение', 'Dim', 'Abdunkeln', 'Przyciemnienie');
+  String get weatherLabel =>
+      _('Погода', 'Weather', 'Wetter', 'Pogoda');
+  String get snow => _('Снег', 'Snow', 'Schnee', 'Śnieg');
+  String get rain => _('Дождь', 'Rain', 'Regen', 'Deszcz');
+  String get msgColors => _('Цвет сообщений', 'Message colors',
+      'Nachrichtenfarben', 'Kolory wiadomości');
+  String get outgoing =>
+      _('Исходящие', 'Outgoing', 'Gesendet', 'Wychodzące');
+  String get incoming =>
+      _('Входящие', 'Incoming', 'Empfangen', 'Przychodzące');
+  String get reset => _('Сброс', 'Reset', 'Zurücksetzen', 'Reset');
   String get compact =>
       _('Компактный режим', 'Compact mode', 'Kompaktmodus', 'Tryb kompaktowy');
   String get compactSub => _('Плотнее, меньше отступов',

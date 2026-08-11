@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../l10n/app_strings.dart';
 import 'audio_player_screen.dart';
+import 'effects.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -230,28 +232,24 @@ class _HomePageState extends State<HomePage> {
         final all = _app.store.items;
         final items = _applyFilter(all);
         final cs = Theme.of(context).colorScheme;
-        final gradient = _app.settings.chatBackground == 1
-            ? BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    cs.primary.withValues(alpha: 0.06),
-                    cs.surface,
-                    cs.tertiary.withValues(alpha: 0.05),
-                  ],
-                ),
-              )
-            : null;
         return Scaffold(
           appBar: _appBar(context),
           body: Column(
             children: [
               _filterBar(context),
               Expanded(
-                child: DecoratedBox(
-                  decoration: gradient ?? const BoxDecoration(),
-                  child: items.isEmpty ? _empty(context) : _timeline(items),
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _bgLayer(cs)),
+                    Positioned.fill(
+                      child:
+                          items.isEmpty ? _empty(context) : _timeline(items),
+                    ),
+                    if (_app.settings.weather != 0)
+                      Positioned.fill(
+                        child: WeatherOverlay(type: _app.settings.weather),
+                      ),
+                  ],
                 ),
               ),
               const MiniPlayer(),
@@ -336,6 +334,49 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+
+  Widget _bgLayer(ColorScheme cs) {
+    final s = _app.settings;
+    final path = s.chatBgImage;
+    if (path != null && File(path).existsSync()) {
+      Widget img;
+      if (s.bgEffect == 2) {
+        // Пиксели: маленький кэш + без сглаживания.
+        img = Image.file(File(path),
+            fit: BoxFit.cover,
+            cacheWidth: 48,
+            filterQuality: FilterQuality.none);
+      } else {
+        img = Image.file(File(path), fit: BoxFit.cover);
+        if (s.bgEffect == 1) {
+          img = ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: img,
+          );
+        }
+      }
+      return Stack(fit: StackFit.expand, children: [
+        img,
+        Container(color: Colors.black.withValues(alpha: s.bgDim)),
+      ]);
+    }
+    if (s.chatBackground == 1) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              cs.primary.withValues(alpha: 0.06),
+              cs.surface,
+              cs.tertiary.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   List<SavedItem> _applyFilter(List<SavedItem> items) {

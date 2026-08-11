@@ -22,8 +22,10 @@ class ItemBubble extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final s = AppScope.of(context).settings;
     final align = item.outgoing ? Alignment.centerRight : Alignment.centerLeft;
-    final bubbleColor =
-        item.outgoing ? cs.primaryContainer : cs.surfaceContainerHighest;
+    final override = item.outgoing ? s.msgOutColor : s.msgInColor;
+    final bubbleColor = override != -1
+        ? Color(override)
+        : (item.outgoing ? cs.primaryContainer : cs.surfaceContainerHighest);
     final r = s.bubbleRadius;
     final tail = r * 0.28;
     final vMargin = s.compact ? 2.0 : 4.0;

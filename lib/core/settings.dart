@@ -125,6 +125,58 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Своё фото-фон ленты (путь). null = нет.
+  String? get chatBgImage => _p.getString('chatBgImage');
+  set chatBgImage(String? v) {
+    if (v == null) {
+      _p.remove('chatBgImage');
+    } else {
+      _p.setString('chatBgImage', v);
+    }
+    notifyListeners();
+  }
+
+  // Эффект фото-фона: 0=нет, 1=блюр, 2=пиксели.
+  int get bgEffect => _p.getInt('bgEffect') ?? 0;
+  set bgEffect(int v) {
+    _p.setInt('bgEffect', v.clamp(0, 2));
+    notifyListeners();
+  }
+
+  // Затемнение фона 0..0.8.
+  double get bgDim => _p.getDouble('bgDim') ?? 0.35;
+  set bgDim(double v) {
+    _p.setDouble('bgDim', v.clamp(0, 0.8));
+    notifyListeners();
+  }
+
+  // Погодный эффект: 0=нет, 1=снег, 2=дождь.
+  int get weather => _p.getInt('weather') ?? 0;
+  set weather(int v) {
+    _p.setInt('weather', v.clamp(0, 2));
+    notifyListeners();
+  }
+
+  // Цвет пузырей: -1 = по теме, иначе ARGB.
+  int get msgOutColor => _p.getInt('msgOutColor') ?? -1;
+  set msgOutColor(int v) {
+    _p.setInt('msgOutColor', v);
+    notifyListeners();
+  }
+
+  int get msgInColor => _p.getInt('msgInColor') ?? -1;
+  set msgInColor(int v) {
+    _p.setInt('msgInColor', v);
+    notifyListeners();
+  }
+
+  // Разблокированы ли admin-настройки (по тапам на версию).
+  bool get adminUnlocked => _p.getBool('adminUnlocked') ?? false;
+  set adminUnlocked(bool v) {
+    _p.setBool('adminUnlocked', v);
+    notifyListeners();
+  }
+
   // Включить анимации появления.
   bool get animations => _p.getBool('animations') ?? true;
   set animations(bool v) {

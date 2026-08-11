@@ -150,6 +150,11 @@ class _SlideView extends StatelessWidget {
                 width: 168,
                 height: 168,
                 decoration: BoxDecoration(
+                  // Для картинки-лого — заметная подложка и рамка, чтобы
+                  // чёрный круг логотипа был виден на тёмном фоне.
+                  color: slide.image != null
+                      ? cs.surfaceContainerHighest
+                      : null,
                   gradient: slide.image == null
                       ? LinearGradient(
                           colors: [cs.primary, cs.tertiary],
@@ -158,6 +163,9 @@ class _SlideView extends StatelessWidget {
                         )
                       : null,
                   shape: BoxShape.circle,
+                  border: slide.image != null
+                      ? Border.all(color: cs.primary, width: 2)
+                      : null,
                   boxShadow: [
                     BoxShadow(
                         color: cs.primary.withValues(alpha: 0.4),
