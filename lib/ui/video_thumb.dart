@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get_thumbnail_video/index.dart';
+import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import '../core/models.dart';
 import 'format.dart';
 
@@ -45,7 +46,7 @@ class _VideoThumbState extends State<VideoThumb> {
         maxHeight: 400,
         quality: 70,
       );
-      if (mounted) setState(() => _thumbPath = res);
+      if (mounted) setState(() => _thumbPath = res.path);
     } catch (_) {
       if (mounted) setState(() => _tried = true);
     }
