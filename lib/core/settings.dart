@@ -62,6 +62,41 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Стиль скругления пузырей: 0 = мягкий, 1 = круглый, 2 = острый.
+  int get bubbleStyle => _p.getInt('bubbleStyle') ?? 0;
+  set bubbleStyle(int v) {
+    _p.setInt('bubbleStyle', v.clamp(0, 2));
+    notifyListeners();
+  }
+
+  // Компактная плотность (меньше отступы).
+  bool get compact => _p.getBool('compact') ?? false;
+  set compact(bool v) {
+    _p.setBool('compact', v);
+    notifyListeners();
+  }
+
+  // Фон ленты: 0 = обычный, 1 = мягкий градиент акцента.
+  int get chatBackground => _p.getInt('chatBackground') ?? 1;
+  set chatBackground(int v) {
+    _p.setInt('chatBackground', v.clamp(0, 1));
+    notifyListeners();
+  }
+
+  // Включить анимации появления.
+  bool get animations => _p.getBool('animations') ?? true;
+  set animations(bool v) {
+    _p.setBool('animations', v);
+    notifyListeners();
+  }
+
+  /// Радиус пузыря по выбранному стилю.
+  double get bubbleRadius => switch (bubbleStyle) {
+        1 => 26,
+        2 => 8,
+        _ => 18,
+      };
+
   // --- Сеть ---
   bool get autoDiscovery => _p.getBool('autoDiscovery') ?? true;
   set autoDiscovery(bool v) {

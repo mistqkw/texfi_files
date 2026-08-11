@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
+import '../app.dart';
 import '../core/models.dart';
 import 'format.dart';
 import 'player_page.dart';
@@ -15,9 +16,13 @@ class ItemBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = AppScope.of(context).settings;
     final align = item.outgoing ? Alignment.centerRight : Alignment.centerLeft;
     final bubbleColor =
         item.outgoing ? cs.primaryContainer : cs.surfaceContainerHighest;
+    final r = s.bubbleRadius;
+    final tail = r * 0.28;
+    final vMargin = s.compact ? 2.0 : 4.0;
 
     return Align(
       alignment: align,
@@ -25,14 +30,14 @@ class ItemBubble extends StatelessWidget {
         child: GestureDetector(
           onLongPress: () => _menu(context),
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+            margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(item.outgoing ? 20 : 6),
-                bottomRight: Radius.circular(item.outgoing ? 6 : 20),
+                topLeft: Radius.circular(r),
+                topRight: Radius.circular(r),
+                bottomLeft: Radius.circular(item.outgoing ? r : tail),
+                bottomRight: Radius.circular(item.outgoing ? tail : r),
               ),
             ),
             clipBehavior: Clip.antiAlias,
