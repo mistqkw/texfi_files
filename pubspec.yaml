@@ -64,6 +64,10 @@ dependencies:
   get_thumbnail_video: ^0.7.3
   flutter_foreground_task: ^8.17.0
 
+  # Голосовые сообщения и «поделиться»
+  record: ^6.1.1
+  share_plus: ^10.1.4
+
 
 dev_dependencies:
   flutter_test:

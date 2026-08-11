@@ -1,9 +1,16 @@
 import 'dart:convert';
 
 /// Тип элемента ленты «Избранное».
-enum ItemKind { text, file, image, audio, video }
+enum ItemKind { text, file, image, audio, video, voice }
 
 ItemKind kindFromMime(String? mime, String name) {
+  // Голосовые сообщения — по префиксу имени, чтобы не путать с музыкой.
+  final lower = name.toLowerCase();
+  if (lower.startsWith('voice_') &&
+      (lower.endsWith('.m4a') || lower.endsWith('.aac') ||
+          lower.endsWith('.opus') || lower.endsWith('.ogg'))) {
+    return ItemKind.voice;
+  }
   final m = (mime ?? '').toLowerCase();
   if (m.startsWith('image/')) return ItemKind.image;
   if (m.startsWith('audio/')) return ItemKind.audio;

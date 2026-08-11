@@ -96,6 +96,14 @@ class AppStrings {
   String get audioWord => _('Аудио', 'Audio', 'Audio', 'Audio');
   String get videoWord => _('Видео', 'Video', 'Video', 'Wideo');
   String get mediaWord => _('Медиа', 'Media', 'Medien', 'Media');
+  String get voiceMessage => _('Голосовое сообщение', 'Voice message',
+      'Sprachnachricht', 'Wiadomość głosowa');
+  String get share => _('Поделиться', 'Share', 'Teilen', 'Udostępnij');
+  String get recording =>
+      _('Запись…', 'Recording…', 'Aufnahme…', 'Nagrywanie…');
+  String get micDenied => _('Нет доступа к микрофону',
+      'Microphone permission denied', 'Kein Mikrofonzugriff',
+      'Brak dostępu do mikrofonu');
   String get today => _('Сегодня', 'Today', 'Heute', 'Dziś');
   String get yesterday => _('Вчера', 'Yesterday', 'Gestern', 'Wczoraj');
 

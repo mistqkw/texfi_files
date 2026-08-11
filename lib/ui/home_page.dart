@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import '../l10n/app_strings.dart';
 import 'audio_player_screen.dart';
 import 'effects.dart';
@@ -34,6 +36,43 @@ class _HomePageState extends State<HomePage> {
   late AppState _app;
   AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
 
+  final _recorder = AudioRecorder();
+  bool _recording = false;
+
+  Future<void> _startRecord() async {
+    try {
+      if (!await _recorder.hasPermission()) {
+        _toast(t.micDenied);
+        return;
+      }
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+      setState(() => _recording = true);
+    } catch (e) {
+      _toast(t.failed('$e'));
+    }
+  }
+
+  Future<void> _stopRecord({bool cancel = false}) async {
+    try {
+      final path = await _recorder.stop();
+      setState(() => _recording = false);
+      if (cancel || path == null) return;
+      final f = File(path);
+      if (f.existsSync() && await f.length() > 0) {
+        await _dispatchFile(f);
+        _scrollToBottom();
+      }
+    } catch (e) {
+      setState(() => _recording = false);
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -50,6 +89,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _input.dispose();
     _scroll.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -541,7 +581,9 @@ class _HomePageState extends State<HomePage> {
           children: [
             _targetSelector(context),
             const SizedBox(height: 6),
-            Row(
+            _recording
+                ? _recordingRow(cs)
+                : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
@@ -562,6 +604,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 6),
+                IconButton(
+                  icon: const Icon(Icons.mic_rounded),
+                  onPressed: _startRecord,
+                ),
                 FloatingActionButton.small(
                   elevation: 0,
                   onPressed: _sendText,
@@ -572,6 +618,31 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _recordingRow(ColorScheme cs) {
+    return Row(
+      children: [
+        const SizedBox(width: 10),
+        const _PulsingMic(),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(t.recording,
+              style: TextStyle(color: cs.onSurfaceVariant)),
+        ),
+        IconButton(
+          tooltip: t.cancel,
+          icon: const Icon(Icons.delete_outline_rounded),
+          onPressed: () => _stopRecord(cancel: true),
+        ),
+        const SizedBox(width: 4),
+        FloatingActionButton.small(
+          elevation: 0,
+          onPressed: () => _stopRecord(),
+          child: const Icon(Icons.send_rounded),
+        ),
+      ],
     );
   }
 
@@ -624,6 +695,35 @@ class _HomePageState extends State<HomePage> {
         onSelected: (_) => onTap(),
         visualDensity: VisualDensity.compact,
       ),
+    );
+  }
+}
+
+/// Пульсирующий красный микрофон при записи голосового.
+class _PulsingMic extends StatefulWidget {
+  const _PulsingMic();
+  @override
+  State<_PulsingMic> createState() => _PulsingMicState();
+}
+
+class _PulsingMicState extends State<_PulsingMic>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.4, end: 1.0).animate(_c),
+      child: const Icon(Icons.mic_rounded, color: Colors.red),
     );
   }
 }

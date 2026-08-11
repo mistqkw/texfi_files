@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:share_plus/share_plus.dart';
 import '../app.dart';
 import '../core/models.dart';
 import '../l10n/app_strings.dart';
@@ -63,6 +64,8 @@ class ItemBubble extends StatelessWidget {
       case ItemKind.audio:
       case ItemKind.video:
         return _mediaContent(context, cs);
+      case ItemKind.voice:
+        return _voiceContent(context, cs);
       case ItemKind.file:
         return _fileContent(context, cs);
     }
@@ -124,6 +127,16 @@ class ItemBubble extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Icon(Icons.copy_rounded,
+                      size: 15, color: cs.onSurfaceVariant),
+                ),
+              ),
+              const SizedBox(width: 2),
+              InkWell(
+                onTap: _share,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.reply_rounded,
                       size: 15, color: cs.onSurfaceVariant),
                 ),
               ),
@@ -254,6 +267,49 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
+  Widget _voiceContent(BuildContext context, ColorScheme cs) {
+    return InkWell(
+      onTap: () {
+        final app = AppScope.of(context);
+        app.player.playItem(item, volume: app.settings.playerVolume);
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: cs.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.mic_rounded, color: cs.onPrimary, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(tr(context).voiceMessage,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(humanSize(item.fileSize),
+                    style:
+                        TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                _footer(cs),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _fileContent(BuildContext context, ColorScheme cs) {
     return InkWell(
       onTap: () {
@@ -333,6 +389,16 @@ class ItemBubble extends StatelessWidget {
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(tr(context).saveError2('$e'))));
     }
+  }
+
+  Future<void> _share() async {
+    try {
+      if (item.kind == ItemKind.text) {
+        await Share.share(item.text ?? '');
+      } else if (item.filePath != null) {
+        await Share.shareXFiles([XFile(item.filePath!)]);
+      }
+    } catch (_) {}
   }
 
   void _copy(BuildContext context) {
@@ -447,6 +513,14 @@ class ItemBubble extends StatelessWidget {
                   _saveAs(context);
                 },
               ),
+            ListTile(
+              leading: const Icon(Icons.ios_share_rounded),
+              title: Text(tr(context).share),
+              onTap: () {
+                Navigator.pop(context);
+                _share();
+              },
+            ),
             ListTile(
               leading: Icon(item.pinned
                   ? Icons.push_pin
