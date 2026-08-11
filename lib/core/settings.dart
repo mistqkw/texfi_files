@@ -62,6 +62,20 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Дизайн-пресет (скин): 0=Material, 1=Apple, 2=Samsung, 3=Windows.
+  int get designPreset => _p.getInt('designPreset') ?? 0;
+  set designPreset(int v) {
+    _p.setInt('designPreset', v.clamp(0, 3));
+    notifyListeners();
+  }
+
+  // Шрифт: 0=обычный, 1=с засечками, 2=моноширинный.
+  int get fontChoice => _p.getInt('fontChoice') ?? 0;
+  set fontChoice(int v) {
+    _p.setInt('fontChoice', v.clamp(0, 2));
+    notifyListeners();
+  }
+
   // Стиль скругления пузырей: 0 = мягкий, 1 = круглый, 2 = острый.
   int get bubbleStyle => _p.getInt('bubbleStyle') ?? 0;
   set bubbleStyle(int v) {

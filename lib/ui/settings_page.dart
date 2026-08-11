@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../app.dart';
 import '../core/settings.dart';
 import '../net/remote_input.dart';
@@ -52,6 +53,36 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _editName(context, s),
             ),
             const Divider(height: 1),
+            _header('Дизайн'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (var i = 0; i < DesignPreset.all.length; i++)
+                    ChoiceChip(
+                      label: Text(DesignPreset.all[i].name),
+                      selected: s.designPreset == i,
+                      onSelected: (_) => s.designPreset = i,
+                    ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.font_download_outlined),
+              title: const Text('Шрифт'),
+              trailing: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Обычный')),
+                  ButtonSegment(value: 1, label: Text('Serif')),
+                  ButtonSegment(value: 2, label: Text('Mono')),
+                ],
+                selected: {s.fontChoice},
+                showSelectedIcon: false,
+                onSelectionChanged: (v) => s.fontChoice = v.first,
+              ),
+            ),
+            const Divider(height: 1),
             _header('Внешний вид'),
             ListTile(
               leading: const Icon(Icons.brightness_6_outlined),
@@ -88,6 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   for (final c in _seeds) _colorDot(s, c),
+                  _customColorDot(context, s),
                 ],
               ),
             ),
@@ -266,6 +298,65 @@ class _SettingsPageState extends State<SettingsPage> {
               ? const Icon(Icons.check, color: Colors.white, size: 20)
               : null,
         ),
+      ),
+    );
+  }
+
+  // Кнопка «любой цвет» — открывает цветовой круг.
+  Widget _customColorDot(BuildContext context, Settings s) {
+    final custom = !_seeds.contains(s.seedColor);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: GestureDetector(
+        onTap: () => _pickColor(context, s),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: const SweepGradient(colors: [
+              Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00),
+              Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF),
+              Color(0xFFFF0000),
+            ]),
+            shape: BoxShape.circle,
+            border: custom
+                ? Border.all(color: Colors.white, width: 3)
+                : Border.all(color: Colors.white24, width: 1),
+          ),
+          child: Icon(custom ? Icons.check : Icons.colorize_rounded,
+              color: Colors.white, size: 20),
+        ),
+      ),
+    );
+  }
+
+  void _pickColor(BuildContext context, Settings s) {
+    Color picked = Color(s.seedColor);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Любой цвет'),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: picked,
+            onColorChanged: (c) => picked = c,
+            enableAlpha: false,
+            labelTypes: const [],
+            pickerAreaHeightPercent: 0.7,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () {
+              s.seedColor = (picked.toARGB32() | 0xFF000000);
+              Navigator.pop(context);
+            },
+            child: const Text('Выбрать'),
+          ),
+        ],
       ),
     );
   }

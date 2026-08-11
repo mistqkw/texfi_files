@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -69,20 +70,74 @@ class _HomePageState extends State<HomePage> {
     _scrollToBottom();
   }
 
-  Future<void> _pickAndSendFiles() async {
+  Future<void> _dispatchFile(File file) async {
+    if (_target != null) {
+      _showFileProgress(file);
+    } else {
+      await _saveFileLocal(file);
+    }
+  }
+
+  // Меню вложений: Файлы / Галерея / Камера.
+  void _attachMenu() {
+    final mobile = Platform.isAndroid || Platform.isIOS;
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file_outlined),
+              title: const Text('Файлы'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFiles();
+              },
+            ),
+            if (mobile)
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Галерея'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            if (mobile)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Камера'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFiles() async {
     final res = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (res == null) return;
     for (final f in res.files) {
       if (f.path == null) continue;
-      final file = File(f.path!);
-      if (_target != null) {
-        _showFileProgress(file);
-      } else {
-        // Локальное сохранение: копируем в хранилище.
-        await _saveFileLocal(file);
-      }
+      await _dispatchFile(File(f.path!));
     }
     _scrollToBottom();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final x = await ImagePicker().pickImage(source: source, imageQuality: 95);
+      if (x == null) return;
+      await _dispatchFile(File(x.path));
+      _scrollToBottom();
+    } catch (e) {
+      _toast('Не удалось: $e');
+    }
   }
 
   Future<void> _saveFileLocal(File file) async {
@@ -334,8 +389,8 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.attach_file_rounded),
-                  onPressed: _pickAndSendFiles,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  onPressed: _attachMenu,
                 ),
                 Expanded(
                   child: TextField(

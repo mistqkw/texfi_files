@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -23,6 +26,10 @@ class _PlayerPageState extends State<PlayerPage> {
   Duration _pos = Duration.zero;
   Duration _dur = Duration.zero;
   bool _playing = false;
+
+  Uint8List? _art; // обложка трека
+  String? _metaTitle;
+  String? _metaArtist;
 
   bool get _isVideo => widget.item.kind == ItemKind.video;
 
@@ -53,6 +60,25 @@ class _PlayerPageState extends State<PlayerPage> {
     final s = AppScope.of(context).settings;
     _player.setVolume(s.playerVolume);
     _player.open(Media('file://${widget.item.filePath}'), play: true);
+    if (!_isVideo) _loadArt();
+  }
+
+  void _loadArt() {
+    final path = widget.item.filePath;
+    if (path == null) return;
+    try {
+      final meta = readMetadata(File(path), getImage: true);
+      final pics = meta.pictures;
+      if (mounted) {
+        setState(() {
+          if (pics.isNotEmpty) _art = pics.first.bytes;
+          _metaTitle = meta.title;
+          _metaArtist = meta.artist;
+        });
+      }
+    } catch (_) {
+      // нет метаданных — покажем градиент
+    }
   }
 
   @override
@@ -74,7 +100,9 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final title = widget.item.fileName ?? 'Медиа';
+    final title = (_metaTitle != null && _metaTitle!.trim().isNotEmpty)
+        ? _metaTitle!
+        : (widget.item.fileName ?? 'Медиа');
     return Scaffold(
       backgroundColor: _isVideo ? Colors.black : cs.surface,
       appBar: AppBar(
@@ -88,7 +116,12 @@ class _PlayerPageState extends State<PlayerPage> {
             child: Center(
               child: _isVideo && _video != null
                   ? Video(controller: _video!, controls: NoVideoControls)
-                  : _AudioArt(title: title, playing: _playing, color: cs),
+                  : _AudioArt(
+                      title: title,
+                      subtitle: _metaArtist,
+                      art: _art,
+                      playing: _playing,
+                      color: cs),
             ),
           ),
           _controls(cs),
@@ -185,10 +218,16 @@ class _PlayerPageState extends State<PlayerPage> {
 
 class _AudioArt extends StatelessWidget {
   final String title;
+  final String? subtitle;
+  final Uint8List? art;
   final bool playing;
   final ColorScheme color;
   const _AudioArt(
-      {required this.title, required this.playing, required this.color});
+      {required this.title,
+      this.subtitle,
+      this.art,
+      required this.playing,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -199,25 +238,30 @@ class _AudioArt extends StatelessWidget {
           scale: playing ? 1.0 : 0.94,
           duration: const Duration(milliseconds: 300),
           child: Container(
-            width: 220,
-            height: 220,
+            width: 260,
+            height: 260,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.primary, color.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: art == null
+                  ? LinearGradient(
+                      colors: [color.primary, color.tertiary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
               borderRadius: BorderRadius.circular(36),
               boxShadow: [
                 BoxShadow(
                   color: color.primary.withValues(alpha: 0.4),
-                  blurRadius: 40,
+                  blurRadius: 44,
                   spreadRadius: 4,
                 ),
               ],
             ),
-            child: Icon(Icons.music_note_rounded,
-                size: 96, color: color.onPrimary),
+            clipBehavior: Clip.antiAlias,
+            child: art != null
+                ? Image.memory(art!, fit: BoxFit.cover)
+                : Icon(Icons.music_note_rounded,
+                    size: 110, color: color.onPrimary),
           ),
         ),
         const SizedBox(height: 28),
@@ -228,9 +272,20 @@ class _AudioArt extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
           ),
         ),
+        if (subtitle != null && subtitle!.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              subtitle!,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, color: color.onSurfaceVariant),
+            ),
+          ),
       ],
     );
   }
