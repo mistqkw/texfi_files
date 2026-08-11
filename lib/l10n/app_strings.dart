@@ -123,6 +123,33 @@ class AppStrings {
   String get hAbout => _('О приложении', 'About', 'Über', 'O aplikacji');
   String get hData => _('Данные', 'Data', 'Daten', 'Dane');
   String get hLanguage => _('Язык', 'Language', 'Sprache', 'Język');
+  String get hBackground =>
+      _('Фон и эффекты', 'Background & effects', 'Hintergrund & Effekte',
+          'Tło i efekty');
+
+  // Подписи категорий (как в Google)
+  String get catAccountSub => _('Вход, облако аккаунта',
+      'Sign in, account cloud', 'Anmeldung, Konto-Cloud', 'Logowanie, chmura');
+  String get catAppearanceSub => _('Тема, цвета, шрифт, дизайн',
+      'Theme, colors, font, design', 'Thema, Farben, Schrift, Design',
+      'Motyw, kolory, czcionka');
+  String get catBackgroundSub => _('Фото-фон, снег/дождь, цвет сообщений',
+      'Photo background, snow/rain, message colors',
+      'Foto-Hintergrund, Schnee/Regen, Farben',
+      'Tło, śnieg/deszcz, kolory');
+  String get catNetworkSub => _('Поиск, порт, приём, фон',
+      'Discovery, port, receive, background',
+      'Suche, Port, Empfang, Hintergrund', 'Wyszukiwanie, port, odbiór');
+  String get catRemoteSub => _('Печать с телефона на ПК',
+      'Type from phone to PC', 'Vom Telefon zum PC tippen',
+      'Pisanie z telefonu na PC');
+  String get catPlayerSub => _('Автоплей, громкость',
+      'Autoplay, volume', 'Autoplay, Lautstärke', 'Autoodtwarzanie, głośność');
+  String get catAboutSub => _('Приветствие, версия, данные',
+      'Welcome, version, data', 'Begrüßung, Version, Daten',
+      'Powitanie, wersja, dane');
+  String get catDeviceSub => _('Имя устройства',
+      'Device name', 'Gerätename', 'Nazwa urządzenia');
 
   // Аккаунт
   String get signInGitHub => _('Войти через GitHub', 'Sign in with GitHub',
