@@ -50,6 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             _header('Аккаунт'),
             _accountTile(context, app),
+            _cloudStatus(context, app),
             const Divider(height: 1),
             _header('Устройство'),
             ListTile(
@@ -327,6 +328,43 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => app.auth.logout(),
             child: const Text('Выйти'),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _cloudStatus(BuildContext context, AppState app) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([app.auth, app.cloud]),
+      builder: (context, _) {
+        if (!app.auth.isLoggedIn) return const SizedBox.shrink();
+        final cs = Theme.of(context).colorScheme;
+        if (app.cloud.needsReauth) {
+          return ListTile(
+            leading: Icon(Icons.cloud_off_rounded, color: cs.error),
+            title: const Text('Облако недоступно'),
+            subtitle: const Text('Войдите заново, чтобы выдать доступ (repo)'),
+            trailing: FilledButton(
+              onPressed: () => _loginDialog(context, app),
+              child: const Text('Войти заново'),
+            ),
+          );
+        }
+        return ListTile(
+          leading: Icon(Icons.cloud_done_rounded, color: cs.primary),
+          title: const Text('Облако аккаунта включено'),
+          subtitle: Text(app.cloud.syncing
+              ? 'Синхронизация…'
+              : 'Файлы до ~90 МБ доступны с любого устройства'),
+          trailing: app.cloud.syncing
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : IconButton(
+                  icon: const Icon(Icons.sync_rounded),
+                  onPressed: () => app.cloud.pull(),
+                ),
         );
       },
     );

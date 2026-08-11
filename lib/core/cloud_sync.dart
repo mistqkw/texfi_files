@@ -25,6 +25,7 @@ class CloudSync extends ChangeNotifier {
   bool _repoReady = false;
   String? lastError;
   bool syncing = false;
+  bool needsReauth = false; // токен без права repo → нужен повторный вход
 
   bool get available => auth.isLoggedIn && auth.token != null;
   String? get _owner => auth.account?.login;
@@ -40,6 +41,8 @@ class CloudSync extends ChangeNotifier {
 
   void start() {
     stop();
+    needsReauth = false;
+    _repoReady = false;
     if (!available) return;
     pull();
     _timer = Timer.periodic(const Duration(seconds: 20), (_) => pull());
@@ -95,7 +98,7 @@ class CloudSync extends ChangeNotifier {
 
   // ── Забрать ленту из облака ──
   Future<void> pull() async {
-    if (_busy || !available) return;
+    if (_busy || !available || needsReauth) return;
     _busy = true;
     syncing = true;
     notifyListeners();
@@ -171,6 +174,14 @@ class CloudSync extends ChangeNotifier {
     );
     if (create.statusCode == 201 || create.statusCode == 422) {
       _repoReady = true;
+    } else if (create.statusCode == 403 ||
+        create.statusCode == 404 ||
+        create.statusCode == 401) {
+      // Токен без права repo — нужен повторный вход.
+      needsReauth = true;
+      lastError = 'Нужен повторный вход для доступа к облаку (право repo)';
+      notifyListeners();
+      throw Exception('repo scope missing (${create.statusCode})');
     } else {
       throw Exception('repo ${create.statusCode}: ${create.body}');
     }
