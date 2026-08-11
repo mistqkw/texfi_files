@@ -60,6 +60,28 @@ class Store extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> togglePin(SavedItem item) async {
+    item.pinned = !item.pinned;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setGroup(SavedItem item, String? group) async {
+    item.group = (group != null && group.trim().isEmpty) ? null : group?.trim();
+    notifyListeners();
+    await _persist();
+  }
+
+  /// Список всех групп (по алфавиту).
+  List<String> get groups {
+    final set = <String>{};
+    for (final it in _items) {
+      if (it.group != null && it.group!.isNotEmpty) set.add(it.group!);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
   Future<void> clearAll() async {
     _items.clear();
     notifyListeners();

@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   final _scroll = ScrollController();
   final Set<String> _seen = {}; // элементы, уже проигравшие анимацию появления
   Peer? _target; // null = сохранить локально
+  String? _filter; // null=все, '__pinned__'=закреплённые, иначе имя группы
 
   late AppState _app;
 
@@ -222,7 +223,8 @@ class _HomePageState extends State<HomePage> {
             !_app.peers.any((p) => p.id == _target!.id && p.online)) {
           _target = _app.preferredPeer;
         }
-        final items = _app.store.items;
+        final all = _app.store.items;
+        final items = _applyFilter(all);
         final cs = Theme.of(context).colorScheme;
         final gradient = _app.settings.chatBackground == 1
             ? BoxDecoration(
@@ -241,6 +243,7 @@ class _HomePageState extends State<HomePage> {
           appBar: _appBar(context),
           body: Column(
             children: [
+              _filterBar(context),
               Expanded(
                 child: DecoratedBox(
                   decoration: gradient ?? const BoxDecoration(),
@@ -295,6 +298,59 @@ class _HomePageState extends State<HomePage> {
               .push(MaterialPageRoute(builder: (_) => const SettingsPage())),
         ),
       ],
+    );
+  }
+
+  List<SavedItem> _applyFilter(List<SavedItem> items) {
+    if (_filter == null) return items;
+    if (_filter == '__pinned__') {
+      return items.where((e) => e.pinned).toList();
+    }
+    return items.where((e) => e.group == _filter).toList();
+  }
+
+  Widget _filterBar(BuildContext context) {
+    final groups = _app.store.groups;
+    final hasPinned = _app.store.items.any((e) => e.pinned);
+    if (groups.isEmpty && !hasPinned) return const SizedBox.shrink();
+    // сбросить фильтр, если группа исчезла
+    if (_filter != null &&
+        _filter != '__pinned__' &&
+        !groups.contains(_filter)) {
+      _filter = null;
+    }
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        children: [
+          _filterChip(context, label: 'Все', value: null, icon: Icons.apps_rounded),
+          if (hasPinned)
+            _filterChip(context,
+                label: 'Закреплённые',
+                value: '__pinned__',
+                icon: Icons.push_pin_rounded),
+          for (final g in groups)
+            _filterChip(context,
+                label: g, value: g, icon: Icons.folder_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip(BuildContext context,
+      {required String label, required String? value, required IconData icon}) {
+    final selected = _filter == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ChoiceChip(
+        avatar: Icon(icon, size: 16),
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => setState(() => _filter = value),
+        visualDensity: VisualDensity.compact,
+      ),
     );
   }
 
