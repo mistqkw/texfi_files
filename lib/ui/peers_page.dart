@@ -55,13 +55,15 @@ class _PeersPageState extends State<PeersPage> {
               _selfCard(context),
               const Divider(height: 1),
               Expanded(
-                child: peers.isEmpty
-                    ? _searching(context)
-                    : ListView(
-                        children: [
-                          for (final p in peers) _peerTile(context, p),
-                        ],
-                      ),
+                child: !_app.auth.isLoggedIn
+                    ? _needLogin(context)
+                    : peers.isEmpty
+                        ? _searching(context)
+                        : ListView(
+                            children: [
+                              for (final p in peers) _peerTile(context, p),
+                            ],
+                          ),
               ),
             ],
           );
@@ -98,14 +100,40 @@ class _PeersPageState extends State<PeersPage> {
             const SizedBox(
                 width: 28, height: 28, child: CircularProgressIndicator()),
             const SizedBox(height: 16),
-            Text('Ищу устройства в сети…',
+            Text('Ищу устройства вашего аккаунта…',
                 style: TextStyle(color: cs.onSurfaceVariant)),
             const SizedBox(height: 4),
             Text(
-              'Должны быть в одной Wi-Fi сети. Если не находит — '
-              'подключитесь по IP кнопкой ниже.',
+              'Войдите этим же GitHub-аккаунтом на другом устройстве. '
+              'Для передачи они должны быть в одной сети.',
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _needLogin(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.account_circle_outlined,
+                size: 64, color: cs.onSurfaceVariant),
+            const SizedBox(height: 16),
+            const Text('Войдите в аккаунт',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text(
+              'Устройства теперь находят друг друга через ваш GitHub-аккаунт. '
+              'Войдите в Настройках → Аккаунт.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
             ),
           ],
         ),

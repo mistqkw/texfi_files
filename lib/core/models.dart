@@ -116,5 +116,5 @@ class Peer {
 
   String get baseUrl => 'http://$address:$httpPort';
 
-  bool get online => DateTime.now().difference(lastSeen).inSeconds < 12;
+  bool get online => DateTime.now().difference(lastSeen).inSeconds < 90;
 }

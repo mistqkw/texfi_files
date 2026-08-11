@@ -57,6 +57,7 @@ class AuthService extends ChangeNotifier {
   String? error;
 
   GithubAccount? get account => _account;
+  String? get token => _token;
   bool get isLoggedIn => _account != null;
 
   /// Идентификатор аккаунта для авто-доверия между устройствами.

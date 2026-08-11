@@ -10,6 +10,6 @@ class AuthConfig {
   static const String tokenUrl = 'https://github.com/login/oauth/access_token';
   static const String verificationUrl = 'https://github.com/login/device';
 
-  // Запрашиваемые права: только чтение профиля (логин + id).
-  static const String scope = 'read:user';
+  // Права: профиль (логин + id) + gist (реестр устройств для поиска через аккаунт).
+  static const String scope = 'read:user gist';
 }
