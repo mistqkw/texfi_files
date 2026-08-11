@@ -80,6 +80,14 @@ class ItemBubble extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 11,
                     color: cs.onSurfaceVariant.withValues(alpha: 0.8))),
+            if (item.group != null) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.folder_rounded, size: 11, color: cs.onSurfaceVariant),
+            ],
+            if (item.pinned) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.push_pin, size: 11, color: cs.primary),
+            ],
           ],
         ),
       );
@@ -302,6 +310,58 @@ class ItemBubble extends StatelessWidget {
     ));
   }
 
+  void _groupDialog(BuildContext context) {
+    final store = AppScope.of(context).store;
+    final groups = store.groups;
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final g in groups)
+              ListTile(
+                leading: const Icon(Icons.folder_rounded),
+                title: Text(g),
+                trailing: item.group == g ? const Icon(Icons.check) : null,
+                onTap: () {
+                  store.setGroup(item, g);
+                  Navigator.pop(context);
+                },
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Новая группа…',
+                        prefixIcon: Icon(Icons.create_new_folder_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      final name = controller.text.trim();
+                      if (name.isNotEmpty) store.setGroup(item, name);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _menu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -334,6 +394,35 @@ class ItemBubble extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   _saveAs(context);
+                },
+              ),
+            ListTile(
+              leading: Icon(item.pinned
+                  ? Icons.push_pin
+                  : Icons.push_pin_outlined),
+              title: Text(item.pinned ? 'Открепить' : 'Закрепить'),
+              onTap: () {
+                Navigator.pop(context);
+                AppScope.of(context).store.togglePin(item);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: Text(item.group == null
+                  ? 'Добавить в группу…'
+                  : 'Группа: ${item.group}'),
+              onTap: () {
+                Navigator.pop(context);
+                _groupDialog(context);
+              },
+            ),
+            if (item.group != null)
+              ListTile(
+                leading: const Icon(Icons.folder_off_outlined),
+                title: const Text('Убрать из группы'),
+                onTap: () {
+                  Navigator.pop(context);
+                  AppScope.of(context).store.setGroup(item, null);
                 },
               ),
             ListTile(

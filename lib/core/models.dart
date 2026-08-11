@@ -30,6 +30,8 @@ class SavedItem {
   final DateTime createdAt;
   final bool outgoing; // true = отправлено с этого устройства
   final String? fromName; // имя пира-источника
+  bool pinned; // закреплено
+  String? group; // название группы/коллекции
 
   SavedItem({
     required this.id,
@@ -42,6 +44,8 @@ class SavedItem {
     required this.createdAt,
     this.outgoing = false,
     this.fromName,
+    this.pinned = false,
+    this.group,
   });
 
   bool get isMedia =>
@@ -58,6 +62,8 @@ class SavedItem {
         'createdAt': createdAt.toIso8601String(),
         'outgoing': outgoing,
         'fromName': fromName,
+        'pinned': pinned,
+        'group': group,
       };
 
   factory SavedItem.fromJson(Map<String, dynamic> j) => SavedItem(
@@ -73,6 +79,8 @@ class SavedItem {
             DateTime.now(),
         outgoing: j['outgoing'] as bool? ?? false,
         fromName: j['fromName'] as String?,
+        pinned: j['pinned'] as bool? ?? false,
+        group: j['group'] as String?,
       );
 
   static List<SavedItem> listFromJson(String raw) {
