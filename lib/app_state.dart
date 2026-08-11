@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'core/auth_service.dart';
 import 'core/models.dart';
 import 'core/player_service.dart';
 import 'core/settings.dart';
@@ -13,6 +14,7 @@ import 'store/store.dart';
 class AppState extends ChangeNotifier {
   final Settings settings;
   final Store store;
+  final AuthService auth;
   late final ReceiveServer server;
   late final Discovery discovery;
   late final SendClient client;
@@ -21,10 +23,12 @@ class AppState extends ChangeNotifier {
   /// Последнее событие приёма — для показа снекбара.
   SavedItem? lastReceived;
 
-  AppState(this.settings, this.store) {
+  AppState(this.settings, this.store, this.auth) {
     server = ReceiveServer(settings, store);
-    discovery = Discovery(settings, () => server.port);
+    discovery = Discovery(settings, () => server.port, () => auth.accountId);
     client = SendClient(settings.deviceName);
+    // Смена аккаунта → обновить анонсы.
+    auth.addListener(() => discovery.notifyListeners());
     server.onReceived = (item) {
       lastReceived = item;
       notifyListeners();
@@ -46,9 +50,16 @@ class AppState extends ChangeNotifier {
 
   List<Peer> get peers => discovery.peers;
 
+  /// Пир доверенный, если он в том же аккаунте, что и мы.
+  bool isTrusted(Peer p) =>
+      auth.accountId != null && p.accountId == auth.accountId;
+
   Peer? get preferredPeer {
-    final list = peers.where((p) => p.online).toList();
-    return list.isEmpty ? null : list.first;
+    final online = peers.where((p) => p.online).toList();
+    if (online.isEmpty) return null;
+    // Сначала — доверенные устройства своего аккаунта.
+    final trusted = online.where(isTrusted).toList();
+    return trusted.isNotEmpty ? trusted.first : online.first;
   }
 
   // --- Отправка ---

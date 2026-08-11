@@ -46,7 +46,8 @@ class _PeersPageState extends State<PeersPage> {
         label: const Text('По IP'),
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([_app.discovery, _app.settings]),
+        listenable:
+            Listenable.merge([_app.discovery, _app.settings, _app.auth]),
         builder: (context, _) {
           final peers = _app.peers;
           return Column(
@@ -125,8 +126,18 @@ class _PeersPageState extends State<PeersPage> {
           color: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
         ),
       ),
-      title: Text(p.name),
-      subtitle: Text('${p.address} · ${p.online ? "онлайн" : "не в сети"}'),
+      title: Row(
+        children: [
+          Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
+          if (_app.isTrusted(p)) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.verified_rounded, size: 16, color: cs.primary),
+          ],
+        ],
+      ),
+      subtitle: Text(_app.isTrusted(p)
+          ? '${p.address} · ваш аккаунт'
+          : '${p.address} · ${p.online ? "онлайн" : "не в сети"}'),
       trailing: Icon(Icons.circle,
           size: 10, color: p.online ? Colors.green : cs.outline),
     );

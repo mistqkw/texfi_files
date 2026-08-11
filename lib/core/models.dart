@@ -101,6 +101,7 @@ class Peer {
   final String platform;
   final String address;
   final int httpPort;
+  final String? accountId; // gh:<id>, если пир вошёл в аккаунт
   DateTime lastSeen;
 
   Peer({
@@ -109,6 +110,7 @@ class Peer {
     required this.platform,
     required this.address,
     required this.httpPort,
+    this.accountId,
     required this.lastSeen,
   });
 

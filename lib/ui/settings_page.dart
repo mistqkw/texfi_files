@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app.dart';
+import '../app_state.dart';
+import '../core/auth_service.dart';
 import '../core/settings.dart';
 import '../net/remote_input.dart';
 
@@ -45,6 +48,9 @@ class _SettingsPageState extends State<SettingsPage> {
         listenable: s,
         builder: (context, _) => ListView(
           children: [
+            _header('Аккаунт'),
+            _accountTile(context, app),
+            const Divider(height: 1),
             _header('Устройство'),
             ListTile(
               leading: const Icon(Icons.badge_outlined),
@@ -288,6 +294,128 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _accountTile(BuildContext context, AppState app) {
+    return ListenableBuilder(
+      listenable: app.auth,
+      builder: (context, _) {
+        final acc = app.auth.account;
+        if (acc == null) {
+          return ListTile(
+            leading: const Icon(Icons.account_circle_outlined),
+            title: const Text('Войти через GitHub'),
+            subtitle: const Text(
+                'Устройства одного аккаунта соединяются автоматически'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _loginDialog(context, app),
+          );
+        }
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundImage:
+                acc.avatarUrl != null ? NetworkImage(acc.avatarUrl!) : null,
+            child: acc.avatarUrl == null
+                ? Text(acc.login.characters.first.toUpperCase())
+                : null,
+          ),
+          title: Text(acc.name?.isNotEmpty == true ? acc.name! : acc.login,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text('@${acc.login} · GitHub'),
+          trailing: TextButton(
+            onPressed: () => app.auth.logout(),
+            child: const Text('Выйти'),
+          ),
+        );
+      },
+    );
+  }
+
+  void _loginDialog(BuildContext context, AppState app) {
+    final auth = app.auth;
+    auth.begin();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ListenableBuilder(
+        listenable: auth,
+        builder: (context, _) {
+          if (auth.status == AuthStatus.success) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (Navigator.canPop(context)) Navigator.pop(context);
+            });
+          }
+          return AlertDialog(
+            title: const Text('Вход через GitHub'),
+            content: _loginBody(context, auth),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  auth.cancel();
+                  Navigator.pop(context);
+                },
+                child: const Text('Закрыть'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _loginBody(BuildContext context, AuthService auth) {
+    final cs = Theme.of(context).colorScheme;
+    if (auth.status == AuthStatus.error) {
+      return Text('Ошибка: ${auth.error}',
+          style: TextStyle(color: cs.error));
+    }
+    if (auth.status == AuthStatus.success) {
+      return const Text('Готово! Вы вошли.');
+    }
+    if (auth.userCode == null) {
+      return const SizedBox(
+        height: 80,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('1. Скопируй код:'),
+        const SizedBox(height: 8),
+        SelectableText(
+          auth.userCode!,
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 4,
+            color: cs.primary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text('2. Открой страницу и вставь код:'),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: () => launchUrl(
+            Uri.parse(auth.verificationUri ?? 'https://github.com/login/device'),
+            mode: LaunchMode.externalApplication,
+          ),
+          icon: const Icon(Icons.open_in_new_rounded),
+          label: const Text('Открыть github.com/login/device'),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+                width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 10),
+            Text('Ждём подтверждения…',
+                style: TextStyle(color: cs.onSurfaceVariant)),
+          ],
+        ),
+      ],
     );
   }
 
