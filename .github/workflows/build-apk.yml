@@ -3,13 +3,11 @@ name: Build APK & Windows
 # Сборки собираются на каждый пуш и кладутся в артефакты.
 # Релиз создаётся автоматически при пуше тега vX.Y.Z (например: git tag v1.0.2 && git push origin v1.0.2).
 on:
+  # Сборка НЕ запускается на обычные пуши — только когда мы этого захотим:
+  #  • пуш тега версии:  git tag v1.0.2 && git push origin v1.0.2   → соберёт и выпустит релиз
+  #  • вручную: вкладка Actions → Run workflow                       → просто соберёт (без релиза)
   push:
-    branches: ["**"]
     tags: ["v*"]
-    paths-ignore:
-      - "**.md"
-      - "assets/**"
-      - "LICENSE"
   workflow_dispatch:
 
 permissions:
