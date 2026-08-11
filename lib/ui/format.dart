@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../l10n/app_strings.dart';
 
 String humanSize(int bytes) {
   if (bytes <= 0) return '0 B';
@@ -15,12 +16,12 @@ String humanSize(int bytes) {
 
 String clockTime(DateTime dt) => DateFormat('HH:mm').format(dt);
 
-String daySeparator(DateTime dt) {
+String daySeparator(DateTime dt, AppStrings t) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final that = DateTime(dt.year, dt.month, dt.day);
   final diff = today.difference(that).inDays;
-  if (diff == 0) return 'Сегодня';
-  if (diff == 1) return 'Вчера';
-  return DateFormat('d MMMM', 'ru').format(dt);
+  if (diff == 0) return t.today;
+  if (diff == 1) return t.yesterday;
+  return DateFormat('d MMMM').format(dt);
 }

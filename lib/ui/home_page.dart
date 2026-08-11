@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../l10n/app_strings.dart';
 import 'audio_player_screen.dart';
 import '../app.dart';
 import '../app_state.dart';
@@ -27,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   String? _filter; // null=все, '__pinned__'=закреплённые, иначе имя группы
 
   late AppState _app;
+  AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
 
   @override
   void didChangeDependencies() {
@@ -64,7 +66,7 @@ class _HomePageState extends State<HomePage> {
     if (_target != null) {
       final ok = await _app.sendTextTo(_target!, text);
       if (!ok && mounted) {
-        _toast('Не удалось отправить на ${_target!.name}');
+        _toast(t.couldNotSendTo(_target!.name));
       }
     } else {
       await _app.saveTextLocal(text);
@@ -91,7 +93,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             ListTile(
               leading: const Icon(Icons.insert_drive_file_outlined),
-              title: const Text('Файлы'),
+              title: Text(t.files),
               onTap: () {
                 Navigator.pop(context);
                 _pickFiles();
@@ -100,7 +102,7 @@ class _HomePageState extends State<HomePage> {
             if (mobile)
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Галерея'),
+                title: Text(t.gallery),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -109,7 +111,7 @@ class _HomePageState extends State<HomePage> {
             if (mobile)
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Камера'),
+                title: Text(t.camera),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.camera);
@@ -138,7 +140,7 @@ class _HomePageState extends State<HomePage> {
       await _dispatchFile(File(x.path));
       _scrollToBottom();
     } catch (e) {
-      _toast('Не удалось: $e');
+      _toast(t.failed('$e'));
     }
   }
 
@@ -189,7 +191,7 @@ class _HomePageState extends State<HomePage> {
       (p) => progress.value = p,
       onDone: () {
         entry.close();
-        _toast('Отправлено: $name');
+        _toast(t.sentName(name));
         // Записываем в свою ленту как исходящее.
         _app.store.add(SavedItem(
           id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -203,7 +205,7 @@ class _HomePageState extends State<HomePage> {
       },
       onError: (e) {
         entry.close();
-        _toast('Ошибка отправки $name');
+        _toast(t.sendError(name));
       },
     );
   }
@@ -301,23 +303,23 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 2),
           Text(
             !_app.auth.isLoggedIn
-                ? 'Войдите в аккаунт'
+                ? t.signInPrompt
                 : online > 0
-                    ? '$online устройств в аккаунте'
-                    : 'Ищу устройства аккаунта…',
+                    ? t.devicesInAccount(online)
+                    : t.searchingDevices,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],
       ),
       actions: [
         IconButton(
-          tooltip: 'Клавиатура на ПК',
+          tooltip: t.ttKeyboard,
           icon: const Icon(Icons.keyboard_alt_outlined),
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => const RemoteKeyboardPage())),
         ),
         IconButton(
-          tooltip: 'Устройства',
+          tooltip: t.ttDevices,
           icon: Badge(
             isLabelVisible: online > 0,
             label: Text('$online'),
@@ -327,7 +329,7 @@ class _HomePageState extends State<HomePage> {
               .push(MaterialPageRoute(builder: (_) => const PeersPage())),
         ),
         IconButton(
-          tooltip: 'Настройки',
+          tooltip: t.ttSettings,
           icon: const Icon(Icons.settings_outlined),
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const SettingsPage())),
@@ -360,10 +362,10 @@ class _HomePageState extends State<HomePage> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         children: [
-          _filterChip(context, label: 'Все', value: null, icon: Icons.apps_rounded),
+          _filterChip(context, label: t.all, value: null, icon: Icons.apps_rounded),
           if (hasPinned)
             _filterChip(context,
-                label: 'Закреплённые',
+                label: t.pinned,
                 value: '__pinned__',
                 icon: Icons.push_pin_rounded),
           for (final g in groups)
@@ -397,14 +399,13 @@ class _HomePageState extends State<HomePage> {
         children: [
           Icon(Icons.bookmark_rounded, size: 72, color: cs.primary),
           const SizedBox(height: 16),
-          const Text('Ваше «Избранное»',
+          Text(t.emptyTitle,
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
-              'Отправляйте сюда текст и файлы любого размера. '
-              'Выберите устройство рядом или сохраните локально.',
+              t.emptyText,
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
@@ -460,7 +461,7 @@ class _HomePageState extends State<HomePage> {
           color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(daySeparator(dt),
+        child: Text(daySeparator(dt, t),
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
       ),
     );
@@ -494,10 +495,10 @@ class _HomePageState extends State<HomePage> {
                     minLines: 1,
                     maxLines: 5,
                     textInputAction: TextInputAction.newline,
-                    decoration: const InputDecoration(
-                      hintText: 'Сообщение или текст для копирования…',
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: InputDecoration(
+                      hintText: t.messageHint,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                     ),
                   ),
                 ),
@@ -525,7 +526,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           _targetChip(
             context,
-            label: 'Сохранить здесь',
+            label: t.saveHere,
             icon: Icons.bookmark_border_rounded,
             selected: _target == null,
             onTap: () => setState(() => _target = null),

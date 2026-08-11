@@ -7,6 +7,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../app.dart';
 import '../core/models.dart';
+import '../l10n/app_strings.dart';
 import 'format.dart';
 
 /// Красивый встроенный плеер для аудио и видео.
@@ -102,7 +103,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final cs = Theme.of(context).colorScheme;
     final title = (_metaTitle != null && _metaTitle!.trim().isNotEmpty)
         ? _metaTitle!
-        : (widget.item.fileName ?? 'Медиа');
+        : (widget.item.fileName ?? tr(context).mediaWord);
     return Scaffold(
       backgroundColor: _isVideo ? Colors.black : cs.surface,
       appBar: AppBar(

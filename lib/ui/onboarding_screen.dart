@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app.dart';
+import '../l10n/app_strings.dart';
 
 class _Slide {
   final IconData icon;
@@ -9,17 +10,13 @@ class _Slide {
   const _Slide(this.icon, this.title, this.text, {this.image});
 }
 
-const _slides = <_Slide>[
-  _Slide(Icons.bookmark_rounded, 'TexFi files',
-      'Ваше «Избранное» — как в Telegram, только своё и без лимитов.',
-      image: 'assets/logo.png'),
-  _Slide(Icons.send_rounded, 'Шлите что угодно',
-      'Текст, фото, видео и файлы любого размера — между вашими устройствами.'),
-  _Slide(Icons.cloud_done_rounded, 'Аккаунт — ваше облако',
-      'Войдите через GitHub, и файлы будут доступны с любого устройства из любой сети.'),
-  _Slide(Icons.palette_rounded, 'Плеер и кастомизация',
-      'Встроенный плеер с обложками, темы, дизайны Apple/Samsung, любые цвета и анимации.'),
-];
+List<_Slide> _buildSlides(AppStrings t) => [
+      _Slide(Icons.bookmark_rounded, t.obTitle1, t.obText1,
+          image: 'assets/logo.png'),
+      _Slide(Icons.send_rounded, t.obTitle2, t.obText2),
+      _Slide(Icons.cloud_done_rounded, t.obTitle3, t.obText3),
+      _Slide(Icons.palette_rounded, t.obTitle4, t.obText4),
+    ];
 
 /// Приветственный экран с анимациями — при первом запуске.
 class OnboardingScreen extends StatefulWidget {
@@ -32,6 +29,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _index = 0;
+  int _count = 4;
 
   @override
   void dispose() {
@@ -45,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    if (_index < _slides.length - 1) {
+    if (_index < _count - 1) {
       _controller.nextPage(
           duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
     } else {
@@ -56,7 +54,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final last = _index == _slides.length - 1;
+    final t = tr(context);
+    final slides = _buildSlides(t);
+    _count = slides.length;
+    final last = _index == slides.length - 1;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -68,21 +69,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 duration: const Duration(milliseconds: 200),
                 child: TextButton(
                   onPressed: last ? null : _finish,
-                  child: const Text('Пропустить'),
+                  child: Text(t.skip),
                 ),
               ),
             ),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: _slides.length,
+                itemCount: slides.length,
                 onPageChanged: (i) => setState(() => _index = i),
                 itemBuilder: (context, i) =>
-                    _SlideView(slide: _slides[i], active: _index == i),
+                    _SlideView(slide: slides[i], active: _index == i),
               ),
             ),
             const SizedBox(height: 8),
-            _dots(cs),
+            _dots(cs, slides.length),
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -93,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: Text(last ? 'Начать' : 'Далее',
+                  child: Text(last ? t.start : t.next,
                       style: const TextStyle(fontSize: 16)),
                 ),
               ),
@@ -104,11 +105,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _dots(ColorScheme cs) {
+  Widget _dots(ColorScheme cs, int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var i = 0; i < _slides.length; i++)
+        for (var i = 0; i < count; i++)
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,

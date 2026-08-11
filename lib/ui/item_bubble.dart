@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import '../app.dart';
 import '../core/models.dart';
+import '../l10n/app_strings.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'image_gallery.dart';
@@ -154,7 +155,7 @@ class ItemBubble extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(item.fileName ?? 'Изображение',
+                child: Text(item.fileName ?? tr(context).imageWord,
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
               _footer(cs),
@@ -208,12 +209,12 @@ class ItemBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.fileName ?? (isVideo ? 'Видео' : 'Аудио'),
+                  Text(item.fileName ?? (isVideo ? tr(context).videoWord : tr(context).audioWord),
                       maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(
-                    '${isVideo ? 'Видео' : 'Аудио'} · ${humanSize(item.fileSize)}',
+                    '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
                     style: TextStyle(
                         fontSize: 12, color: cs.onSurfaceVariant),
                   ),
@@ -253,7 +254,7 @@ class ItemBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.fileName ?? 'Файл',
+                  Text(item.fileName ?? tr(context).fileWord,
                       maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
@@ -265,7 +266,7 @@ class ItemBubble extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Сохранить',
+              tooltip: tr(context).save,
               icon: const Icon(Icons.download_rounded),
               onPressed: () => _saveAs(context),
             ),
@@ -284,35 +285,35 @@ class ItemBubble extends StatelessWidget {
         // На Android сохраняем через системный диалог с байтами.
         final bytes = await File(src).readAsBytes();
         final path = await FilePicker.platform.saveFile(
-          dialogTitle: 'Сохранить файл',
+          dialogTitle: tr(context).saveTitle,
           fileName: item.fileName ?? 'file',
           bytes: bytes,
         );
         messenger.showSnackBar(SnackBar(
-            content: Text(path != null ? 'Сохранено' : 'Отменено')));
+            content: Text(path != null ? tr(context).saved : tr(context).cancelled)));
       } else {
         // Desktop: выбираем путь и копируем файл.
         final path = await FilePicker.platform.saveFile(
-          dialogTitle: 'Сохранить файл',
+          dialogTitle: tr(context).saveTitle,
           fileName: item.fileName ?? 'file',
         );
         if (path == null) {
-          messenger.showSnackBar(const SnackBar(content: Text('Отменено')));
+          messenger.showSnackBar(SnackBar(content: Text(tr(context).cancelled)));
           return;
         }
         await File(src).copy(path);
-        messenger.showSnackBar(SnackBar(content: Text('Сохранено: $path')));
+        messenger.showSnackBar(SnackBar(content: Text(tr(context).savedTo(path))));
       }
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(tr(context).saveError2('$e'))));
     }
   }
 
   void _copy(BuildContext context) {
     Clipboard.setData(ClipboardData(text: item.text ?? ''));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Скопировано'), duration: Duration(seconds: 1)),
+      SnackBar(
+          content: Text(tr(context).copied), duration: const Duration(seconds: 1)),
     );
   }
 
@@ -362,8 +363,8 @@ class ItemBubble extends StatelessWidget {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Новая группа…',
+                      decoration: InputDecoration(
+                        hintText: tr(context).newGroup,
                         prefixIcon: Icon(Icons.create_new_folder_outlined),
                       ),
                     ),
@@ -396,7 +397,7 @@ class ItemBubble extends StatelessWidget {
             if (item.kind == ItemKind.text)
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
-                title: const Text('Копировать'),
+                title: Text(tr(context).copy),
                 onTap: () {
                   Navigator.pop(context);
                   _copy(context);
@@ -405,7 +406,7 @@ class ItemBubble extends StatelessWidget {
             if (item.filePath != null)
               ListTile(
                 leading: const Icon(Icons.open_in_new_rounded),
-                title: const Text('Открыть'),
+                title: Text(tr(context).open),
                 onTap: () {
                   Navigator.pop(context);
                   OpenFilex.open(item.filePath!);
@@ -414,7 +415,7 @@ class ItemBubble extends StatelessWidget {
             if (item.filePath != null)
               ListTile(
                 leading: const Icon(Icons.download_rounded),
-                title: const Text('Сохранить как…'),
+                title: Text(tr(context).saveAs),
                 onTap: () {
                   Navigator.pop(context);
                   _saveAs(context);
@@ -424,7 +425,7 @@ class ItemBubble extends StatelessWidget {
               leading: Icon(item.pinned
                   ? Icons.push_pin
                   : Icons.push_pin_outlined),
-              title: Text(item.pinned ? 'Открепить' : 'Закрепить'),
+              title: Text(item.pinned ? tr(context).unpin : tr(context).pin),
               onTap: () {
                 Navigator.pop(context);
                 AppScope.of(context).store.togglePin(item);
@@ -433,8 +434,8 @@ class ItemBubble extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.folder_outlined),
               title: Text(item.group == null
-                  ? 'Добавить в группу…'
-                  : 'Группа: ${item.group}'),
+                  ? tr(context).addToGroup
+                  : tr(context).groupName(item.group!)),
               onTap: () {
                 Navigator.pop(context);
                 _groupDialog(context);
@@ -443,7 +444,7 @@ class ItemBubble extends StatelessWidget {
             if (item.group != null)
               ListTile(
                 leading: const Icon(Icons.folder_off_outlined),
-                title: const Text('Убрать из группы'),
+                title: Text(tr(context).removeFromGroup),
                 onTap: () {
                   Navigator.pop(context);
                   AppScope.of(context).store.setGroup(item, null);
@@ -451,7 +452,7 @@ class ItemBubble extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded),
-              title: const Text('Удалить'),
+              title: Text(tr(context).delete),
               onTap: () {
                 Navigator.pop(context);
                 onDelete();
