@@ -169,6 +169,37 @@ class _SettingsPageState extends State<SettingsPage> {
               value: s.animations,
               onChanged: (v) => s.animations = v,
             ),
+            if (s.animations) ...[
+              ListTile(
+                leading: const Icon(Icons.auto_awesome_motion_rounded),
+                title: const Text('Стиль анимации'),
+                trailing: DropdownButton<int>(
+                  value: s.animStyle,
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Fade')),
+                    DropdownMenuItem(value: 1, child: Text('Подъём')),
+                    DropdownMenuItem(value: 2, child: Text('Масштаб')),
+                    DropdownMenuItem(value: 3, child: Text('Подъём+Fade')),
+                  ],
+                  onChanged: (v) => s.animStyle = v ?? 3,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.speed_rounded),
+                title: const Text('Скорость анимаций'),
+                trailing: SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 0, label: Text('Медл.')),
+                    ButtonSegment(value: 1, label: Text('Обычно')),
+                    ButtonSegment(value: 2, label: Text('Быстро')),
+                  ],
+                  selected: {s.animSpeed},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (v) => s.animSpeed = v.first,
+                ),
+              ),
+            ],
             const Divider(height: 1),
             _header('Сеть'),
             SwitchListTile(

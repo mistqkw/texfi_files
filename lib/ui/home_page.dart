@@ -404,7 +404,12 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         );
-        return animate ? _Entrance(child: row) : row;
+        return animate
+            ? _Entrance(
+                style: _app.settings.animStyle,
+                durationMs: _app.settings.animDurationMs,
+                child: row)
+            : row;
       },
     );
   }
@@ -530,10 +535,13 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Плавное появление нового элемента ленты: fade + лёгкий подъём.
+/// Плавное появление нового элемента ленты. Стиль и скорость — из настроек.
 class _Entrance extends StatefulWidget {
   final Widget child;
-  const _Entrance({required this.child});
+  final int style; // 0=fade,1=подъём,2=масштаб,3=подъём+fade
+  final int durationMs;
+  const _Entrance(
+      {required this.child, required this.style, required this.durationMs});
 
   @override
   State<_Entrance> createState() => _EntranceState();
@@ -543,14 +551,10 @@ class _EntranceState extends State<_Entrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 320),
+    duration: Duration(milliseconds: widget.durationMs),
   )..forward();
-  late final Animation<double> _fade =
-      CurvedAnimation(parent: _c, curve: Curves.easeOut);
-  late final Animation<Offset> _slide = Tween<Offset>(
-    begin: const Offset(0, 0.12),
-    end: Offset.zero,
-  ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+  late final Animation<double> _curve =
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
 
   @override
   void dispose() {
@@ -560,9 +564,27 @@ class _EntranceState extends State<_Entrance>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
-    );
+    final fade = FadeTransition(opacity: _curve, child: widget.child);
+    switch (widget.style) {
+      case 0: // только fade
+        return fade;
+      case 1: // подъём
+        return SlideTransition(
+          position: Tween(begin: const Offset(0, 0.14), end: Offset.zero)
+              .animate(_curve),
+          child: widget.child,
+        );
+      case 2: // масштаб
+        return ScaleTransition(
+          scale: Tween(begin: 0.85, end: 1.0).animate(_curve),
+          child: fade,
+        );
+      default: // подъём + fade
+        return SlideTransition(
+          position: Tween(begin: const Offset(0, 0.12), end: Offset.zero)
+              .animate(_curve),
+          child: fade,
+        );
+    }
   }
 }
