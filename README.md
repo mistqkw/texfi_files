@@ -4,11 +4,11 @@
 
 # TexFi files
 
-**Your own "Saved Messages", like Telegram — but local and without limits.**
-Send text and files of any size directly between your phone and computer over Wi-Fi.
-No cloud, no sign-up, no size limits.
+**Your own "Saved Messages", by TexFi — local and without limits.**
+Send text and files between your phone and computer, keep everything in your
+account, and reach it from any network. No third‑party cloud, no size limits on local transfers.
 
-![Platform](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Windows-4f7cff)
+![Platform](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Windows-4C7CFF)
 ![Release](https://img.shields.io/github/v/release/mistqkw/texfi_files?label=release)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter)
 ![License](https://img.shields.io/badge/license-open%20source-green)
@@ -31,34 +31,32 @@ All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistq
 
 ## ✨ Features
 
-- 📁 **Files of any size** — streamed over the local network, memory-friendly
-- ⚡ **Instant and direct** — text, images, audio, video fly between devices
-- 🎵 **Built-in player** — listen to music and watch video right in the app
-- ⌨️ **Type from phone to PC** — the phone keyboard types on your computer (via `wtype`)
-- 💾 **Save received files** in a couple of taps
-- 🔍 **Auto-discovery** on the same Wi-Fi network + manual connection by IP
-- 🎨 **Material 3**, dark and OLED themes, accent colors, settings
+- ☁️ **Account cloud (hybrid)** — sign in with GitHub and your text, photos and files
+  (up to ~90 MB) live in your account, reachable from **any device and any network**.
+- 📁 **Any‑size local transfer** — bigger files go directly between devices on the same network.
+- 🎵 **Built‑in player** — audio with album art + mini‑player, and video.
+- ⌨️ **Type from phone to PC** — the phone keyboard types on your computer.
+- 📌 **Pin & group** — pin important items, organize into collections, filter the timeline.
+- 🎨 **Deep customization** — design skins (TexFi / Material / Apple / Samsung / Windows),
+  any accent color, fonts, changeable animations, OLED theme.
+- 👋 **Onboarding** — an animated intro explains the app on first launch.
 
 ---
 
-## 📱 How to use
+## 📱 How it works
 
-1. Install TexFi files on your phone and your computer.
-2. Connect both devices to the same Wi-Fi network.
-3. They usually find each other automatically — see the **Devices** tab.
-4. If not — open Devices on the PC, read the line
-   `This device · 192.168.x.x:PORT`, and tap **"By IP"** on the phone.
-5. Pick a target in the input bar and send text/files. Or **"Save here"** —
-   locally, without sending.
+**Account cloud (anywhere):** sign in with GitHub on each device (Settings → Account).
+Small files and text sync through a private repository in your own account, so the
+other device pulls them automatically — even from a different network.
 
-> **Linux + firewall:** if the PC can't see the phone, open the ports:
-> ```bash
-> sudo firewall-cmd --permanent --add-port=45888/udp
-> sudo firewall-cmd --permanent --add-port=45889-45899/tcp
-> sudo firewall-cmd --reload
-> ```
+**Local (same network):** large files transfer directly device‑to‑device. Devices of the
+same account find each other automatically; you can also connect by IP.
 
-> **Keyboard on PC (Linux):** requires `wtype` — `sudo pacman -S wtype`.
+> **Sign‑in:** on Android/Linux/Windows it's a simple code flow — the app shows a code,
+> you paste it on `github.com/login/device`, done. Grant the **repo** permission to enable the account cloud.
+
+> **Linux + firewall:** if the PC can't receive, open ports:
+> `sudo firewall-cmd --permanent --add-port=45888/udp && sudo firewall-cmd --permanent --add-port=45889-45899/tcp && sudo firewall-cmd --reload`
 
 ---
 
@@ -71,31 +69,25 @@ git clone https://github.com/mistqkw/texfi_files.git
 cd texfi_files
 flutter pub get
 
-# Linux
-flutter build linux --release
-bash packaging/install-linux.sh   # install as a native app
-
-# Android
-flutter build apk --release
-
-# Windows
-flutter build windows --release
+flutter build linux   --release   # Linux  (then packaging/install-linux.sh)
+flutter build apk     --release   # Android
+flutter build windows --release   # Windows
 ```
 
-Ready-to-use APK and Windows builds are produced automatically by **GitHub Actions**
-on every push and attached to the release.
+Ready‑to‑use APK and Windows builds are produced by **GitHub Actions** on every version
+tag (`git tag v1.2.3 && git push origin v1.2.3`) and attached to the release.
 
 ---
 
 ## 🧩 Tech
 
 - **Flutter** — single codebase for Android, Linux and Windows
-- **dart:io** — HTTP receive server and UDP device discovery (multicast + broadcast)
-- **media_kit** — built-in audio/video player
-- **wtype / ydotool** — input emulation on the PC for the "phone keyboard" feature
+- **dart:io** — local HTTP transfer server; device discovery through the account
+- **GitHub** — identity (OAuth device flow) + private‑repo storage for the account cloud
+- **media_kit** — built‑in audio/video player
 
 ---
 
 <div align="center">
-Made with ❤️ in Flutter · open source
+TexFi files — a TexFi product · open source
 </div>

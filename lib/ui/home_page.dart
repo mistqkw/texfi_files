@@ -271,16 +271,32 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(
-            dark
-                ? 'assets/brand/logo-horizontal-white.png'
-                : 'assets/brand/logo-horizontal.png',
-            height: 24,
-            fit: BoxFit.contain,
-            alignment: Alignment.centerLeft,
-            errorBuilder: (_, __, ___) => Image.asset(
-                'assets/brand/logo-horizontal-white.png',
-                height: 24),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset(
+                dark
+                    ? 'assets/brand/logo-horizontal-white.png'
+                    : 'assets/brand/logo-horizontal.png',
+                height: 22,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/brand/logo-horizontal-white.png',
+                    height: 22),
+              ),
+              const SizedBox(width: 7),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('files',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w500,
+                      color: cs.onSurfaceVariant,
+                    )),
+              ),
+            ],
           ),
           const SizedBox(height: 2),
           Text(
