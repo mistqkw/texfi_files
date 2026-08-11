@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'audio_player_screen.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -250,6 +251,7 @@ class _HomePageState extends State<HomePage> {
                   child: items.isEmpty ? _empty(context) : _timeline(items),
                 ),
               ),
+              const MiniPlayer(),
               _inputBar(context),
             ],
           ),

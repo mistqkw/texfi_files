@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'core/models.dart';
+import 'core/player_service.dart';
 import 'core/settings.dart';
 import 'net/client.dart';
 import 'net/discovery.dart';
@@ -15,6 +16,7 @@ class AppState extends ChangeNotifier {
   late final ReceiveServer server;
   late final Discovery discovery;
   late final SendClient client;
+  final PlayerService player = PlayerService();
 
   /// Последнее событие приёма — для показа снекбара.
   SavedItem? lastReceived;
@@ -85,6 +87,7 @@ class AppState extends ChangeNotifier {
     discovery.dispose();
     server.stop();
     client.close();
+    player.dispose();
     super.dispose();
   }
 }
