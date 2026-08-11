@@ -72,15 +72,24 @@ class AuthService extends ChangeNotifier {
     status = AuthStatus.awaitingUser;
     notifyListeners();
     try {
-      final resp = await http.post(
-        Uri.parse(AuthConfig.deviceCodeUrl),
-        headers: {'Accept': 'application/json'},
-        body: {
-          'client_id': AuthConfig.githubClientId,
-          'scope': AuthConfig.scope,
-        },
-      );
-      final j = jsonDecode(resp.body) as Map<String, dynamic>;
+      http.Response? resp;
+      for (var attempt = 0; attempt < 4; attempt++) {
+        try {
+          resp = await http.post(
+            Uri.parse(AuthConfig.deviceCodeUrl),
+            headers: {'Accept': 'application/json'},
+            body: {
+              'client_id': AuthConfig.githubClientId,
+              'scope': AuthConfig.scope,
+            },
+          );
+          break;
+        } catch (e) {
+          if (!_isNetworkError(e) || attempt == 3) rethrow;
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+      final j = jsonDecode(resp!.body) as Map<String, dynamic>;
       final deviceCode = j['device_code'] as String?;
       userCode = j['user_code'] as String?;
       verificationUri =
