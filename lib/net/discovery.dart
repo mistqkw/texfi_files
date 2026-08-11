@@ -15,7 +15,8 @@ class Discovery extends ChangeNotifier {
 
   final Settings settings;
   final int Function() httpPortProvider;
-  Discovery(this.settings, this.httpPortProvider);
+  final String? Function() accountIdProvider;
+  Discovery(this.settings, this.httpPortProvider, this.accountIdProvider);
 
   RawDatagramSocket? _socket;
   Timer? _announceTimer;
@@ -88,6 +89,7 @@ class Discovery extends ChangeNotifier {
         platform: (msg['platform'] as String?) ?? '?',
         address: dg.address.address,
         httpPort: (msg['httpPort'] as num?)?.toInt() ?? 0,
+        accountId: msg['acc'] as String?,
         lastSeen: DateTime.now(),
       );
       final existed = _peers.containsKey(id);
@@ -134,6 +136,7 @@ class Discovery extends ChangeNotifier {
       'name': settings.deviceName,
       'platform': Platform.isAndroid ? 'android' : 'linux',
       'httpPort': httpPortProvider(),
+      if (accountIdProvider() != null) 'acc': accountIdProvider(),
     }));
     try {
       sock.send(payload, _group, settings.discoveryPort);
