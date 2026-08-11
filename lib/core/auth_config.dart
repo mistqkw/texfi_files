@@ -10,6 +10,11 @@ class AuthConfig {
   static const String tokenUrl = 'https://github.com/login/oauth/access_token';
   static const String verificationUrl = 'https://github.com/login/device';
 
-  // Права: профиль (логин + id) + gist (реестр устройств для поиска через аккаунт).
-  static const String scope = 'read:user gist';
+  // Права: профиль + gist (реестр устройств) + repo (приватное хранилище файлов аккаунта).
+  static const String scope = 'read:user gist repo';
+
+  // Порог: файлы до этого размера уходят в облако аккаунта (GitHub-репо),
+  // большие — только напрямую между устройствами в одной сети.
+  static const int cloudMaxBytes = 90 * 1024 * 1024; // ~90 МБ
+  static const String storageRepo = 'texfi-files-storage';
 }

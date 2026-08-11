@@ -89,6 +89,14 @@ class ItemBubble extends StatelessWidget {
               const SizedBox(width: 4),
               Icon(Icons.push_pin, size: 11, color: cs.primary),
             ],
+            const SizedBox(width: 4),
+            Icon(
+              item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
+              size: 11,
+              color: item.cloud
+                  ? cs.primary
+                  : cs.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
           ],
         ),
       );

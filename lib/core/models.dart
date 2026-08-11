@@ -32,6 +32,8 @@ class SavedItem {
   final String? fromName; // имя пира-источника
   bool pinned; // закреплено
   String? group; // название группы/коллекции
+  bool cloud; // синхронизировано в облако аккаунта (GitHub-репо)
+  String? remotePath; // путь файла в репозитории (если в облаке)
 
   SavedItem({
     required this.id,
@@ -46,6 +48,8 @@ class SavedItem {
     this.fromName,
     this.pinned = false,
     this.group,
+    this.cloud = false,
+    this.remotePath,
   });
 
   bool get isMedia =>
@@ -64,6 +68,8 @@ class SavedItem {
         'fromName': fromName,
         'pinned': pinned,
         'group': group,
+        'cloud': cloud,
+        'remotePath': remotePath,
       };
 
   factory SavedItem.fromJson(Map<String, dynamic> j) => SavedItem(
@@ -81,6 +87,8 @@ class SavedItem {
         fromName: j['fromName'] as String?,
         pinned: j['pinned'] as bool? ?? false,
         group: j['group'] as String?,
+        cloud: j['cloud'] as bool? ?? false,
+        remotePath: j['remotePath'] as String?,
       );
 
   static List<SavedItem> listFromJson(String raw) {
