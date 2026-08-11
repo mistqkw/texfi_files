@@ -81,7 +81,7 @@ class TexfiApp extends StatelessWidget {
         elevation: 0,
         titleTextStyle: TextStyle(
           color: scheme.onSurface,
-          fontFamily: font,
+          fontFamily: d.titleFont ?? font,
           fontSize: 20,
           fontWeight: d.titleWeight,
         ),
@@ -133,6 +133,7 @@ class DesignPreset {
   final bool centerTitle;
   final FontWeight titleWeight;
   final bool dense;
+  final String? titleFont; // null = как общий шрифт
 
   const DesignPreset({
     required this.name,
@@ -142,7 +143,19 @@ class DesignPreset {
     required this.centerTitle,
     required this.titleWeight,
     required this.dense,
+    this.titleFont,
   });
+
+  // Фирменный стиль: чёткие скруглённые «плашки», плотный sans-заголовок.
+  static const texfi = DesignPreset(
+    name: 'TexFi',
+    cardRadius: 22,
+    buttonRadius: 18,
+    fieldRadius: 18,
+    centerTitle: false,
+    titleWeight: FontWeight.w800,
+    dense: false,
+  );
 
   static const material = DesignPreset(
     name: 'Material',
@@ -182,11 +195,12 @@ class DesignPreset {
   );
 
   static DesignPreset of(int i) => switch (i) {
-        1 => apple,
-        2 => samsung,
-        3 => windows,
-        _ => material,
+        1 => material,
+        2 => apple,
+        3 => samsung,
+        4 => windows,
+        _ => texfi,
       };
 
-  static const all = [material, apple, samsung, windows];
+  static const all = [texfi, material, apple, samsung, windows];
 }

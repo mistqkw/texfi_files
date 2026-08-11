@@ -264,13 +264,25 @@ class _HomePageState extends State<HomePage> {
   PreferredSizeWidget _appBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final online = _app.peers.where((p) => p.online).length;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
       titleSpacing: 16,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('TexFi files',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+          Image.asset(
+            dark
+                ? 'assets/brand/logo-horizontal-white.png'
+                : 'assets/brand/logo-horizontal.png',
+            height: 24,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            errorBuilder: (_, __, ___) => Image.asset(
+                'assets/brand/logo-horizontal-white.png',
+                height: 24),
+          ),
+          const SizedBox(height: 2),
           Text(
             !_app.auth.isLoggedIn
                 ? 'Войдите в аккаунт'

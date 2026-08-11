@@ -51,7 +51,7 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
-  int get seedColor => _p.getInt('seedColor') ?? 0xFF6C5CE7;
+  int get seedColor => _p.getInt('seedColor') ?? 0xFF4C7CFF; // Signal Blue (на тёмном)
   set seedColor(int v) {
     _p.setInt('seedColor', v);
     notifyListeners();

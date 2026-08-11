@@ -66,9 +66,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icon_1024.png"
-  adaptive_icon_background: "#0a0a0c"
-  adaptive_icon_foreground: "assets/icon_1024.png"
+  image_path: "assets/brand/app-icon.png"
+  adaptive_icon_background: "#0E0F11"
+  adaptive_icon_foreground: "assets/brand/app-icon.png"
   remove_alpha_ios: false
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -92,6 +92,7 @@ flutter:
   assets:
     - assets/icon_1024.png
     - assets/icon_512.png
+    - assets/brand/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

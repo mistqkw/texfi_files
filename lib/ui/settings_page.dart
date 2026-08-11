@@ -17,9 +17,9 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const _seeds = <int>[
-    0xFF3B6CF0, 0xFF6C5CE7, 0xFF0984E3, 0xFF00B894,
-    0xFF00CEC9, 0xFFE17055, 0xFFE84393, 0xFFFF7675,
-    0xFFFDCB6E, 0xFFEE5253, 0xFFA55EEA, 0xFF576574,
+    0xFF4C7CFF, 0xFF2A63FF, 0xFF6C5CE7, 0xFF0984E3,
+    0xFF00B894, 0xFF00CEC9, 0xFFE17055, 0xFFE84393,
+    0xFFFF7675, 0xFFFDCB6E, 0xFFA55EEA, 0xFF576574,
   ];
 
   bool? _ydotool; // доступен ли хоть какой-то движок ввода

@@ -5,12 +5,14 @@ class _Slide {
   final IconData icon;
   final String title;
   final String text;
-  const _Slide(this.icon, this.title, this.text);
+  final String? image;
+  const _Slide(this.icon, this.title, this.text, {this.image});
 }
 
 const _slides = <_Slide>[
   _Slide(Icons.bookmark_rounded, 'TexFi files',
-      'Ваше «Избранное» — как в Telegram, только своё и без лимитов.'),
+      'Ваше «Избранное» — как в Telegram, только своё и без лимитов.',
+      image: 'assets/brand/circle-icon.png'),
   _Slide(Icons.send_rounded, 'Шлите что угодно',
       'Текст, фото, видео и файлы любого размера — между вашими устройствами.'),
   _Slide(Icons.cloud_done_rounded, 'Аккаунт — ваше облако',
@@ -144,14 +146,16 @@ class _SlideView extends StatelessWidget {
               opacity: active ? 1 : 0.4,
               duration: const Duration(milliseconds: 300),
               child: Container(
-                width: 160,
-                height: 160,
+                width: 168,
+                height: 168,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [cs.primary, cs.tertiary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: slide.image == null
+                      ? LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -160,7 +164,10 @@ class _SlideView extends StatelessWidget {
                         spreadRadius: 4),
                   ],
                 ),
-                child: Icon(slide.icon, size: 76, color: cs.onPrimary),
+                clipBehavior: Clip.antiAlias,
+                child: slide.image != null
+                    ? Image.asset(slide.image!, fit: BoxFit.cover)
+                    : Icon(slide.icon, size: 76, color: cs.onPrimary),
               ),
             ),
           ),
