@@ -7,6 +7,7 @@ import '../app.dart';
 import '../core/models.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
+import 'image_gallery.dart';
 import 'player_page.dart';
 
 class ItemBubble extends StatelessWidget {
@@ -142,7 +143,10 @@ class ItemBubble extends StatelessWidget {
             onTap: () => _openImage(context, path),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
-              child: Image.file(File(path), fit: BoxFit.cover),
+              child: Hero(
+                tag: path,
+                child: Image.file(File(path), fit: BoxFit.cover),
+              ),
             ),
           ),
         Padding(
@@ -313,19 +317,19 @@ class ItemBubble extends StatelessWidget {
   }
 
   void _openImage(BuildContext context, String path) {
+    // Собираем все картинки ленты для свайпа между ними.
+    final all = AppScope.of(context)
+        .store
+        .items
+        .where((e) => e.kind == ItemKind.image && e.filePath != null)
+        .toList()
+        .reversed
+        .toList();
+    final idx = all.indexWhere((e) => e.id == item.id);
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-        ),
-        body: Center(
-          child: InteractiveViewer(
-            maxScale: 5,
-            child: Image.file(File(path)),
-          ),
-        ),
+      builder: (_) => ImageGallery(
+        images: all.isEmpty ? [item] : all,
+        initialIndex: idx < 0 ? 0 : idx,
       ),
     ));
   }
