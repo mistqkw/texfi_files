@@ -10,6 +10,7 @@ import 'audio_player_screen.dart';
 import 'format.dart';
 import 'image_gallery.dart';
 import 'player_page.dart';
+import 'video_thumb.dart';
 
 class ItemBubble extends StatelessWidget {
   final SavedItem item;
@@ -166,23 +167,46 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
+  void _openMedia(BuildContext context, bool isVideo) {
+    if (isVideo) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PlayerPage(item: item)),
+      );
+    } else {
+      final app = AppScope.of(context);
+      app.player.playItem(item, volume: app.settings.playerVolume);
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
+      );
+    }
+  }
+
   Widget _mediaContent(BuildContext context, ColorScheme cs) {
     final isVideo = item.kind == ItemKind.video;
+    // Видео — с превью-кадром.
+    if (isVideo) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          VideoThumb(item: item, onOpen: () => _openMedia(context, true)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(item.fileName ?? tr(context).videoWord,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                _footer(cs),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     return InkWell(
-      onTap: () {
-        if (isVideo) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => PlayerPage(item: item)),
-          );
-        } else {
-          // Аудио — через глобальный плеер (мини-плеер + фон).
-          final app = AppScope.of(context);
-          app.player.playItem(item, volume: app.settings.playerVolume);
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
-          );
-        }
-      },
+      onTap: () => _openMedia(context, false),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
