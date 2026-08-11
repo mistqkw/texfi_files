@@ -12,8 +12,9 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const _seeds = <int>[
-    0xFF6C5CE7, 0xFF0984E3, 0xFF00B894, 0xFFE17055,
-    0xFFE84393, 0xFFFDCB6E, 0xFFEE5253, 0xFF576574,
+    0xFF3B6CF0, 0xFF6C5CE7, 0xFF0984E3, 0xFF00B894,
+    0xFF00CEC9, 0xFFE17055, 0xFFE84393, 0xFFFF7675,
+    0xFFFDCB6E, 0xFFEE5253, 0xFFA55EEA, 0xFF576574,
   ];
 
   bool? _ydotool; // доступен ли хоть какой-то движок ввода
@@ -101,6 +102,40 @@ class _SettingsPageState extends State<SettingsPage> {
                 label: '${(s.uiScale * 100).toStringAsFixed(0)}%',
                 onChanged: (v) => s.uiScale = v,
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.rounded_corner_rounded),
+              title: const Text('Стиль пузырей'),
+              trailing: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Мягкий')),
+                  ButtonSegment(value: 1, label: Text('Круглый')),
+                  ButtonSegment(value: 2, label: Text('Острый')),
+                ],
+                selected: {s.bubbleStyle},
+                showSelectedIcon: false,
+                onSelectionChanged: (v) => s.bubbleStyle = v.first,
+              ),
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.gradient_rounded),
+              title: const Text('Градиентный фон ленты'),
+              value: s.chatBackground == 1,
+              onChanged: (v) => s.chatBackground = v ? 1 : 0,
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.density_small_rounded),
+              title: const Text('Компактный режим'),
+              subtitle: const Text('Плотнее, меньше отступов'),
+              value: s.compact,
+              onChanged: (v) => s.compact = v,
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.animation_rounded),
+              title: const Text('Анимации'),
+              subtitle: const Text('Плавное появление и переходы'),
+              value: s.animations,
+              onChanged: (v) => s.animations = v,
             ),
             const Divider(height: 1),
             _header('Сеть'),

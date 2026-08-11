@@ -20,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final Set<String> _seen = {}; // элементы, уже проигравшие анимацию появления
   Peer? _target; // null = сохранить локально
 
   late AppState _app;
@@ -28,6 +29,12 @@ class _HomePageState extends State<HomePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _app = AppScope.of(context);
+    if (_seen.isEmpty) {
+      // Историю при первом открытии не анимируем — только новые сообщения.
+      for (final it in _app.store.items) {
+        _seen.add(it.id);
+      }
+    }
   }
 
   @override
@@ -161,14 +168,29 @@ class _HomePageState extends State<HomePage> {
           _target = _app.preferredPeer;
         }
         final items = _app.store.items;
+        final cs = Theme.of(context).colorScheme;
+        final gradient = _app.settings.chatBackground == 1
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    cs.primary.withValues(alpha: 0.06),
+                    cs.surface,
+                    cs.tertiary.withValues(alpha: 0.05),
+                  ],
+                ),
+              )
+            : null;
         return Scaffold(
           appBar: _appBar(context),
           body: Column(
             children: [
               Expanded(
-                child: items.isEmpty
-                    ? _empty(context)
-                    : _timeline(items),
+                child: DecoratedBox(
+                  decoration: gradient ?? const BoxDecoration(),
+                  child: items.isEmpty ? _empty(context) : _timeline(items),
+                ),
               ),
               _inputBar(context),
             ],
@@ -257,7 +279,10 @@ class _HomePageState extends State<HomePage> {
         final item = ordered[i];
         final showDay = i == 0 ||
             !_sameDay(ordered[i - 1].createdAt, item.createdAt);
-        return Column(
+        final animate = _app.settings.animations && !_seen.contains(item.id);
+        _seen.add(item.id);
+        final row = Column(
+          key: ValueKey(item.id),
           children: [
             if (showDay) _dayChip(context, item.createdAt),
             ItemBubble(
@@ -266,6 +291,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         );
+        return animate ? _Entrance(child: row) : row;
       },
     );
   }
@@ -387,6 +413,43 @@ class _HomePageState extends State<HomePage> {
         onSelected: (_) => onTap(),
         visualDensity: VisualDensity.compact,
       ),
+    );
+  }
+}
+
+/// Плавное появление нового элемента ленты: fade + лёгкий подъём.
+class _Entrance extends StatefulWidget {
+  final Widget child;
+  const _Entrance({required this.child});
+
+  @override
+  State<_Entrance> createState() => _EntranceState();
+}
+
+class _EntranceState extends State<_Entrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  )..forward();
+  late final Animation<double> _fade =
+      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 0.12),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
