@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import '../app.dart';
 import '../core/models.dart';
+import 'audio_player_screen.dart';
 import 'format.dart';
 import 'player_page.dart';
 
@@ -155,9 +156,20 @@ class ItemBubble extends StatelessWidget {
   Widget _mediaContent(BuildContext context, ColorScheme cs) {
     final isVideo = item.kind == ItemKind.video;
     return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PlayerPage(item: item)),
-      ),
+      onTap: () {
+        if (isVideo) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => PlayerPage(item: item)),
+          );
+        } else {
+          // Аудио — через глобальный плеер (мини-плеер + фон).
+          final app = AppScope.of(context);
+          app.player.playItem(item, volume: app.settings.playerVolume);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
+          );
+        }
+      },
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
