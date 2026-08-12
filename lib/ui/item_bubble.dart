@@ -30,6 +30,13 @@ class ItemBubble extends StatelessWidget {
     final r = s.bubbleRadius;
     final tail = r * 0.28;
     final vMargin = s.compact ? 2.0 : 4.0;
+    // Едва заметный диагональный глянец вместо плоской заливки — то, что
+    // отличает «премиальный» пузырь от плоского цвета из коробки.
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [_shade(bubbleColor, 0.035), _shade(bubbleColor, -0.035)],
+    );
 
     return Align(
       alignment: align,
@@ -42,18 +49,23 @@ class ItemBubble extends StatelessWidget {
             child: Container(
               margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
               decoration: BoxDecoration(
-                color: bubbleColor,
+                gradient: gradient,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(r),
                   topRight: Radius.circular(r),
                   bottomLeft: Radius.circular(item.outgoing ? r : tail),
                   bottomRight: Radius.circular(item.outgoing ? tail : r),
                 ),
+                border: !item.outgoing
+                    ? Border.all(
+                        color: cs.outlineVariant.withValues(alpha: 0.18),
+                      )
+                    : null,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -64,6 +76,13 @@ class ItemBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Слегка осветляет/затемняет цвет по HSL-светлоте — используется для
+  /// диагонального глянца пузыря без потери контраста с текстом поверх.
+  static Color _shade(Color c, double delta) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
   }
 
   Widget _content(BuildContext context, ColorScheme cs) {
@@ -94,7 +113,9 @@ class ItemBubble extends StatelessWidget {
   Widget _receivingContent(BuildContext context, ColorScheme cs) {
     final t = tr(context);
     final expected = item.expectedSize;
-    final progress = expected > 0 ? (item.fileSize / expected).clamp(0.0, 1.0) : null;
+    final progress = expected > 0
+        ? (item.fileSize / expected).clamp(0.0, 1.0)
+        : null;
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -117,10 +138,12 @@ class ItemBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(item.fileName ?? t.fileWord,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  item.fileName ?? t.fileWord,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   expected > 0
@@ -137,53 +160,58 @@ class ItemBubble extends StatelessWidget {
   }
 
   Widget _footer(ColorScheme cs) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!item.outgoing && item.fromName != null) ...[
-              Icon(Icons.smartphone_rounded,
-                  size: 12, color: cs.onSurfaceVariant),
-              const SizedBox(width: 3),
-              Text(item.fromName!,
-                  style:
-                      TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-              const SizedBox(width: 8),
-            ],
-            Text(clockTime(item.createdAt),
-                style: TextStyle(
-                    fontSize: 11,
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.8))),
-            if (item.group != null) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.folder_rounded, size: 11, color: cs.onSurfaceVariant),
-            ],
-            if (item.pinned) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.push_pin, size: 11, color: cs.primary),
-            ],
-            if (item.archived) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.archive_rounded, size: 11, color: cs.onSurfaceVariant),
-            ],
-            const SizedBox(width: 4),
-            Icon(
-              item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
-              size: 11,
-              color: item.cloud
-                  ? cs.primary
-                  : cs.onSurfaceVariant.withValues(alpha: 0.6),
-            ),
-            if (item.expiresAt != null) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.timer_outlined, size: 11, color: cs.error),
-              const SizedBox(width: 2),
-              Text(_ttlLeft(item.expiresAt!),
-                  style: TextStyle(fontSize: 10, color: cs.error)),
-            ],
-          ],
+    padding: const EdgeInsets.only(top: 4),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!item.outgoing && item.fromName != null) ...[
+          Icon(Icons.smartphone_rounded, size: 12, color: cs.onSurfaceVariant),
+          const SizedBox(width: 3),
+          Text(
+            item.fromName!,
+            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          clockTime(item.createdAt),
+          style: TextStyle(
+            fontSize: 11,
+            color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+          ),
         ),
-      );
+        if (item.group != null) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.folder_rounded, size: 11, color: cs.onSurfaceVariant),
+        ],
+        if (item.pinned) ...[
+          const SizedBox(width: 4),
+          Icon(Icons.push_pin, size: 11, color: cs.primary),
+        ],
+        if (item.archived) ...[
+          const SizedBox(width: 4),
+          Icon(Icons.archive_rounded, size: 11, color: cs.onSurfaceVariant),
+        ],
+        const SizedBox(width: 4),
+        Icon(
+          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
+          size: 11,
+          color: item.cloud
+              ? cs.primary
+              : cs.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+        if (item.expiresAt != null) ...[
+          const SizedBox(width: 4),
+          Icon(Icons.timer_outlined, size: 11, color: cs.error),
+          const SizedBox(width: 2),
+          Text(
+            _ttlLeft(item.expiresAt!),
+            style: TextStyle(fontSize: 10, color: cs.error),
+          ),
+        ],
+      ],
+    ),
+  );
 
   String _ttlLeft(DateTime at) {
     final left = at.difference(DateTime.now());
@@ -201,8 +229,10 @@ class ItemBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SelectableText(item.text ?? '',
-              style: const TextStyle(fontSize: 15, height: 1.3)),
+          SelectableText(
+            item.text ?? '',
+            style: const TextStyle(fontSize: 15, height: 1.3),
+          ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -211,8 +241,11 @@ class ItemBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.copy_rounded,
-                      size: 15, color: cs.onSurfaceVariant),
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 15,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ),
               const SizedBox(width: 2),
@@ -221,8 +254,11 @@ class ItemBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.reply_rounded,
-                      size: 15, color: cs.onSurfaceVariant),
+                  child: Icon(
+                    Icons.reply_rounded,
+                    size: 15,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -256,8 +292,11 @@ class ItemBubble extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(item.fileName ?? tr(context).imageWord,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  item.fileName ?? tr(context).imageWord,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               _footer(cs),
             ],
@@ -269,15 +308,15 @@ class ItemBubble extends StatelessWidget {
 
   void _openMedia(BuildContext context, bool isVideo) {
     if (isVideo) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PlayerPage(item: item)),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => PlayerPage(item: item)));
     } else {
       final app = AppScope.of(context);
       app.player.playItem(item, volume: app.settings.playerVolume);
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
     }
   }
 
@@ -295,8 +334,11 @@ class ItemBubble extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(item.fileName ?? tr(context).videoWord,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    item.fileName ?? tr(context).videoWord,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 _footer(cs),
               ],
@@ -316,16 +358,14 @@ class ItemBubble extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [cs.primary, cs.tertiary]),
+                gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                  isVideo
-                      ? Icons.play_arrow_rounded
-                      : Icons.music_note_rounded,
-                  color: cs.onPrimary,
-                  size: 30),
+                isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded,
+                color: cs.onPrimary,
+                size: 30,
+              ),
             ),
             const SizedBox(width: 12),
             Flexible(
@@ -333,14 +373,19 @@ class ItemBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.fileName ?? (isVideo ? tr(context).videoWord : tr(context).audioWord),
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    item.fileName ??
+                        (isVideo
+                            ? tr(context).videoWord
+                            : tr(context).audioWord),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
-                    style: TextStyle(
-                        fontSize: 12, color: cs.onSurfaceVariant),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                   _footer(cs),
                 ],
@@ -357,9 +402,9 @@ class ItemBubble extends StatelessWidget {
       onTap: () {
         final app = AppScope.of(context);
         app.player.playItem(item, volume: app.settings.playerVolume);
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
       },
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -380,12 +425,15 @@ class ItemBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(tr(context).voiceMessage,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  tr(context).voiceMessage,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
-                Text(humanSize(item.fileSize),
-                    style:
-                        TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                Text(
+                  humanSize(item.fileSize),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
                 _footer(cs),
               ],
             ),
@@ -412,8 +460,10 @@ class ItemBubble extends StatelessWidget {
                 color: cs.secondaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.insert_drive_file_rounded,
-                  color: cs.onSecondaryContainer),
+              child: Icon(
+                Icons.insert_drive_file_rounded,
+                color: cs.onSecondaryContainer,
+              ),
             ),
             const SizedBox(width: 12),
             Flexible(
@@ -421,13 +471,17 @@ class ItemBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.fileName ?? tr(context).fileWord,
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    item.fileName ?? tr(context).fileWord,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 2),
-                  Text(humanSize(item.fileSize),
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
+                  Text(
+                    humanSize(item.fileSize),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
                   _footer(cs),
                 ],
               ),
@@ -456,8 +510,13 @@ class ItemBubble extends StatelessWidget {
           fileName: item.fileName ?? 'file',
           bytes: bytes,
         );
-        messenger.showSnackBar(SnackBar(
-            content: Text(path != null ? tr(context).saved : tr(context).cancelled)));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              path != null ? tr(context).saved : tr(context).cancelled,
+            ),
+          ),
+        );
       } else {
         // Desktop: выбираем путь и копируем файл.
         final path = await FilePicker.platform.saveFile(
@@ -465,14 +524,20 @@ class ItemBubble extends StatelessWidget {
           fileName: item.fileName ?? 'file',
         );
         if (path == null) {
-          messenger.showSnackBar(SnackBar(content: Text(tr(context).cancelled)));
+          messenger.showSnackBar(
+            SnackBar(content: Text(tr(context).cancelled)),
+          );
           return;
         }
         await File(src).copy(path);
-        messenger.showSnackBar(SnackBar(content: Text(tr(context).savedTo(path))));
+        messenger.showSnackBar(
+          SnackBar(content: Text(tr(context).savedTo(path))),
+        );
       }
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(tr(context).saveError2('$e'))));
+      messenger.showSnackBar(
+        SnackBar(content: Text(tr(context).saveError2('$e'))),
+      );
     }
   }
 
@@ -482,26 +547,28 @@ class ItemBubble extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: item.text ?? ''));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(tr(context).copied), duration: const Duration(seconds: 1)),
+        content: Text(tr(context).copied),
+        duration: const Duration(seconds: 1),
+      ),
     );
   }
 
   void _openImage(BuildContext context, String path) {
     // Собираем все картинки ленты для свайпа между ними.
-    final all = AppScope.of(context)
-        .store
-        .items
+    final all = AppScope.of(context).store.items
         .where((e) => e.kind == ItemKind.image && e.filePath != null)
         .toList()
         .reversed
         .toList();
     final idx = all.indexWhere((e) => e.id == item.id);
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ImageGallery(
-        images: all.isEmpty ? [item] : all,
-        initialIndex: idx < 0 ? 0 : idx,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ImageGallery(
+          images: all.isEmpty ? [item] : all,
+          initialIndex: idx < 0 ? 0 : idx,
+        ),
       ),
-    ));
+    );
   }
 
   void _groupDialog(BuildContext context) {
@@ -599,9 +666,9 @@ class ItemBubble extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(item.pinned
-                  ? Icons.push_pin
-                  : Icons.push_pin_outlined),
+              leading: Icon(
+                item.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+              ),
               title: Text(item.pinned ? tr(context).unpin : tr(context).pin),
               onTap: () {
                 Navigator.pop(context);
@@ -609,10 +676,14 @@ class ItemBubble extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(item.archived
-                  ? Icons.unarchive_outlined
-                  : Icons.archive_outlined),
-              title: Text(item.archived ? tr(context).unarchive : tr(context).archive),
+              leading: Icon(
+                item.archived
+                    ? Icons.unarchive_outlined
+                    : Icons.archive_outlined,
+              ),
+              title: Text(
+                item.archived ? tr(context).unarchive : tr(context).archive,
+              ),
               onTap: () {
                 Navigator.pop(context);
                 AppScope.of(context).store.toggleArchive(item);
@@ -620,9 +691,11 @@ class ItemBubble extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.folder_outlined),
-              title: Text(item.group == null
-                  ? tr(context).addToGroup
-                  : tr(context).groupName(item.group!)),
+              title: Text(
+                item.group == null
+                    ? tr(context).addToGroup
+                    : tr(context).groupName(item.group!),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _groupDialog(context);
@@ -686,8 +759,9 @@ class _DownloadTileState extends State<_DownloadTile> {
     final ok = await AppScope.of(context).cloud.downloadNow(widget.item);
     if (mounted) setState(() => _loading = false);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(widget.t.downloadFailed)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(widget.t.downloadFailed)));
     }
   }
 
@@ -709,9 +783,13 @@ class _DownloadTileState extends State<_DownloadTile> {
                   ? const CircularProgressIndicator(strokeWidth: 3)
                   : Container(
                       decoration: BoxDecoration(
-                          color: cs.primaryContainer, shape: BoxShape.circle),
-                      child: Icon(Icons.cloud_download_rounded,
-                          color: cs.onPrimaryContainer),
+                        color: cs.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cloud_download_rounded,
+                        color: cs.onPrimaryContainer,
+                      ),
                     ),
             ),
             const SizedBox(width: 12),
@@ -720,15 +798,18 @@ class _DownloadTileState extends State<_DownloadTile> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.fileName ?? widget.t.fileWord,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text(
-                      _loading
-                          ? widget.t.downloading
-                          : '${humanSize(item.fileSize)} · ${widget.t.download}',
-                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                    item.fileName ?? widget.t.fileWord,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    _loading
+                        ? widget.t.downloading
+                        : '${humanSize(item.fileSize)} · ${widget.t.download}',
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),

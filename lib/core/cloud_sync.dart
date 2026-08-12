@@ -36,13 +36,12 @@ class CloudSync extends ChangeNotifier {
   String? get _owner => auth.account?.login;
 
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer ${auth.token}',
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'TexFi-files',
-      };
+    'Authorization': 'Bearer ${auth.token}',
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'TexFi-files',
+  };
 
-  String get _repoBase =>
-      '$_api/repos/$_owner/${AuthConfig.storageRepo}';
+  String get _repoBase => '$_api/repos/$_owner/${AuthConfig.storageRepo}';
 
   void start() {
     stop();
@@ -84,11 +83,14 @@ class CloudSync extends ChangeNotifier {
           item.remotePath = dup.remotePath;
           item.encrypted = dup.encrypted;
         } else {
-          final safe =
-              (item.fileName ?? 'file').replaceAll(RegExp(r'[^\w.\-]'), '_');
+          final safe = (item.fileName ?? 'file').replaceAll(
+            RegExp(r'[^\w.\-]'),
+            '_',
+          );
           final remote = 'files/${hash.substring(0, 16)}__$safe';
-          final toUpload =
-              settings.encryptCloud ? await CryptoUtil.encrypt(raw) : raw;
+          final toUpload = settings.encryptCloud
+              ? await CryptoUtil.encrypt(raw)
+              : raw;
           await _putFile(remote, toUpload);
           item.remotePath = remote;
           item.encrypted = settings.encryptCloud;
@@ -103,6 +105,47 @@ class CloudSync extends ChangeNotifier {
       lastError = '$e';
       debugPrint('CloudSync push: $e');
     }
+  }
+
+  // ── Удаление элемента из общего индекса аккаунта ──
+  // Так удаление распространяется на все устройства аккаунта: следующий
+  // pull() на другом устройстве обнаружит, что запись пропала из индекса,
+  // и уберёт элемент локально (см. pull()).
+  Future<void> remove(SavedItem item) async {
+    if (!available) return;
+    try {
+      await _ensureRepo();
+      await _removeFromIndex(item.id);
+    } catch (e) {
+      lastError = '$e';
+      debugPrint('CloudSync remove: $e');
+    }
+  }
+
+  Future<void> _removeFromIndex(String id) async {
+    for (var attempt = 0; attempt < 4; attempt++) {
+      final (list, sha) = await _getIndex();
+      final before = list.length;
+      list.removeWhere((e) => e['id'] == id);
+      if (list.length == before) return; // уже удалено
+      final content = base64.encode(utf8.encode(jsonEncode(list)));
+      final resp = await http.put(
+        Uri.parse('$_repoBase/contents/$_indexPath'),
+        headers: _headers,
+        body: jsonEncode({
+          'message': 'remove $id',
+          'content': content,
+          if (sha != null) 'sha': sha,
+        }),
+      );
+      if (resp.statusCode == 200 || resp.statusCode == 201) return;
+      if (resp.statusCode == 409 || resp.statusCode == 422) {
+        await Future.delayed(const Duration(milliseconds: 400));
+        continue; // конфликт версий — перечитаем и повторим
+      }
+      throw Exception('index put ${resp.statusCode}: ${resp.body}');
+    }
+    throw Exception('index remove: не удалось после повторов');
   }
 
   /// Ищет в уже загруженном индексе запись с тем же хэшем файла (дедуп).
@@ -125,20 +168,20 @@ class CloudSync extends ChangeNotifier {
   }
 
   Map<String, dynamic> _entryOf(SavedItem it) => {
-        'id': it.id,
-        'kind': it.kind.name,
-        'text': it.text,
-        'fileName': it.fileName,
-        'fileSize': it.fileSize,
-        'mime': it.mime,
-        'createdAt': it.createdAt.toIso8601String(),
-        'pinned': it.pinned,
-        'group': it.group,
-        'remotePath': it.remotePath,
-        'fileHash': it.fileHash,
-        'encrypted': it.encrypted,
-        'expiresAt': it.expiresAt?.toIso8601String(),
-      };
+    'id': it.id,
+    'kind': it.kind.name,
+    'text': it.text,
+    'fileName': it.fileName,
+    'fileSize': it.fileSize,
+    'mime': it.mime,
+    'createdAt': it.createdAt.toIso8601String(),
+    'pinned': it.pinned,
+    'group': it.group,
+    'remotePath': it.remotePath,
+    'fileHash': it.fileHash,
+    'encrypted': it.encrypted,
+    'expiresAt': it.expiresAt?.toIso8601String(),
+  };
 
   // ── Забрать ленту из облака ──
   Future<void> pull() async {
@@ -155,6 +198,18 @@ class CloudSync extends ChangeNotifier {
         if (id == null || store.has(id)) continue;
         await _materialize(e);
       }
+      // Удаления с других устройств: если элемент был получен из облака,
+      // но его больше нет в общем индексе — убираем и здесь.
+      final remoteIds = entries
+          .map((e) => e['id'] as String?)
+          .whereType<String>()
+          .toSet();
+      final goneLocally = store.items
+          .where((it) => it.cloud && !remoteIds.contains(it.id))
+          .toList();
+      for (final it in goneLocally) {
+        await store.remove(it, notifyCloud: false);
+      }
       lastError = null;
     } catch (e) {
       lastError = '$e';
@@ -167,8 +222,10 @@ class CloudSync extends ChangeNotifier {
   }
 
   Future<void> _materialize(Map<String, dynamic> e) async {
-    final kind = ItemKind.values
-        .firstWhere((k) => k.name == e['kind'], orElse: () => ItemKind.text);
+    final kind = ItemKind.values.firstWhere(
+      (k) => k.name == e['kind'],
+      orElse: () => ItemKind.text,
+    );
     final expiresAt = e['expiresAt'] != null
         ? DateTime.tryParse(e['expiresAt'] as String)
         : null;
@@ -197,26 +254,29 @@ class CloudSync extends ChangeNotifier {
       await target.writeAsBytes(bytes);
       filePath = target.path;
     }
-    await store.addRemote(SavedItem(
-      id: e['id'] as String,
-      kind: kind,
-      text: e['text'] as String?,
-      filePath: filePath,
-      fileName: e['fileName'] as String?,
-      fileSize: (e['fileSize'] as num?)?.toInt() ?? 0,
-      mime: e['mime'] as String?,
-      createdAt:
-          DateTime.tryParse(e['createdAt'] as String? ?? '') ?? DateTime.now(),
-      outgoing: false,
-      fromName: 'Аккаунт',
-      pinned: e['pinned'] as bool? ?? false,
-      group: e['group'] as String?,
-      cloud: true,
-      remotePath: remote,
-      fileHash: e['fileHash'] as String?,
-      encrypted: encrypted,
-      expiresAt: expiresAt,
-    ));
+    await store.addRemote(
+      SavedItem(
+        id: e['id'] as String,
+        kind: kind,
+        text: e['text'] as String?,
+        filePath: filePath,
+        fileName: e['fileName'] as String?,
+        fileSize: (e['fileSize'] as num?)?.toInt() ?? 0,
+        mime: e['mime'] as String?,
+        createdAt:
+            DateTime.tryParse(e['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+        outgoing: false,
+        fromName: 'Аккаунт',
+        pinned: e['pinned'] as bool? ?? false,
+        group: e['group'] as String?,
+        cloud: true,
+        remotePath: remote,
+        fileHash: e['fileHash'] as String?,
+        encrypted: encrypted,
+        expiresAt: expiresAt,
+      ),
+    );
   }
 
   /// Скачать содержимое элемента, который был пропущен избирательной
@@ -286,8 +346,7 @@ class CloudSync extends ChangeNotifier {
     final content = (j['content'] as String? ?? '').replaceAll('\n', '');
     if (content.isEmpty) return (<Map<String, dynamic>>[], sha);
     final decoded = utf8.decode(base64.decode(content));
-    final list = (jsonDecode(decoded) as List)
-        .cast<Map<String, dynamic>>();
+    final list = (jsonDecode(decoded) as List).cast<Map<String, dynamic>>();
     return (list, sha);
   }
 

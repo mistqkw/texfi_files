@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,9 +9,11 @@ import '../core/models.dart';
 /// Индекс — JSON-файл, полученные файлы лежат в подпапке files/.
 class Store extends ChangeNotifier {
   final List<SavedItem> _items = [];
+  final Set<String> _tombstones = {};
   late final Directory _root;
   late final Directory _filesDir;
   late final File _index;
+  late final File _tombstoneFile;
   bool _ready = false;
 
   List<SavedItem> get items => List.unmodifiable(_items.reversed);
@@ -20,7 +23,14 @@ class Store extends ChangeNotifier {
   /// Вызывается при локальном добавлении (для отправки в облако).
   void Function(SavedItem item)? onItemAdded;
 
+  /// Вызывается при удалении элемента, который был в облаке (для удаления
+  /// записи из общего индекса аккаунта).
+  void Function(SavedItem item)? onItemRemoved;
+
   bool has(String id) => _items.any((e) => e.id == id);
+
+  /// Был ли элемент с таким id удалён (чтобы не воскрешать его из облака).
+  bool isDeleted(String id) => _tombstones.contains(id);
 
   Future<void> init() async {
     final base = await getApplicationSupportDirectory();
@@ -28,6 +38,7 @@ class Store extends ChangeNotifier {
     _filesDir = Directory('${_root.path}/files');
     if (!_filesDir.existsSync()) _filesDir.createSync(recursive: true);
     _index = File('${_root.path}/index.json');
+    _tombstoneFile = File('${_root.path}/deleted.json');
     if (_index.existsSync()) {
       try {
         _items
@@ -38,9 +49,23 @@ class Store extends ChangeNotifier {
         debugPrint('Store: не смог прочитать индекс: $e');
       }
     }
+    if (_tombstoneFile.existsSync()) {
+      try {
+        final list = (jsonDecode(await _tombstoneFile.readAsString()) as List)
+            .cast<String>();
+        _tombstones
+          ..clear()
+          ..addAll(list);
+      } catch (e) {
+        debugPrint('Store: не смог прочитать deleted.json: $e');
+      }
+    }
     _ready = true;
     notifyListeners();
   }
+
+  Future<void> _persistTombstones() =>
+      _tombstoneFile.writeAsString(jsonEncode(_tombstones.toList()));
 
   Future<void> _persist() async {
     await _index.writeAsString(SavedItem.listToJson(_items));
@@ -83,7 +108,7 @@ class Store extends ChangeNotifier {
 
   /// Добавить элемент, пришедший из облака (без повторной отправки в облако).
   Future<void> addRemote(SavedItem item) async {
-    if (has(item.id)) return;
+    if (has(item.id) || _tombstones.contains(item.id)) return;
     _items.add(item);
     _items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     notifyListeners();
@@ -93,8 +118,18 @@ class Store extends ChangeNotifier {
   /// Сохранить изменения (например, после пометки cloud=true).
   Future<void> persist() => _persist();
 
-  Future<void> remove(SavedItem item) async {
+  /// Удалить элемент. [notifyCloud] управляет тем, будет ли вызван
+  /// [onItemRemoved] (отключается при удалении, пришедшем уже из облака,
+  /// чтобы не слать в GitHub лишний запрос на то, что там уже удалено).
+  Future<void> remove(SavedItem item, {bool notifyCloud = true}) async {
     _items.removeWhere((e) => e.id == item.id);
+    if (item.cloud) {
+      // Ставим «надгробие», чтобы ближайший periodic pull() из облака
+      // (индекс ещё может содержать запись, пока идёт запрос на удаление)
+      // не воскресил только что удалённый элемент обратно в ленту.
+      _tombstones.add(item.id);
+      await _persistTombstones();
+    }
     notifyListeners();
     // Удаляем локальный файл, если он в нашей папке.
     if (item.filePath != null && item.filePath!.startsWith(_filesDir.path)) {
@@ -104,6 +139,7 @@ class Store extends ChangeNotifier {
       } catch (_) {}
     }
     await _persist();
+    if (notifyCloud && item.cloud) onItemRemoved?.call(item);
   }
 
   Future<void> togglePin(SavedItem item) async {
@@ -146,8 +182,9 @@ class Store extends ChangeNotifier {
   /// изменения (чтобы вызывающий мог не персистить впустую).
   Future<bool> purgeExpired() async {
     final now = DateTime.now();
-    final expired =
-        _items.where((e) => e.expiresAt != null && now.isAfter(e.expiresAt!)).toList();
+    final expired = _items
+        .where((e) => e.expiresAt != null && now.isAfter(e.expiresAt!))
+        .toList();
     if (expired.isEmpty) return false;
     for (final e in expired) {
       _items.remove(e);
