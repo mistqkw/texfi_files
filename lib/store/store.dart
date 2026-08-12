@@ -142,6 +142,27 @@ class Store extends ChangeNotifier {
     return list;
   }
 
+  /// Удаляет элементы с истёкшим TTL (самоуничтожение). Возвращает, были ли
+  /// изменения (чтобы вызывающий мог не персистить впустую).
+  Future<bool> purgeExpired() async {
+    final now = DateTime.now();
+    final expired =
+        _items.where((e) => e.expiresAt != null && now.isAfter(e.expiresAt!)).toList();
+    if (expired.isEmpty) return false;
+    for (final e in expired) {
+      _items.remove(e);
+      if (e.filePath != null && e.filePath!.startsWith(_filesDir.path)) {
+        try {
+          final f = File(e.filePath!);
+          if (f.existsSync()) await f.delete();
+        } catch (_) {}
+      }
+    }
+    notifyListeners();
+    await _persist();
+    return true;
+  }
+
   Future<void> clearAll() async {
     _items.clear();
     notifyListeners();

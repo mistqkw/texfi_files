@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -108,13 +109,20 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Самоуничтожение: null=выкл, иначе кол-во секунд до удаления.
+  int? _ttlSeconds;
+  bool _dragHover = false;
+  static bool get _dragDropSupported =>
+      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+
   Future<void> _sendText() async {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     _input.clear();
+    final ttl = _ttlSeconds;
     if (_target != null) {
       final peer = _target!;
-      final ok = await _app.sendTextTo(peer, text);
+      final ok = await _app.sendTextTo(peer, text, ttlSeconds: ttl);
       if (!ok && mounted) {
         await _app.queue.enqueue(QueuedSend(
           id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -127,7 +135,7 @@ class _HomePageState extends State<HomePage> {
         _toast(t.queuedOffline(peer.name));
       }
     } else {
-      await _app.saveTextLocal(text);
+      await _app.saveTextLocal(text, ttlSeconds: ttl);
     }
     _scrollToBottom();
   }
@@ -215,6 +223,9 @@ class _HomePageState extends State<HomePage> {
       fileSize: size,
       createdAt: DateTime.now(),
       outgoing: true,
+      expiresAt: _ttlSeconds != null
+          ? DateTime.now().add(Duration(seconds: _ttlSeconds!))
+          : null,
     ));
   }
 
@@ -245,7 +256,8 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-    _app.sendFileTo(peer, file).listen(
+    final ttl = _ttlSeconds;
+    _app.sendFileTo(peer, file, ttlSeconds: ttl).listen(
       (p) => progress.value = p,
       onDone: () {
         entry.close();
@@ -259,6 +271,8 @@ class _HomePageState extends State<HomePage> {
           createdAt: DateTime.now(),
           outgoing: true,
           fromName: peer.name,
+          expiresAt:
+              ttl != null ? DateTime.now().add(Duration(seconds: ttl)) : null,
         ));
       },
       onError: (e) async {
@@ -303,7 +317,7 @@ class _HomePageState extends State<HomePage> {
         final all = _app.store.items;
         final items = _applyFilter(all);
         final cs = Theme.of(context).colorScheme;
-        return Scaffold(
+        final scaffold = Scaffold(
           appBar: _appBar(context),
           body: Column(
             children: [
@@ -327,6 +341,32 @@ class _HomePageState extends State<HomePage> {
                       child:
                           items.isEmpty ? _empty(context) : _timeline(items),
                     ),
+                    if (_dragHover)
+                      Positioned.fill(
+                        child: Container(
+                          color: cs.primary.withValues(alpha: 0.12),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: cs.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: cs.primary, width: 2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.file_download_outlined,
+                                      color: cs.primary),
+                                  const SizedBox(width: 8),
+                                  Text(t.dropFilesHere),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -334,6 +374,19 @@ class _HomePageState extends State<HomePage> {
               _inputBar(context),
             ],
           ),
+        );
+        if (!_dragDropSupported) return scaffold;
+        return DropTarget(
+          onDragEntered: (_) => setState(() => _dragHover = true),
+          onDragExited: (_) => setState(() => _dragHover = false),
+          onDragDone: (details) async {
+            setState(() => _dragHover = false);
+            for (final f in details.files) {
+              await _dispatchFile(File(f.path));
+            }
+            _scrollToBottom();
+          },
+          child: scaffold,
         );
       },
     );
@@ -610,9 +663,26 @@ class _HomePageState extends State<HomePage> {
           key: ValueKey(item.id),
           children: [
             if (showDay) _dayChip(context, item.createdAt),
-            ItemBubble(
-              item: item,
-              onDelete: () => _app.store.remove(item),
+            Dismissible(
+              key: ValueKey('dismiss_${item.id}'),
+              direction: DismissDirection.horizontal,
+              // Свайп вправо — переслать (не удаляет элемент).
+              confirmDismiss: (dir) async {
+                if (dir == DismissDirection.startToEnd) {
+                  await shareItem(item);
+                  return false;
+                }
+                return true; // влево — удалить
+              },
+              onDismissed: (_) => _app.store.remove(item),
+              background: _swipeBg(context, Alignment.centerLeft,
+                  Icons.reply_rounded, t.share, Colors.blue),
+              secondaryBackground: _swipeBg(context, Alignment.centerRight,
+                  Icons.delete_outline_rounded, t.delete, Colors.red),
+              child: ItemBubble(
+                item: item,
+                onDelete: () => _app.store.remove(item),
+              ),
             ),
           ],
         );
@@ -623,6 +693,22 @@ class _HomePageState extends State<HomePage> {
                 child: row)
             : row;
         },
+      ),
+    );
+  }
+
+  Widget _swipeBg(BuildContext context, Alignment align, IconData icon,
+      String label, Color color) {
+    return Container(
+      alignment: align,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      color: color.withValues(alpha: 0.15),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color),
+          Text(label, style: TextStyle(color: color, fontSize: 11)),
+        ],
       ),
     );
   }
@@ -683,7 +769,17 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 2),
+                IconButton(
+                  tooltip: t.selfDestruct,
+                  icon: Icon(
+                    _ttlSeconds == null
+                        ? Icons.timer_outlined
+                        : Icons.timer_rounded,
+                    color: _ttlSeconds != null ? cs.primary : null,
+                  ),
+                  onPressed: _pickTtl,
+                ),
                 IconButton(
                   icon: const Icon(Icons.mic_rounded),
                   onPressed: _startRecord,
@@ -700,6 +796,43 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void _pickTtl() {
+    const options = <int?>[null, 60, 3600, 86400, 604800];
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            for (final v in options)
+              ListTile(
+                leading: Icon(v == null
+                    ? Icons.timer_off_outlined
+                    : Icons.timer_outlined),
+                title: Text(_ttlLabel(v)),
+                trailing: _ttlSeconds == v
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () {
+                  setState(() => _ttlSeconds = v);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _ttlLabel(int? v) => switch (v) {
+        null => t.ttlOff,
+        60 => t.ttl1m,
+        3600 => t.ttl1h,
+        86400 => t.ttl1d,
+        604800 => t.ttl1w,
+        _ => '$v s',
+      };
 
   Widget _recordingRow(ColorScheme cs) {
     return Row(
