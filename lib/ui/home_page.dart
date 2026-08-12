@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -397,84 +398,113 @@ class _HomePageState extends State<HomePage> {
     final online = _app.peers.where((p) => p.online).length;
     final dark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
-      titleSpacing: 16,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      titleSpacing: 12,
+      toolbarHeight: 60,
+      title: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset(
-                dark
-                    ? 'assets/brand/logo-horizontal-white.png'
-                    : 'assets/brand/logo-horizontal.png',
-                height: 22,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-                errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/brand/logo-horizontal-white.png',
-                    height: 22),
-              ),
-              const SizedBox(width: 7),
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text('files',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w500,
-                      color: cs.onSurfaceVariant,
-                    )),
-              ),
-            ],
+          Image.asset(
+            dark
+                ? 'assets/brand/logo-horizontal-white.png'
+                : 'assets/brand/logo-horizontal.png',
+            height: 18,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            errorBuilder: (_, __, ___) => Image.asset(
+                'assets/brand/logo-horizontal-white.png',
+                height: 18),
           ),
-          const SizedBox(height: 2),
-          Text(
-            !_app.auth.isLoggedIn
-                ? t.signInPrompt
-                : online > 0
-                    ? t.devicesInAccount(online)
-                    : t.searchingDevices,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text('files',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: cs.onSurfaceVariant,
+                  )),
+            ),
           ),
         ],
       ),
       actions: [
         IconButton(
+          visualDensity: VisualDensity.compact,
           tooltip: t.searchHint,
-          icon: const Icon(Icons.search_rounded),
+          icon: const Icon(Icons.search_rounded, size: 22),
           onPressed: () => setState(() => _searching = !_searching),
         ),
         IconButton(
-          tooltip: t.music,
-          icon: const Icon(Icons.library_music_outlined),
-          onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MusicScreen())),
-        ),
-        IconButton(
-          tooltip: t.ttKeyboard,
-          icon: const Icon(Icons.keyboard_alt_outlined),
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => const RemoteKeyboardPage())),
-        ),
-        IconButton(
+          visualDensity: VisualDensity.compact,
           tooltip: t.ttDevices,
           icon: Badge(
             isLabelVisible: online > 0,
             label: Text('$online'),
-            child: const Icon(Icons.devices_rounded),
+            child: const Icon(Icons.devices_rounded, size: 22),
           ),
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const PeersPage())),
         ),
-        IconButton(
-          tooltip: t.ttSettings,
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+        PopupMenuButton<int>(
+          tooltip: '',
+          icon: const Icon(Icons.more_vert_rounded, size: 22),
+          onSelected: (v) {
+            final page = switch (v) {
+              0 => const MusicScreen(),
+              1 => const RemoteKeyboardPage(),
+              _ => const SettingsPage(),
+            };
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => page));
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 0,
+              child: Row(children: [
+                const Icon(Icons.library_music_outlined, size: 20),
+                const SizedBox(width: 12),
+                Text(t.music),
+              ]),
+            ),
+            PopupMenuItem(
+              value: 1,
+              child: Row(children: [
+                const Icon(Icons.keyboard_alt_outlined, size: 20),
+                const SizedBox(width: 12),
+                Text(t.ttKeyboard),
+              ]),
+            ),
+            PopupMenuItem(
+              value: 2,
+              child: Row(children: [
+                const Icon(Icons.settings_outlined, size: 20),
+                const SizedBox(width: 12),
+                Text(t.ttSettings),
+              ]),
+            ),
+          ],
         ),
+        const SizedBox(width: 4),
       ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(18),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 6),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              !_app.auth.isLoggedIn
+                  ? t.signInPrompt
+                  : online > 0
+                      ? t.devicesInAccount(online)
+                      : t.searchingDevices,
+              style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -663,22 +693,10 @@ class _HomePageState extends State<HomePage> {
           key: ValueKey(item.id),
           children: [
             if (showDay) _dayChip(context, item.createdAt),
-            Dismissible(
-              key: ValueKey('dismiss_${item.id}'),
-              direction: DismissDirection.horizontal,
-              // Свайп вправо — переслать (не удаляет элемент).
-              confirmDismiss: (dir) async {
-                if (dir == DismissDirection.startToEnd) {
-                  await shareItem(item);
-                  return false;
-                }
-                return true; // влево — удалить
-              },
-              onDismissed: (_) => _app.store.remove(item),
-              background: _swipeBg(context, Alignment.centerLeft,
-                  Icons.reply_rounded, t.share, Colors.blue),
-              secondaryBackground: _swipeBg(context, Alignment.centerRight,
-                  Icons.delete_outline_rounded, t.delete, Colors.red),
+            _SwipeRow(
+              itemId: item.id,
+              onShare: () => shareItem(item),
+              onDelete: () => _app.store.remove(item),
               child: ItemBubble(
                 item: item,
                 onDelete: () => _app.store.remove(item),
@@ -693,22 +711,6 @@ class _HomePageState extends State<HomePage> {
                 child: row)
             : row;
         },
-      ),
-    );
-  }
-
-  Widget _swipeBg(BuildContext context, Alignment align, IconData icon,
-      String label, Color color) {
-    return Container(
-      alignment: align,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      color: color.withValues(alpha: 0.15),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color),
-          Text(label, style: TextStyle(color: color, fontSize: 11)),
-        ],
       ),
     );
   }
@@ -737,10 +739,16 @@ class _HomePageState extends State<HomePage> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
         decoration: BoxDecoration(
           color: cs.surface,
-          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -753,41 +761,63 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
+                  visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add_circle_outline_rounded),
                   onPressed: _attachMenu,
                 ),
                 Expanded(
-                  child: TextField(
-                    controller: _input,
-                    minLines: 1,
-                    maxLines: 5,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
-                      hintText: t.messageHint,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(24),
+                      border: _ttlSeconds != null
+                          ? Border.all(color: cs.primary, width: 1.2)
+                          : null,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _input,
+                            minLines: 1,
+                            maxLines: 5,
+                            textInputAction: TextInputAction.newline,
+                            decoration: InputDecoration(
+                              hintText: t.messageHint,
+                              filled: false,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.fromLTRB(
+                                  18, 12, 4, 12),
+                            ),
+                          ),
+                        ),
+                        if (_ttlSeconds != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4, bottom: 6),
+                            child: Icon(Icons.timer_rounded,
+                                size: 16, color: cs.primary),
+                          ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.mic_rounded),
+                          onPressed: _startRecord,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 2),
-                IconButton(
-                  tooltip: t.selfDestruct,
-                  icon: Icon(
-                    _ttlSeconds == null
-                        ? Icons.timer_outlined
-                        : Icons.timer_rounded,
-                    color: _ttlSeconds != null ? cs.primary : null,
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onLongPress: _pickTtl,
+                  child: FloatingActionButton.small(
+                    elevation: 0,
+                    tooltip: t.selfDestruct,
+                    backgroundColor:
+                        _ttlSeconds != null ? cs.primary : null,
+                    onPressed: _sendText,
+                    child: const Icon(Icons.send_rounded),
                   ),
-                  onPressed: _pickTtl,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mic_rounded),
-                  onPressed: _startRecord,
-                ),
-                FloatingActionButton.small(
-                  elevation: 0,
-                  onPressed: _sendText,
-                  child: const Icon(Icons.send_rounded),
                 ),
               ],
             ),
@@ -992,5 +1022,104 @@ class _EntranceState extends State<_Entrance>
           child: fade,
         );
     }
+  }
+}
+
+/// Пузырь со свайпом: плавно нарастающая иконка/фон по мере перетаскивания
+/// (вправо — переслать, влево — удалить), лёгкая вибро-отдача на пороге.
+class _SwipeRow extends StatefulWidget {
+  final String itemId;
+  final Widget child;
+  final VoidCallback onShare;
+  final VoidCallback onDelete;
+  const _SwipeRow({
+    required this.itemId,
+    required this.child,
+    required this.onShare,
+    required this.onDelete,
+  });
+
+  @override
+  State<_SwipeRow> createState() => _SwipeRowState();
+}
+
+class _SwipeRowState extends State<_SwipeRow> {
+  double _progress = 0; // -1..1 (влево..вправо)
+  bool _reached = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey('dismiss_${widget.itemId}'),
+      direction: DismissDirection.horizontal,
+      onUpdate: (details) {
+        final signed = details.direction == DismissDirection.endToStart
+            ? -details.progress
+            : details.progress;
+        if (details.reached && !_reached) HapticFeedback.lightImpact();
+        setState(() {
+          _progress = signed;
+          _reached = details.reached;
+        });
+      },
+      confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd) {
+          widget.onShare();
+          setState(() => _progress = 0);
+          return false; // переслать — не удаляет
+        }
+        return true; // влево — удалить
+      },
+      onDismissed: (_) => widget.onDelete(),
+      background: _swipeReveal(
+        align: Alignment.centerLeft,
+        icon: Icons.reply_rounded,
+        label: tr(context).share,
+        color: Colors.blue,
+        progress: _progress.clamp(0, 1),
+      ),
+      secondaryBackground: _swipeReveal(
+        align: Alignment.centerRight,
+        icon: Icons.delete_outline_rounded,
+        label: tr(context).delete,
+        color: Colors.red,
+        progress: (-_progress).clamp(0, 1),
+      ),
+      child: widget.child,
+    );
+  }
+
+  Widget _swipeReveal({
+    required Alignment align,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required double progress,
+  }) {
+    final scale = 0.6 + (progress.clamp(0, 1) * 0.7);
+    return Container(
+      alignment: align,
+      padding: const EdgeInsets.symmetric(horizontal: 26),
+      color: color.withValues(alpha: 0.10 + progress * 0.10),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 80),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(color: color, fontSize: 10.5)),
+          ],
+        ),
+      ),
+    );
   }
 }
