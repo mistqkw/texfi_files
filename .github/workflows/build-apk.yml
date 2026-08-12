@@ -36,7 +36,10 @@ jobs:
           if-no-files-found: error
 
   build-windows:
-    runs-on: windows-latest
+    # windows-latest перешёл на VS2026/MSVC v18, который жёстко запрещает
+    # <experimental/coroutine> (используется в local_auth_windows) — держим
+    # windows-2022 с более старым тулсетом, пока апстрим не починит плагин.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
