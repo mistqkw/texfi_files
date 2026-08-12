@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
 import '../app_state.dart';
 import '../core/models.dart';
+
+const _qrScheme = 'texfi';
 
 class PeersPage extends StatefulWidget {
   const PeersPage({super.key});
@@ -40,8 +44,24 @@ class _PeersPageState extends State<PeersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = Platform.isAndroid || Platform.isIOS;
     return Scaffold(
-      appBar: AppBar(title: Text(t.devicesTitle)),
+      appBar: AppBar(
+        title: Text(t.devicesTitle),
+        actions: [
+          IconButton(
+            tooltip: t.showQr,
+            icon: const Icon(Icons.qr_code_rounded),
+            onPressed: _showMyQr,
+          ),
+          if (mobile)
+            IconButton(
+              tooltip: t.scanQr,
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: _scanQr,
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addByIp,
         icon: const Icon(Icons.add_link_rounded),
@@ -221,6 +241,70 @@ class _PeersPageState extends State<PeersPage> {
             child: Text(t.connect),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showMyQr() {
+    final ip = _localIp;
+    final port = _app.server.port;
+    if (ip == null) return;
+    final data = '$_qrScheme:$ip:$port';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(t.showQr),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(data: data, size: 220),
+            const SizedBox(height: 12),
+            Text('$ip:$port', style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: Text(t.close)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _scanQr() async {
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const _QrScannerPage()),
+    );
+    if (result == null || !result.startsWith('$_qrScheme:')) return;
+    final parts = result.split(':');
+    if (parts.length != 3) return;
+    final ip = parts[1];
+    final port = int.tryParse(parts[2]);
+    if (port == null) return;
+    final name = await _app.discovery.addManual(ip, port);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          name != null ? t.connectedTo(name) : t.connectFail('$ip:$port')),
+    ));
+  }
+}
+
+/// Полноэкранный сканер QR (Android/iOS) — считывает код пары другого
+/// устройства и возвращает его строковое содержимое.
+class _QrScannerPage extends StatelessWidget {
+  const _QrScannerPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(tr(context).scanQr)),
+      body: MobileScanner(
+        onDetect: (capture) {
+          final codes = capture.barcodes;
+          if (codes.isEmpty) return;
+          final value = codes.first.rawValue;
+          if (value != null) Navigator.of(context).pop(value);
+        },
       ),
     );
   }
