@@ -67,6 +67,29 @@ class AppStrings {
       'Sendewarteschlange', 'Kolejka wysyłania');
   String get offlineQueueEmpty => _('Очередь пуста', 'Queue is empty',
       'Warteschlange leer', 'Kolejka jest pusta');
+  String get enterPin => _('Введите PIN', 'Enter PIN', 'PIN eingeben',
+      'Wprowadź PIN');
+  String get unlockReason => _('Разблокировать TexFi files',
+      'Unlock TexFi files', 'TexFi files entsperren', 'Odblokuj TexFi files');
+  String get setPin => _('Задать PIN-код', 'Set PIN code', 'PIN festlegen',
+      'Ustaw kod PIN');
+  String get pinLock => _('PIN-код', 'PIN lock', 'PIN-Sperre', 'Blokada PIN');
+  String get pinLockSub => _('Запрашивать код при открытии приложения',
+      'Ask for a code when opening the app',
+      'Code beim Öffnen der App abfragen',
+      'Pytaj o kod przy otwieraniu aplikacji');
+  String get biometric => _('Биометрия', 'Biometric unlock', 'Biometrie',
+      'Odblokowanie biometryczne');
+  String get createPinStep1 =>
+      _('Придумайте 4-значный PIN', 'Create a 4-digit PIN', 'PIN erstellen',
+          'Utwórz 4-cyfrowy PIN');
+  String get createPinStep2 => _('Повторите PIN', 'Repeat the PIN',
+      'PIN wiederholen', 'Powtórz PIN');
+  String get pinMismatch => _('PIN не совпадает, попробуйте снова',
+      'PINs don\'t match, try again', 'PINs stimmen nicht überein',
+      'PIN-y się nie zgadzają');
+  String get pinSetDone => _('PIN установлен', 'PIN set', 'PIN gesetzt',
+      'PIN ustawiony');
   String sendError(String name) => _('Ошибка отправки $name',
       'Error sending $name', 'Fehler beim Senden $name', 'Błąd wysyłania $name');
   String failed(String e) =>
@@ -145,6 +168,46 @@ class AppStrings {
   String get hBackground =>
       _('Фон и эффекты', 'Background & effects', 'Hintergrund & Effekte',
           'Tło i efekty');
+  String get hFilesSync => _('Файлы и синхронизация', 'Files & sync',
+      'Dateien & Synchronisierung', 'Pliki i synchronizacja');
+  String get hSecurity =>
+      _('Безопасность', 'Security', 'Sicherheit', 'Bezpieczeństwo');
+  String get catFilesSyncSub => _('Облако/P2P, оффлайн-очередь, устройства',
+      'Cloud/P2P, offline queue, devices',
+      'Cloud/P2P, Offline-Warteschlange, Geräte',
+      'Chmura/P2P, kolejka offline, urządzenia');
+  String get catSecuritySub => _('Шифрование, PIN, биометрия',
+      'Encryption, PIN, biometrics', 'Verschlüsselung, PIN, Biometrie',
+      'Szyfrowanie, PIN, biometria');
+  String get cloudRouting => _('Маршрутизация', 'Routing', 'Routing',
+      'Trasowanie');
+  String get cloudModeAuto => _('Авто (по размеру)', 'Auto (by size)',
+      'Automatisch (nach Größe)', 'Automatycznie (wg rozmiaru)');
+  String get cloudModeAlways => _('Всегда в облако', 'Always cloud',
+      'Immer Cloud', 'Zawsze chmura');
+  String get cloudModeNever => _('Только P2P', 'P2P only', 'Nur P2P',
+      'Tylko P2P');
+  String get selectiveSync => _('Избирательная синхронизация',
+      'Selective sync', 'Selektive Synchronisierung',
+      'Selektywna synchronizacja');
+  String get selectiveSyncSub => _(
+      'Не скачивать медиа из облака автоматически — только по запросу',
+      'Don\'t auto-download media from the cloud — only on request',
+      'Medien nicht automatisch aus der Cloud laden — nur auf Anfrage',
+      'Nie pobieraj mediów automatycznie — tylko na żądanie');
+  String get encryptCloud => _('Шифровать файлы в облаке',
+      'Encrypt files in the cloud', 'Dateien in der Cloud verschlüsseln',
+      'Szyfruj pliki w chmurze');
+  String get encryptCloudSub => _(
+      'AES-256 перед загрузкой в приватный репозиторий',
+      'AES-256 before uploading to the private repo',
+      'AES-256 vor dem Hochladen ins private Repo',
+      'AES-256 przed przesłaniem do prywatnego repo');
+  String get deviceHistory => _('История устройств', 'Device history',
+      'Geräteverlauf', 'Historia urządzeń');
+  String get download => _('Скачать', 'Download', 'Herunterladen', 'Pobierz');
+  String get downloading =>
+      _('Скачивание…', 'Downloading…', 'Herunterladen…', 'Pobieranie…');
 
   // Подписи категорий (как в Google)
   String get catAccountSub => _('Вход, облако аккаунта',

@@ -9,11 +9,14 @@ import '../app.dart';
 import '../app_state.dart';
 import '../core/auth_service.dart';
 import '../core/background.dart';
+import '../core/crypto_util.dart';
+import '../core/device_history.dart';
 import '../core/settings.dart';
 import '../core/version.dart';
 import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
 import 'admin_page.dart';
+import 'format.dart';
 import 'onboarding_screen.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -95,6 +98,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 t.catBackgroundSub, () => _open(t.hBackground, _sectionBackground)),
             _card(cs, Icons.wifi_rounded, t.hNetwork, t.catNetworkSub,
                 () => _open(t.hNetwork, _sectionNetwork)),
+            _card(cs, Icons.sync_alt_rounded, t.hFilesSync, t.catFilesSyncSub,
+                () => _open(t.hFilesSync, _sectionFilesSync)),
+            _card(cs, Icons.lock_outline_rounded, t.hSecurity, t.catSecuritySub,
+                () => _open(t.hSecurity, _sectionSecurity)),
             if (RemoteInput.supported)
               _card(cs, Icons.keyboard_rounded, t.hRemoteInput,
                   t.catRemoteSub, () => _open(t.hRemoteInput, _sectionRemote)),
@@ -494,6 +501,119 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
     ];
+  }
+
+  List<Widget> _sectionFilesSync(BuildContext context) {
+    final app = AppScope.of(context);
+    final s = app.settings;
+    return [
+      _sub(t.cloudRouting),
+      RadioGroup<int>(
+        groupValue: s.cloudMode,
+        onChanged: (v) => s.cloudMode = v ?? 0,
+        child: Column(
+          children: [
+            RadioListTile<int>(
+                value: 0, title: Text(t.cloudModeAuto)),
+            RadioListTile<int>(
+                value: 1, title: Text(t.cloudModeAlways)),
+            RadioListTile<int>(
+                value: 2, title: Text(t.cloudModeNever)),
+          ],
+        ),
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.data_saver_on_rounded),
+        title: Text(t.selectiveSync),
+        subtitle: Text(t.selectiveSyncSub),
+        value: s.selectiveSync,
+        onChanged: (v) => s.selectiveSync = v,
+      ),
+      ListTile(
+        leading: const Icon(Icons.pending_actions_rounded),
+        title: Text(t.offlineQueue),
+        subtitle: ListenableBuilder(
+          listenable: app.queue,
+          builder: (_, __) => Text('${app.queue.items.length}'),
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const _OfflineQueuePage()),
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.devices_other_rounded),
+        title: Text(t.deviceHistory),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const _DeviceHistoryPage()),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _sectionSecurity(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    return [
+      SwitchListTile(
+        secondary: const Icon(Icons.enhanced_encryption_outlined),
+        title: Text(t.encryptCloud),
+        subtitle: Text(t.encryptCloudSub),
+        value: s.encryptCloud,
+        onChanged: (v) => s.encryptCloud = v,
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.pin_rounded),
+        title: Text(t.pinLock),
+        subtitle: Text(t.pinLockSub),
+        value: s.pinEnabled,
+        onChanged: (v) async {
+          if (v) {
+            final ok = await _setupPin(context, s);
+            if (ok) s.pinEnabled = true;
+          } else {
+            s.pinEnabled = false;
+          }
+        },
+      ),
+      if (s.pinEnabled) ...[
+        if (Platform.isAndroid || Platform.isIOS)
+          SwitchListTile(
+            secondary: const Icon(Icons.fingerprint_rounded),
+            title: Text(t.biometric),
+            value: s.biometricEnabled,
+            onChanged: (v) => s.biometricEnabled = v,
+          ),
+        ListTile(
+          leading: const Icon(Icons.password_rounded),
+          title: Text(t.setPin),
+          onTap: () => _setupPin(context, s),
+        ),
+      ],
+    ];
+  }
+
+  Future<bool> _setupPin(BuildContext context, Settings s) async {
+    final first = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep1)),
+    );
+    if (first == null || !context.mounted) return false;
+    final second = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep2)),
+    );
+    if (second == null) return false;
+    if (first != second) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(t.pinMismatch)));
+      }
+      return false;
+    }
+    final salt = await pinSalt();
+    s.pinHash = hashPin(first, salt);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(t.pinSetDone)));
+    }
+    return true;
   }
 
   List<Widget> _sectionRemote(BuildContext context) {
@@ -1003,6 +1123,196 @@ class _SettingsPageState extends State<SettingsPage> {
             },
             child: Text(t.clearBtn),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Экран ввода 4-значного PIN при настройке (шаг 1 и шаг 2 — подтверждение).
+class _PinEntryPage extends StatefulWidget {
+  final String title;
+  const _PinEntryPage({required this.title});
+
+  @override
+  State<_PinEntryPage> createState() => _PinEntryPageState();
+}
+
+class _PinEntryPageState extends State<_PinEntryPage> {
+  String _entered = '';
+
+  void _tap(String d) {
+    if (_entered.length >= 4) return;
+    setState(() => _entered += d);
+    if (_entered.length == 4) {
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) Navigator.of(context).pop(_entered);
+      });
+    }
+  }
+
+  void _backspace() {
+    if (_entered.isEmpty) return;
+    setState(() => _entered = _entered.substring(0, _entered.length - 1));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(4, (i) {
+              final filled = i < _entered.length;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: filled ? cs.primary : cs.surfaceContainerHighest,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: 280,
+            child: Column(
+              children: [
+                for (final row in [
+                  ['1', '2', '3'],
+                  ['4', '5', '6'],
+                  ['7', '8', '9'],
+                  ['', '0', 'back'],
+                ])
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: row.map((d) {
+                        if (d.isEmpty) return const SizedBox(width: 64);
+                        if (d == 'back') {
+                          return InkResponse(
+                            onTap: _backspace,
+                            radius: 36,
+                            child: const SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: Center(child: Icon(Icons.backspace_outlined)),
+                            ),
+                          );
+                        }
+                        return InkResponse(
+                          onTap: () => _tap(d),
+                          radius: 36,
+                          child: SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: Center(
+                                child: Text(d,
+                                    style: const TextStyle(fontSize: 24))),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Список отложенных отправок (оффлайн-очередь).
+class _OfflineQueuePage extends StatelessWidget {
+  const _OfflineQueuePage();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = tr(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(t.offlineQueue)),
+      body: ListenableBuilder(
+        listenable: app.queue,
+        builder: (context, _) {
+          if (app.queue.items.isEmpty) {
+            return Center(child: Text(t.offlineQueueEmpty));
+          }
+          return ListView(
+            children: [
+              for (final q in app.queue.items)
+                ListTile(
+                  leading: Icon(q.kind == 'text'
+                      ? Icons.chat_bubble_outline_rounded
+                      : Icons.insert_drive_file_outlined),
+                  title: Text(q.kind == 'text'
+                      ? (q.text ?? '')
+                      : q.filePath!.split('/').last),
+                  subtitle: Text(q.peerName),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => app.queue.cancel(q),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// История устройств: когда последний раз синкалось, сколько передано.
+class _DeviceHistoryPage extends StatelessWidget {
+  const _DeviceHistoryPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = tr(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(t.deviceHistory)),
+      body: ListenableBuilder(
+        listenable: app.deviceHistory,
+        builder: (context, _) {
+          final list = app.deviceHistory.all;
+          if (list.isEmpty) {
+            return const Center(child: Icon(Icons.devices_other_rounded, size: 48));
+          }
+          return ListView(
+            children: [
+              for (final d in list) _deviceTile(context, d),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _deviceTile(BuildContext context, DeviceStat d) {
+    final cs = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: cs.primaryContainer,
+        child: Icon(Icons.smartphone_rounded, color: cs.onPrimaryContainer),
+      ),
+      title: Text(d.name),
+      subtitle: Text(
+          '${d.lastSeen.toLocal()}'.split('.').first),
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text('↑ ${humanSize(d.bytesSent)}', style: const TextStyle(fontSize: 11)),
+          Text('↓ ${humanSize(d.bytesReceived)}', style: const TextStyle(fontSize: 11)),
         ],
       ),
     );

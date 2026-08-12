@@ -7,15 +7,18 @@ import '../core/models.dart';
 /// Отправка текста/файлов/клавиш на пир по HTTP.
 class SendClient {
   final String deviceName;
-  SendClient(this.deviceName);
+  final String deviceId;
+  SendClient(this.deviceName, this.deviceId);
 
   final _http = HttpClient()..connectionTimeout = const Duration(seconds: 8);
 
-  Future<bool> sendText(Peer peer, String text) async {
+  Future<bool> sendText(Peer peer, String text, {int? ttlSeconds}) async {
     try {
       final req = await _http.postUrl(Uri.parse('${peer.baseUrl}/message'));
       req.headers.contentType = ContentType('text', 'plain', charset: 'utf-8');
       req.headers.set('x-from', Uri.encodeComponent(deviceName));
+      req.headers.set('x-device-id', deviceId);
+      if (ttlSeconds != null) req.headers.set('x-ttl-seconds', '$ttlSeconds');
       req.add(utf8.encode(text));
       final resp = await req.close();
       await resp.drain();
@@ -27,7 +30,7 @@ class SendClient {
   }
 
   /// Отправка файла потоком. Возвращает поток прогресса 0..1.
-  Stream<double> sendFile(Peer peer, File file) async* {
+  Stream<double> sendFile(Peer peer, File file, {int? ttlSeconds}) async* {
     final total = await file.length();
     final name = file.uri.pathSegments.last;
     final mime = lookupMimeType(file.path) ?? 'application/octet-stream';
@@ -36,6 +39,8 @@ class SendClient {
       req.headers.set('x-filename', Uri.encodeComponent(name));
       req.headers.set('x-mime', mime);
       req.headers.set('x-from', Uri.encodeComponent(deviceName));
+      req.headers.set('x-device-id', deviceId);
+      if (ttlSeconds != null) req.headers.set('x-ttl-seconds', '$ttlSeconds');
       req.headers.contentType = ContentType.parse(mime);
       if (total > 0) req.contentLength = total;
 
