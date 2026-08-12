@@ -205,7 +205,20 @@ class AppStrings {
       'AES-256 przed przesłaniem do prywatnego repo');
   String get deviceHistory => _('История устройств', 'Device history',
       'Geräteverlauf', 'Historia urządzeń');
+  String get selfDestruct => _('Самоуничтожение', 'Self-destruct',
+      'Selbstzerstörung', 'Samozniszczenie');
+  String get ttlOff => _('Без ограничения', 'Off', 'Aus', 'Wyłączone');
+  String get ttl1m => _('Через 1 минуту', 'After 1 minute', 'Nach 1 Minute',
+      'Po 1 minucie');
+  String get ttl1h => _('Через 1 час', 'After 1 hour', 'Nach 1 Stunde',
+      'Po 1 godzinie');
+  String get ttl1d => _('Через 1 день', 'After 1 day', 'Nach 1 Tag',
+      'Po 1 dniu');
+  String get ttl1w => _('Через 1 неделю', 'After 1 week', 'Nach 1 Woche',
+      'Po 1 tygodniu');
   String get download => _('Скачать', 'Download', 'Herunterladen', 'Pobierz');
+  String get dropFilesHere => _('Отпустите, чтобы отправить файлы',
+      'Drop to send files', 'Loslassen zum Senden', 'Upuść, aby wysłać');
   String get downloading =>
       _('Скачивание…', 'Downloading…', 'Herunterladen…', 'Pobieranie…');
 

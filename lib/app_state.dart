@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +30,7 @@ class AppState extends ChangeNotifier {
 
   /// Последнее событие приёма — для показа снекбара.
   SavedItem? lastReceived;
+  Timer? _purgeTimer;
 
   AppState(this.settings, this.store, this.auth) {
     server = ReceiveServer(settings, store);
@@ -58,6 +60,10 @@ class AppState extends ChangeNotifier {
     deviceHistory = DeviceHistory(prefs);
     server.onDeviceActivity = (id, name, bytes) =>
         deviceHistory.recordReceived(id, name, bytes);
+    // Самоуничтожающиеся сообщения: чистим раз в минуту.
+    await store.purgeExpired();
+    _purgeTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => store.purgeExpired());
     notifyListeners();
   }
 
@@ -103,13 +109,16 @@ class AppState extends ChangeNotifier {
   }
 
   /// Локально сохранить текст без отправки (личное «Избранное»).
-  Future<void> saveTextLocal(String text) async {
+  Future<void> saveTextLocal(String text, {int? ttlSeconds}) async {
     await store.add(SavedItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       kind: ItemKind.text,
       text: text,
       createdAt: DateTime.now(),
       outgoing: true,
+      expiresAt: ttlSeconds != null
+          ? DateTime.now().add(Duration(seconds: ttlSeconds))
+          : null,
     ));
   }
 
@@ -121,6 +130,7 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     settings.removeListener(_onSettingsChanged);
+    _purgeTimer?.cancel();
     discovery.dispose();
     queue.dispose();
     deviceHistory.dispose();

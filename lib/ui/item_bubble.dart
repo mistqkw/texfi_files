@@ -155,9 +155,25 @@ class ItemBubble extends StatelessWidget {
                   ? cs.primary
                   : cs.onSurfaceVariant.withValues(alpha: 0.6),
             ),
+            if (item.expiresAt != null) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.timer_outlined, size: 11, color: cs.error),
+              const SizedBox(width: 2),
+              Text(_ttlLeft(item.expiresAt!),
+                  style: TextStyle(fontSize: 10, color: cs.error)),
+            ],
           ],
         ),
       );
+
+  String _ttlLeft(DateTime at) {
+    final left = at.difference(DateTime.now());
+    if (left.isNegative) return '0s';
+    if (left.inDays > 0) return '${left.inDays}d';
+    if (left.inHours > 0) return '${left.inHours}h';
+    if (left.inMinutes > 0) return '${left.inMinutes}m';
+    return '${left.inSeconds}s';
+  }
 
   Widget _textContent(BuildContext context, ColorScheme cs) {
     return Padding(
@@ -441,15 +457,7 @@ class ItemBubble extends StatelessWidget {
     }
   }
 
-  Future<void> _share() async {
-    try {
-      if (item.kind == ItemKind.text) {
-        await Share.share(item.text ?? '');
-      } else if (item.filePath != null) {
-        await Share.shareXFiles([XFile(item.filePath!)]);
-      }
-    } catch (_) {}
-  }
+  Future<void> _share() => shareItem(item);
 
   void _copy(BuildContext context) {
     Clipboard.setData(ClipboardData(text: item.text ?? ''));
@@ -637,4 +645,17 @@ class ConstraintsBox extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// Отправить элемент через системное меню «Поделиться» (шэринг в другие
+/// приложения — Telegram и т.д.). Переиспользуется из меню пузыря и из
+/// свайп-жеста.
+Future<void> shareItem(SavedItem item) async {
+  try {
+    if (item.kind == ItemKind.text) {
+      await Share.share(item.text ?? '');
+    } else if (item.filePath != null) {
+      await Share.shareXFiles([XFile(item.filePath!)]);
+    }
+  } catch (_) {}
 }
