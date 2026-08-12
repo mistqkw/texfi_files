@@ -104,7 +104,8 @@ class _TexfiAppState extends State<TexfiApp> {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         centerTitle: d.centerTitle,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.15),
         titleTextStyle: TextStyle(
           color: scheme.onSurface,
           fontFamily: d.titleFont ?? font,

@@ -33,22 +33,33 @@ class ItemBubble extends StatelessWidget {
 
     return Align(
       alignment: align,
+      // IntrinsicWidth — чтобы короткие сообщения не растягивались во всю
+      // ширину, а обёртывались по содержимому (как в обычных мессенджерах).
       child: ConstraintsBox(
-        child: GestureDetector(
-          onLongPress: () => _menu(context),
-          child: Container(
-            margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(r),
-                topRight: Radius.circular(r),
-                bottomLeft: Radius.circular(item.outgoing ? r : tail),
-                bottomRight: Radius.circular(item.outgoing ? tail : r),
+        child: IntrinsicWidth(
+          child: GestureDetector(
+            onLongPress: () => _menu(context),
+            child: Container(
+              margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(r),
+                  topRight: Radius.circular(r),
+                  bottomLeft: Radius.circular(item.outgoing ? r : tail),
+                  bottomRight: Radius.circular(item.outgoing ? tail : r),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
+              clipBehavior: Clip.antiAlias,
+              child: _content(context, cs),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: _content(context, cs),
           ),
         ),
       ),
