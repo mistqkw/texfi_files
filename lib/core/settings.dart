@@ -291,4 +291,49 @@ class Settings extends ChangeNotifier {
     _p.setDouble('playerVolume', v.clamp(0, 100));
     notifyListeners();
   }
+
+  // --- Файлы и синхронизация ---
+  // Маршрутизация: 0=авто (по размеру), 1=всегда облако (если влезает), 2=только P2P (никогда не в облако).
+  int get cloudMode => _p.getInt('cloudMode') ?? 0;
+  set cloudMode(int v) {
+    _p.setInt('cloudMode', v.clamp(0, 2));
+    notifyListeners();
+  }
+
+  // Избирательная синхронизация: не тянуть медиа из облака автоматически.
+  bool get selectiveSync => _p.getBool('selectiveSync') ?? false;
+  set selectiveSync(bool v) {
+    _p.setBool('selectiveSync', v);
+    notifyListeners();
+  }
+
+  // --- Безопасность ---
+  // Шифровать файлы перед загрузкой в облако (AES-GCM, ключ хранится локально).
+  bool get encryptCloud => _p.getBool('encryptCloud') ?? false;
+  set encryptCloud(bool v) {
+    _p.setBool('encryptCloud', v);
+    notifyListeners();
+  }
+
+  bool get pinEnabled => _p.getBool('pinEnabled') ?? false;
+  set pinEnabled(bool v) {
+    _p.setBool('pinEnabled', v);
+    notifyListeners();
+  }
+
+  String? get pinHash => _p.getString('pinHash');
+  set pinHash(String? v) {
+    if (v == null) {
+      _p.remove('pinHash');
+    } else {
+      _p.setString('pinHash', v);
+    }
+    notifyListeners();
+  }
+
+  bool get biometricEnabled => _p.getBool('biometricEnabled') ?? false;
+  set biometricEnabled(bool v) {
+    _p.setBool('biometricEnabled', v);
+    notifyListeners();
+  }
 }

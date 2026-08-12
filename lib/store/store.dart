@@ -46,6 +46,34 @@ class Store extends ChangeNotifier {
     await _index.writeAsString(SavedItem.listToJson(_items));
   }
 
+  /// Добавить «в процессе приёма» плейсхолдер — не персистится и не уходит
+  /// в облако, пока приём не завершится (см. [finishReceiving]).
+  Future<void> addReceiving(SavedItem item) async {
+    _items.add(item);
+    notifyListeners();
+  }
+
+  /// Обновить прогресс приёма (вызывается часто — без записи на диск).
+  void updateReceivedBytes(SavedItem item, int bytes) {
+    item.fileSize = bytes;
+    notifyListeners();
+  }
+
+  /// Приём завершён: фиксируем размер, персистим и запускаем облачную синхронизацию.
+  Future<void> finishReceiving(SavedItem item, int finalSize) async {
+    item.receiving = false;
+    item.fileSize = finalSize;
+    notifyListeners();
+    await _persist();
+    onItemAdded?.call(item);
+  }
+
+  /// Приём прервался — убираем плейсхолдер из ленты.
+  Future<void> cancelReceiving(SavedItem item) async {
+    _items.removeWhere((e) => e.id == item.id);
+    notifyListeners();
+  }
+
   Future<void> add(SavedItem item) async {
     _items.add(item);
     notifyListeners();
@@ -80,6 +108,20 @@ class Store extends ChangeNotifier {
 
   Future<void> togglePin(SavedItem item) async {
     item.pinned = !item.pinned;
+    notifyListeners();
+    await _persist();
+  }
+
+  /// После отложенной загрузки (избирательная синхронизация) — проставить
+  /// локальный путь скачанного файла.
+  Future<void> updateFilePath(SavedItem item, String path) async {
+    item.filePath = path;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> toggleArchive(SavedItem item) async {
+    item.archived = !item.archived;
     notifyListeners();
     await _persist();
   }

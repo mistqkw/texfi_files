@@ -30,17 +30,23 @@ class SavedItem {
   final String id;
   final ItemKind kind;
   final String? text;
-  final String? filePath;
+  String? filePath; // мутируется при отложенной загрузке (избирательная синхронизация)
   final String? fileName;
-  final int fileSize;
+  int fileSize; // мутируется во время приёма (растёт до финального размера)
   final String? mime;
   final DateTime createdAt;
   final bool outgoing; // true = отправлено с этого устройства
   final String? fromName; // имя пира-источника
   bool pinned; // закреплено
+  bool archived; // архивировано (скрыто из общей ленты)
   String? group; // название группы/коллекции
   bool cloud; // синхронизировано в облако аккаунта (GitHub-репо)
   String? remotePath; // путь файла в репозитории (если в облаке)
+  String? fileHash; // sha256 содержимого — для дедупликации в облаке
+  bool encrypted; // содержимое в облаке зашифровано (AES-GCM)
+  DateTime? expiresAt; // самоуничтожение: элемент удаляется после этого момента
+  bool receiving; // сейчас идёт приём по сети — не персистится, только в памяти
+  int expectedSize; // ожидаемый итоговый размер во время приёма (0 = неизвестен)
 
   SavedItem({
     required this.id,
@@ -54,9 +60,15 @@ class SavedItem {
     this.outgoing = false,
     this.fromName,
     this.pinned = false,
+    this.archived = false,
     this.group,
     this.cloud = false,
     this.remotePath,
+    this.fileHash,
+    this.encrypted = false,
+    this.expiresAt,
+    this.receiving = false,
+    this.expectedSize = 0,
   });
 
   bool get isMedia =>
@@ -74,9 +86,13 @@ class SavedItem {
         'outgoing': outgoing,
         'fromName': fromName,
         'pinned': pinned,
+        'archived': archived,
         'group': group,
         'cloud': cloud,
         'remotePath': remotePath,
+        'fileHash': fileHash,
+        'encrypted': encrypted,
+        'expiresAt': expiresAt?.toIso8601String(),
       };
 
   factory SavedItem.fromJson(Map<String, dynamic> j) => SavedItem(
@@ -93,9 +109,15 @@ class SavedItem {
         outgoing: j['outgoing'] as bool? ?? false,
         fromName: j['fromName'] as String?,
         pinned: j['pinned'] as bool? ?? false,
+        archived: j['archived'] as bool? ?? false,
         group: j['group'] as String?,
         cloud: j['cloud'] as bool? ?? false,
         remotePath: j['remotePath'] as String?,
+        fileHash: j['fileHash'] as String?,
+        encrypted: j['encrypted'] as bool? ?? false,
+        expiresAt: j['expiresAt'] != null
+            ? DateTime.tryParse(j['expiresAt'] as String)
+            : null,
       );
 
   static List<SavedItem> listFromJson(String raw) {

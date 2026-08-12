@@ -121,33 +121,52 @@ class ReceiveServer {
     final mime =
         req.headers.value('x-mime') ?? req.headers.contentType?.mimeType;
     final from = _decodeFrom(req);
-
-    final target = store.newFileFor(name);
-    final sink = target.openWrite();
-    var received = 0;
-    try {
-      await for (final chunk in req) {
-        sink.add(chunk);
-        received += chunk.length;
-      }
-      await sink.flush();
-    } finally {
-      await sink.close();
-    }
+    final ttlSeconds = int.tryParse(req.headers.value('x-ttl-seconds') ?? '');
+    final expectedTotal = req.contentLength > 0 ? req.contentLength : 0;
 
     final kind = kindFromMime(mime, name);
+    final target = store.newFileFor(name);
+
+    // Плейсхолдер «идёт приём» — сразу виден в ленте с прогресс-баром.
     final item = SavedItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       kind: kind,
       filePath: target.path,
       fileName: name,
-      fileSize: received,
       mime: mime,
       createdAt: DateTime.now(),
       outgoing: false,
       fromName: from,
+      receiving: true,
+      expectedSize: expectedTotal,
+      expiresAt: ttlSeconds != null
+          ? DateTime.now().add(Duration(seconds: ttlSeconds))
+          : null,
     );
-    await store.add(item);
+    await store.addReceiving(item);
+
+    final sink = target.openWrite();
+    var received = 0;
+    var lastNotify = 0;
+    try {
+      await for (final chunk in req) {
+        sink.add(chunk);
+        received += chunk.length;
+        // Не дёргаем UI на каждый чанк — раз в ~256KB достаточно для плавного бара.
+        if (received - lastNotify > 256 * 1024) {
+          lastNotify = received;
+          store.updateReceivedBytes(item, received);
+        }
+      }
+      await sink.flush();
+    } catch (e) {
+      await sink.close();
+      await store.cancelReceiving(item);
+      rethrow;
+    }
+    await sink.close();
+
+    await store.finishReceiving(item, received);
     onReceived?.call(item);
 
     req.response
