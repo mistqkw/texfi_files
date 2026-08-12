@@ -28,6 +28,23 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/texfi-release.jks
+            cat > android/key.properties <<EOF
+          storeFile=texfi-release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=texfi
+          keyPassword=$KEY_PASSWORD
+          EOF
+          else
+            echo "::warning::No release keystore secret set — building with debug signing (do not distribute)."
+          fi
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:

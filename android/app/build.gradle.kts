@@ -1,8 +1,22 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Release-подпись: секреты берутся из key.properties (не в git) либо из
+// переменных окружения (в CI). Без них release собирается debug-ключом —
+// удобно для локальной разработки, но такие сборки нельзя распространять.
+val keystorePropsFile = rootProject.file("key.properties")
+val keystoreProps = Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(FileInputStream(keystorePropsFile))
+}
+fun prop(key: String): String? =
+    keystoreProps.getProperty(key) ?: System.getenv(key)
 
 android {
     namespace = "app.texfi.texfi_files"
@@ -25,11 +39,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = prop("storeFile")
+            if (storeFilePath != null) {
+                storeFile = rootProject.file(storeFilePath)
+                storePassword = prop("storePassword")
+                keyAlias = prop("keyAlias")
+                keyPassword = prop("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Реальный release-ключ, если он настроен (key.properties/env);
+            // иначе — debug-ключ, чтобы `flutter run --release` работал локально
+            // без секретов (такие сборки просто нельзя распространять).
+            signingConfig = if (prop("storeFile") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
