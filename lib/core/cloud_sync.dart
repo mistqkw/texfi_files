@@ -5,17 +5,22 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'auth_config.dart';
 import 'auth_service.dart';
+import 'crypto_util.dart';
 import 'models.dart';
+import 'settings.dart';
 import '../store/store.dart';
 
 /// Облачное хранилище аккаунта на приватном GitHub-репозитории.
 ///
 /// Гибрид: текст и файлы до [AuthConfig.cloudMaxBytes] уходят в репозиторий
 /// (доступны с любого устройства/сети). Большие файлы остаются локальными.
+/// Маршрутизация облако/P2P управляется [Settings.cloudMode]; одинаковые
+/// файлы (по SHA-256) переиспользуют уже загруженную копию (дедупликация).
 class CloudSync extends ChangeNotifier {
   final AuthService auth;
   final Store store;
-  CloudSync(this.auth, this.store);
+  final Settings settings;
+  CloudSync(this.auth, this.store, this.settings);
 
   static const _indexPath = 'index.json';
   static const _api = 'https://api.github.com';
@@ -56,31 +61,67 @@ class CloudSync extends ChangeNotifier {
   // ── Отправка нового элемента в облако ──
   Future<void> maybePush(SavedItem item) async {
     if (!available || item.cloud) return;
+    // Режим «только P2P» — файлы в облако не уходят вовсе (текст всё равно
+    // синхронизируем, иначе кросс-сетевая лента вообще не работает для него).
+    final filesAllowed = settings.cloudMode != 2;
     try {
       await _ensureRepo();
       if (item.kind == ItemKind.text) {
         await _appendIndex(_entryOf(item));
         item.cloud = true;
         await store.persist();
-      } else if (item.filePath != null &&
+      } else if (filesAllowed &&
+          item.filePath != null &&
           item.fileSize > 0 &&
           item.fileSize <= AuthConfig.cloudMaxBytes) {
-        final safe =
-            (item.fileName ?? 'file').replaceAll(RegExp(r'[^\w.\-]'), '_');
-        final remote = 'files/${item.id}__$safe';
-        final bytes = await File(item.filePath!).readAsBytes();
-        await _putFile(remote, bytes);
-        item.remotePath = remote;
+        final raw = await File(item.filePath!).readAsBytes();
+        final hash = await sha256Hex(raw);
+        item.fileHash = hash;
+
+        // Дедупликация: если файл с таким же хэшем уже в облаке — переиспользуем.
+        final dup = await _findByHash(hash);
+        if (dup != null) {
+          item.remotePath = dup.remotePath;
+          item.encrypted = dup.encrypted;
+        } else {
+          final safe =
+              (item.fileName ?? 'file').replaceAll(RegExp(r'[^\w.\-]'), '_');
+          final remote = 'files/${hash.substring(0, 16)}__$safe';
+          final toUpload =
+              settings.encryptCloud ? await CryptoUtil.encrypt(raw) : raw;
+          await _putFile(remote, toUpload);
+          item.remotePath = remote;
+          item.encrypted = settings.encryptCloud;
+        }
         await _appendIndex(_entryOf(item));
         item.cloud = true;
         await store.persist();
       }
-      // Большие файлы не трогаем — остаются локальными.
+      // Большие файлы / режим «только P2P» — остаются только локальными.
       notifyListeners();
     } catch (e) {
       lastError = '$e';
       debugPrint('CloudSync push: $e');
     }
+  }
+
+  /// Ищет в уже загруженном индексе запись с тем же хэшем файла (дедуп).
+  Future<SavedItem?> _findByHash(String hash) async {
+    try {
+      final (list, _) = await _getIndex();
+      for (final e in list) {
+        if (e['fileHash'] == hash && e['remotePath'] != null) {
+          return SavedItem(
+            id: 'dup',
+            kind: ItemKind.file,
+            remotePath: e['remotePath'] as String,
+            encrypted: e['encrypted'] as bool? ?? false,
+            createdAt: DateTime.now(),
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   Map<String, dynamic> _entryOf(SavedItem it) => {
@@ -94,6 +135,9 @@ class CloudSync extends ChangeNotifier {
         'pinned': it.pinned,
         'group': it.group,
         'remotePath': it.remotePath,
+        'fileHash': it.fileHash,
+        'encrypted': it.encrypted,
+        'expiresAt': it.expiresAt?.toIso8601String(),
       };
 
   // ── Забрать ленту из облака ──
@@ -125,11 +169,30 @@ class CloudSync extends ChangeNotifier {
   Future<void> _materialize(Map<String, dynamic> e) async {
     final kind = ItemKind.values
         .firstWhere((k) => k.name == e['kind'], orElse: () => ItemKind.text);
-    String? filePath;
+    final expiresAt = e['expiresAt'] != null
+        ? DateTime.tryParse(e['expiresAt'] as String)
+        : null;
+    if (expiresAt != null && DateTime.now().isAfter(expiresAt)) {
+      return; // самоуничтожившееся сообщение — не материализуем
+    }
     final remote = e['remotePath'] as String?;
-    if (remote != null) {
-      final bytes = await _getFile(remote);
+    final encrypted = e['encrypted'] as bool? ?? false;
+    String? filePath;
+    // Избирательная синхронизация: медиа/файлы не тянем автоматически —
+    // элемент появится в ленте с облачным remotePath, скачивание по тапу.
+    final skipDownload =
+        settings.selectiveSync && kind != ItemKind.text && remote != null;
+    if (remote != null && !skipDownload) {
+      var bytes = await _getFile(remote);
       if (bytes == null) return;
+      if (encrypted) {
+        try {
+          bytes = await CryptoUtil.decrypt(bytes);
+        } catch (err) {
+          debugPrint('CloudSync decrypt failed: $err');
+          return;
+        }
+      }
       final target = store.newFileFor(e['fileName'] as String? ?? 'file');
       await target.writeAsBytes(bytes);
       filePath = target.path;
@@ -150,7 +213,28 @@ class CloudSync extends ChangeNotifier {
       group: e['group'] as String?,
       cloud: true,
       remotePath: remote,
+      fileHash: e['fileHash'] as String?,
+      encrypted: encrypted,
+      expiresAt: expiresAt,
     ));
+  }
+
+  /// Скачать содержимое элемента, который был пропущен избирательной
+  /// синхронизацией (кнопка «Скачать» в UI).
+  Future<bool> downloadNow(SavedItem item) async {
+    if (item.remotePath == null || item.filePath != null) return false;
+    try {
+      var bytes = await _getFile(item.remotePath!);
+      if (bytes == null) return false;
+      if (item.encrypted) bytes = await CryptoUtil.decrypt(bytes);
+      final target = store.newFileFor(item.fileName ?? 'file');
+      await target.writeAsBytes(bytes);
+      await store.updateFilePath(item, target.path);
+      return true;
+    } catch (e) {
+      lastError = '$e';
+      return false;
+    }
   }
 
   // ── GitHub REST helpers ──

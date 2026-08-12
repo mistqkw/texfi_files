@@ -11,6 +11,7 @@ import 'effects.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
+import '../core/offline_queue.dart';
 import 'format.dart';
 import 'item_bubble.dart';
 import 'music_screen.dart';
@@ -31,7 +32,10 @@ class _HomePageState extends State<HomePage> {
   final _scroll = ScrollController();
   final Set<String> _seen = {}; // элементы, уже проигравшие анимацию появления
   Peer? _target; // null = сохранить локально
-  String? _filter; // null=все, '__pinned__'=закреплённые, иначе имя группы
+  String? _filter; // null=все, '__pinned__'=закреплённые, '__archive__'=архив, иначе имя группы
+  bool _searching = false;
+  final _search = TextEditingController();
+  String _query = '';
 
   late AppState _app;
   AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
@@ -89,6 +93,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _input.dispose();
     _scroll.dispose();
+    _search.dispose();
     _recorder.dispose();
     super.dispose();
   }
@@ -108,9 +113,18 @@ class _HomePageState extends State<HomePage> {
     if (text.isEmpty) return;
     _input.clear();
     if (_target != null) {
-      final ok = await _app.sendTextTo(_target!, text);
+      final peer = _target!;
+      final ok = await _app.sendTextTo(peer, text);
       if (!ok && mounted) {
-        _toast(t.couldNotSendTo(_target!.name));
+        await _app.queue.enqueue(QueuedSend(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          peerId: peer.id,
+          peerName: peer.name,
+          kind: 'text',
+          text: text,
+          createdAt: DateTime.now(),
+        ));
+        _toast(t.queuedOffline(peer.name));
       }
     } else {
       await _app.saveTextLocal(text);
@@ -247,9 +261,24 @@ class _HomePageState extends State<HomePage> {
           fromName: peer.name,
         ));
       },
-      onError: (e) {
+      onError: (e) async {
         entry.close();
-        _toast(t.sendError(name));
+        // Пир пропал во время передачи — сохраняем копию и кладём в очередь.
+        try {
+          final copy = _app.store.newFileFor(name);
+          await file.copy(copy.path);
+          await _app.queue.enqueue(QueuedSend(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            peerId: peer.id,
+            peerName: peer.name,
+            kind: 'file',
+            filePath: copy.path,
+            createdAt: DateTime.now(),
+          ));
+          _toast(t.queuedOffline(peer.name));
+        } catch (_) {
+          _toast(t.sendError(name));
+        }
       },
     );
   }
@@ -278,6 +307,7 @@ class _HomePageState extends State<HomePage> {
           appBar: _appBar(context),
           body: Column(
             children: [
+              if (_searching) _searchBar(context),
               _filterBar(context),
               Expanded(
                 child: Stack(
@@ -359,6 +389,11 @@ class _HomePageState extends State<HomePage> {
       ),
       actions: [
         IconButton(
+          tooltip: t.searchHint,
+          icon: const Icon(Icons.search_rounded),
+          onPressed: () => setState(() => _searching = !_searching),
+        ),
+        IconButton(
           tooltip: t.music,
           icon: const Icon(Icons.library_music_outlined),
           onPressed: () => Navigator.of(context).push(
@@ -434,20 +469,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<SavedItem> _applyFilter(List<SavedItem> items) {
-    if (_filter == null) return items;
-    if (_filter == '__pinned__') {
-      return items.where((e) => e.pinned).toList();
+    List<SavedItem> base;
+    if (_filter == '__archive__') {
+      base = items.where((e) => e.archived).toList();
+    } else if (_filter == '__pinned__') {
+      base = items.where((e) => e.pinned && !e.archived).toList();
+    } else if (_filter == null) {
+      base = items.where((e) => !e.archived).toList();
+    } else {
+      base = items.where((e) => e.group == _filter && !e.archived).toList();
     }
-    return items.where((e) => e.group == _filter).toList();
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return base;
+    return base
+        .where((e) =>
+            (e.text ?? '').toLowerCase().contains(q) ||
+            (e.fileName ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
+  Widget _searchBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+      child: TextField(
+        controller: _search,
+        autofocus: true,
+        onChanged: (v) => setState(() => _query = v),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: t.searchHint,
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.close_rounded),
+            onPressed: () => setState(() {
+              _searching = false;
+              _query = '';
+              _search.clear();
+            }),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _filterBar(BuildContext context) {
     final groups = _app.store.groups;
-    final hasPinned = _app.store.items.any((e) => e.pinned);
-    if (groups.isEmpty && !hasPinned) return const SizedBox.shrink();
+    final hasPinned = _app.store.items.any((e) => e.pinned && !e.archived);
+    final hasArchived = _app.store.items.any((e) => e.archived);
+    if (groups.isEmpty && !hasPinned && !hasArchived) {
+      return const SizedBox.shrink();
+    }
     // сбросить фильтр, если группа исчезла
     if (_filter != null &&
         _filter != '__pinned__' &&
+        _filter != '__archive__' &&
         !groups.contains(_filter)) {
       _filter = null;
     }
@@ -463,6 +538,11 @@ class _HomePageState extends State<HomePage> {
                 label: t.pinned,
                 value: '__pinned__',
                 icon: Icons.push_pin_rounded),
+          if (hasArchived)
+            _filterChip(context,
+                label: t.archived,
+                value: '__archive__',
+                icon: Icons.archive_rounded),
           for (final g in groups)
             _filterChip(context,
                 label: g, value: g, icon: Icons.folder_rounded),

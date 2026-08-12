@@ -23,5 +23,9 @@ String daySeparator(DateTime dt, AppStrings t) {
   final diff = today.difference(that).inDays;
   if (diff == 0) return t.today;
   if (diff == 1) return t.yesterday;
+  // «На этой неделе»: с начала текущей недели (пн) по вчера, кроме уже покрытых.
+  final weekday = today.weekday; // 1=пн..7=вс
+  final startOfWeek = today.subtract(Duration(days: weekday - 1));
+  if (!that.isBefore(startOfWeek) && diff > 1) return t.thisWeek;
   return DateFormat('d MMMM').format(dt);
 }

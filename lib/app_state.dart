@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/auth_service.dart';
 import 'core/cloud_sync.dart';
 import 'core/models.dart';
+import 'core/offline_queue.dart';
 import 'core/player_service.dart';
 import 'core/settings.dart';
 import 'net/client.dart';
@@ -20,6 +22,7 @@ class AppState extends ChangeNotifier {
   late final Discovery discovery;
   late final SendClient client;
   late final CloudSync cloud;
+  late final OfflineQueue queue;
   final PlayerService player = PlayerService();
 
   /// Последнее событие приёма — для показа снекбара.
@@ -29,7 +32,7 @@ class AppState extends ChangeNotifier {
     server = ReceiveServer(settings, store);
     discovery = Discovery(settings, () => server.port, auth);
     client = SendClient(settings.deviceName);
-    cloud = CloudSync(auth, store);
+    cloud = CloudSync(auth, store, settings);
     // Локально добавленный элемент → отправить в облако аккаунта.
     store.onItemAdded = (item) => cloud.maybePush(item);
     // Вход/выход из аккаунта → перезапустить поиск и облако.
@@ -48,6 +51,8 @@ class AppState extends ChangeNotifier {
     await server.start();
     await discovery.start();
     cloud.start();
+    final prefs = await SharedPreferences.getInstance();
+    queue = OfflineQueue(prefs, client, discovery, (item) => store.add(item));
     notifyListeners();
   }
 
@@ -105,6 +110,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     settings.removeListener(_onSettingsChanged);
     discovery.dispose();
+    queue.dispose();
     cloud.stop();
     server.stop();
     client.close();

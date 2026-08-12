@@ -58,6 +58,15 @@ class AppStrings {
       'Nie udało się wysłać do $name');
   String sentName(String name) =>
       _('Отправлено: $name', 'Sent: $name', 'Gesendet: $name', 'Wysłano: $name');
+  String queuedOffline(String name) => _(
+      'Устройство $name не в сети — отправлю, когда появится',
+      '$name is offline — will send when it reconnects',
+      '$name ist offline — wird gesendet, sobald verfügbar',
+      '$name jest offline — wyślę, gdy będzie dostępne');
+  String get offlineQueue => _('Очередь отправки', 'Send queue',
+      'Sendewarteschlange', 'Kolejka wysyłania');
+  String get offlineQueueEmpty => _('Очередь пуста', 'Queue is empty',
+      'Warteschlange leer', 'Kolejka jest pusta');
   String sendError(String name) => _('Ошибка отправки $name',
       'Error sending $name', 'Fehler beim Senden $name', 'Błąd wysyłania $name');
   String failed(String e) =>
@@ -73,6 +82,12 @@ class AppStrings {
   String get pinned => _('Закреплённые', 'Pinned', 'Angeheftet', 'Przypięte');
   String get pin => _('Закрепить', 'Pin', 'Anheften', 'Przypnij');
   String get unpin => _('Открепить', 'Unpin', 'Lösen', 'Odepnij');
+  String get archived => _('Архив', 'Archive', 'Archiv', 'Archiwum');
+  String get archive => _('В архив', 'Archive', 'Archivieren', 'Archiwizuj');
+  String get unarchive =>
+      _('Из архива', 'Unarchive', 'Aus Archiv', 'Wyjmij z archiwum');
+  String get searchHint =>
+      _('Поиск по сохранённому…', 'Search saved items…', 'Suche…', 'Szukaj…');
   String get addToGroup =>
       _('Добавить в группу…', 'Add to group…', 'Zur Gruppe…', 'Dodaj do grupy…');
   String groupName(String g) =>
@@ -101,11 +116,15 @@ class AppStrings {
   String get share => _('Поделиться', 'Share', 'Teilen', 'Udostępnij');
   String get recording =>
       _('Запись…', 'Recording…', 'Aufnahme…', 'Nagrywanie…');
+  String get receivingLabel =>
+      _('приём…', 'receiving…', 'Empfang…', 'odbieranie…');
   String get micDenied => _('Нет доступа к микрофону',
       'Microphone permission denied', 'Kein Mikrofonzugriff',
       'Brak dostępu do mikrofonu');
   String get today => _('Сегодня', 'Today', 'Heute', 'Dziś');
   String get yesterday => _('Вчера', 'Yesterday', 'Gestern', 'Wczoraj');
+  String get thisWeek =>
+      _('На этой неделе', 'This week', 'Diese Woche', 'W tym tygodniu');
 
   // Настройки — заголовки
   String get settings =>

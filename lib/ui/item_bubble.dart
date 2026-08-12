@@ -56,6 +56,7 @@ class ItemBubble extends StatelessWidget {
   }
 
   Widget _content(BuildContext context, ColorScheme cs) {
+    if (item.receiving) return _receivingContent(context, cs);
     switch (item.kind) {
       case ItemKind.text:
         return _textContent(context, cs);
@@ -69,6 +70,51 @@ class ItemBubble extends StatelessWidget {
       case ItemKind.file:
         return _fileContent(context, cs);
     }
+  }
+
+  Widget _receivingContent(BuildContext context, ColorScheme cs) {
+    final t = tr(context);
+    final expected = item.expectedSize;
+    final progress = expected > 0 ? (item.fileSize / expected).clamp(0.0, 1.0) : null;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(value: progress, strokeWidth: 3),
+                Icon(Icons.download_rounded, size: 18, color: cs.primary),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(item.fileName ?? t.fileWord,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  expected > 0
+                      ? '${humanSize(item.fileSize)} / ${humanSize(expected)}'
+                      : '${humanSize(item.fileSize)} · ${t.receivingLabel}',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _footer(ColorScheme cs) => Padding(
@@ -96,6 +142,10 @@ class ItemBubble extends StatelessWidget {
             if (item.pinned) ...[
               const SizedBox(width: 4),
               Icon(Icons.push_pin, size: 11, color: cs.primary),
+            ],
+            if (item.archived) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.archive_rounded, size: 11, color: cs.onSurfaceVariant),
             ],
             const SizedBox(width: 4),
             Icon(
@@ -529,6 +579,16 @@ class ItemBubble extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 AppScope.of(context).store.togglePin(item);
+              },
+            ),
+            ListTile(
+              leading: Icon(item.archived
+                  ? Icons.unarchive_outlined
+                  : Icons.archive_outlined),
+              title: Text(item.archived ? tr(context).unarchive : tr(context).archive),
+              onTap: () {
+                Navigator.pop(context);
+                AppScope.of(context).store.toggleArchive(item);
               },
             ),
             ListTile(

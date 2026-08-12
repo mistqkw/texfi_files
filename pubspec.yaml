@@ -68,6 +68,21 @@ dependencies:
   record: ^6.1.1
   share_plus: ^10.1.4
 
+  # Безопасность: шифрование, PIN
+  cryptography: ^2.7.0
+  crypto: ^3.0.6
+  local_auth: ^2.3.0
+
+  # Кросс-девайс: QR-пары
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.10
+
+  # Desktop drag & drop
+  desktop_drop: ^0.5.0
+
+  # Приём «Поделиться в TexFi files» из других приложений
+  receive_sharing_intent: ^1.8.1
+
 
 dev_dependencies:
   flutter_test:
