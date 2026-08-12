@@ -5,6 +5,7 @@ import 'app.dart';
 import 'app_state.dart';
 import 'core/auth_service.dart';
 import 'core/background.dart';
+import 'core/quick_share.dart';
 import 'core/settings.dart';
 import 'l10n/app_strings.dart';
 import 'store/store.dart';
@@ -25,6 +26,11 @@ Future<void> main() async {
   if (Platform.isAndroid && settings.backgroundReceive) {
     final t = AppStrings(settings.effectiveLanguageCode);
     await Background.start(t.bgTitle, t.bgText);
+  }
+
+  // «Поделиться в TexFi files» из других приложений (Android/iOS).
+  if (QuickShare.supported) {
+    await QuickShare(store, settings).start();
   }
 
   runApp(TexfiApp(state: state));
