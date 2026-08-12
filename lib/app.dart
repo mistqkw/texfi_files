@@ -4,6 +4,7 @@ import 'app_state.dart';
 import 'core/settings.dart';
 import 'ui/home_page.dart';
 import 'ui/onboarding_screen.dart';
+import 'ui/pin_lock_screen.dart';
 
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
@@ -17,12 +18,21 @@ class AppScope extends InheritedNotifier<AppState> {
   }
 }
 
-class TexfiApp extends StatelessWidget {
+class TexfiApp extends StatefulWidget {
   final AppState state;
   const TexfiApp({super.key, required this.state});
 
   @override
+  State<TexfiApp> createState() => _TexfiAppState();
+}
+
+class _TexfiAppState extends State<TexfiApp> {
+  // Разблокировано на время текущего запуска приложения.
+  bool _unlocked = false;
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     return AppScope(
       state: state,
       child: ListenableBuilder(
@@ -30,6 +40,7 @@ class TexfiApp extends StatelessWidget {
         builder: (context, _) {
           final s = state.settings;
           final seed = Color(s.seedColor);
+          final locked = s.pinEnabled && s.pinHash != null && !_unlocked;
           return MaterialApp(
             title: 'TexFi files',
             debugShowCheckedModeBanner: false,
@@ -57,9 +68,11 @@ class TexfiApp extends StatelessWidget {
                 child: child!,
               );
             },
-            home: s.onboardingSeen
-                ? const HomePage()
-                : const OnboardingScreen(),
+            home: locked
+                ? PinLockScreen(onUnlocked: () => setState(() => _unlocked = true))
+                : (s.onboardingSeen
+                    ? const HomePage()
+                    : const OnboardingScreen()),
           );
         },
       ),

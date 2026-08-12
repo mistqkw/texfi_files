@@ -19,6 +19,9 @@ class ReceiveServer {
   /// Вызывается при получении текста/файла (для уведомления в UI).
   void Function(SavedItem item)? onReceived;
 
+  /// Вызывается при получении данных от устройства — для истории устройств.
+  void Function(String deviceId, String name, int bytes)? onDeviceActivity;
+
   // Предпочтительный фиксированный порт — чтобы легко открыть в фаерволе.
   // Если занят, пробуем следующие, и лишь потом произвольный.
   static const preferredPort = 45889;
@@ -99,6 +102,8 @@ class ReceiveServer {
   Future<void> _handleMessage(HttpRequest req) async {
     final text = await utf8.decoder.bind(req).join();
     final from = _decodeFrom(req);
+    final deviceId = req.headers.value('x-device-id');
+    final ttlSeconds = int.tryParse(req.headers.value('x-ttl-seconds') ?? '');
     final item = SavedItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       kind: ItemKind.text,
@@ -106,9 +111,15 @@ class ReceiveServer {
       createdAt: DateTime.now(),
       outgoing: false,
       fromName: from,
+      expiresAt: ttlSeconds != null
+          ? DateTime.now().add(Duration(seconds: ttlSeconds))
+          : null,
     );
     await store.add(item);
     onReceived?.call(item);
+    if (deviceId != null) {
+      onDeviceActivity?.call(deviceId, from, utf8.encode(text).length);
+    }
     req.response
       ..statusCode = HttpStatus.ok
       ..write('ok');
@@ -168,6 +179,10 @@ class ReceiveServer {
 
     await store.finishReceiving(item, received);
     onReceived?.call(item);
+    final deviceId = req.headers.value('x-device-id');
+    if (deviceId != null) {
+      onDeviceActivity?.call(deviceId, from, received);
+    }
 
     req.response
       ..statusCode = HttpStatus.ok

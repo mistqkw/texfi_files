@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/auth_service.dart';
 import 'core/cloud_sync.dart';
+import 'core/device_history.dart';
 import 'core/models.dart';
 import 'core/offline_queue.dart';
 import 'core/player_service.dart';
@@ -23,6 +24,7 @@ class AppState extends ChangeNotifier {
   late final SendClient client;
   late final CloudSync cloud;
   late final OfflineQueue queue;
+  late final DeviceHistory deviceHistory;
   final PlayerService player = PlayerService();
 
   /// Последнее событие приёма — для показа снекбара.
@@ -31,7 +33,7 @@ class AppState extends ChangeNotifier {
   AppState(this.settings, this.store, this.auth) {
     server = ReceiveServer(settings, store);
     discovery = Discovery(settings, () => server.port, auth);
-    client = SendClient(settings.deviceName);
+    client = SendClient(settings.deviceName, settings.deviceId);
     cloud = CloudSync(auth, store, settings);
     // Локально добавленный элемент → отправить в облако аккаунта.
     store.onItemAdded = (item) => cloud.maybePush(item);
@@ -53,6 +55,9 @@ class AppState extends ChangeNotifier {
     cloud.start();
     final prefs = await SharedPreferences.getInstance();
     queue = OfflineQueue(prefs, client, discovery, (item) => store.add(item));
+    deviceHistory = DeviceHistory(prefs);
+    server.onDeviceActivity = (id, name, bytes) =>
+        deviceHistory.recordReceived(id, name, bytes);
     notifyListeners();
   }
 
@@ -78,8 +83,8 @@ class AppState extends ChangeNotifier {
 
   // --- Отправка ---
 
-  Future<bool> sendTextTo(Peer peer, String text) async {
-    final ok = await client.sendText(peer, text);
+  Future<bool> sendTextTo(Peer peer, String text, {int? ttlSeconds}) async {
+    final ok = await client.sendText(peer, text, ttlSeconds: ttlSeconds);
     if (ok) {
       await store.add(SavedItem(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -88,7 +93,11 @@ class AppState extends ChangeNotifier {
         createdAt: DateTime.now(),
         outgoing: true,
         fromName: peer.name,
+        expiresAt: ttlSeconds != null
+            ? DateTime.now().add(Duration(seconds: ttlSeconds))
+            : null,
       ));
+      deviceHistory.recordSent(peer.id, peer.name, text.length);
     }
     return ok;
   }
@@ -104,13 +113,17 @@ class AppState extends ChangeNotifier {
     ));
   }
 
-  Stream<double> sendFileTo(Peer peer, File file) => client.sendFile(peer, file);
+  Stream<double> sendFileTo(Peer peer, File file, {int? ttlSeconds}) async* {
+    yield* client.sendFile(peer, file, ttlSeconds: ttlSeconds);
+    deviceHistory.recordSent(peer.id, peer.name, await file.length());
+  }
 
   @override
   void dispose() {
     settings.removeListener(_onSettingsChanged);
     discovery.dispose();
     queue.dispose();
+    deviceHistory.dispose();
     cloud.stop();
     server.stop();
     client.close();
