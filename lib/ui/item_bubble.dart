@@ -57,6 +57,9 @@ class ItemBubble extends StatelessWidget {
 
   Widget _content(BuildContext context, ColorScheme cs) {
     if (item.receiving) return _receivingContent(context, cs);
+    if (item.cloud && item.filePath == null && item.remotePath != null) {
+      return _notDownloadedContent(context, cs);
+    }
     switch (item.kind) {
       case ItemKind.text:
         return _textContent(context, cs);
@@ -70,6 +73,11 @@ class ItemBubble extends StatelessWidget {
       case ItemKind.file:
         return _fileContent(context, cs);
     }
+  }
+
+  Widget _notDownloadedContent(BuildContext context, ColorScheme cs) {
+    final t = tr(context);
+    return _DownloadTile(item: item, cs: cs, t: t);
   }
 
   Widget _receivingContent(BuildContext context, ColorScheme cs) {
@@ -643,6 +651,79 @@ class ConstraintsBox extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: w > 700 ? 520 : w * 0.82),
       child: child,
+    );
+  }
+}
+
+/// Плитка «не скачано» для элементов, пропущенных избирательной
+/// синхронизацией — скачивает содержимое из облака по тапу.
+class _DownloadTile extends StatefulWidget {
+  final SavedItem item;
+  final ColorScheme cs;
+  final AppStrings t;
+  const _DownloadTile({required this.item, required this.cs, required this.t});
+
+  @override
+  State<_DownloadTile> createState() => _DownloadTileState();
+}
+
+class _DownloadTileState extends State<_DownloadTile> {
+  bool _loading = false;
+
+  Future<void> _download(BuildContext context) async {
+    setState(() => _loading = true);
+    final ok = await AppScope.of(context).cloud.downloadNow(widget.item);
+    if (mounted) setState(() => _loading = false);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(widget.t.downloadFailed)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+    final item = widget.item;
+    return InkWell(
+      onTap: _loading ? null : () => _download(context),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: _loading
+                  ? const CircularProgressIndicator(strokeWidth: 3)
+                  : Container(
+                      decoration: BoxDecoration(
+                          color: cs.primaryContainer, shape: BoxShape.circle),
+                      child: Icon(Icons.cloud_download_rounded,
+                          color: cs.onPrimaryContainer),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(item.fileName ?? widget.t.fileWord,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                      _loading
+                          ? widget.t.downloading
+                          : '${humanSize(item.fileSize)} · ${widget.t.download}',
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

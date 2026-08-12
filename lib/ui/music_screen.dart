@@ -5,9 +5,17 @@ import 'audio_player_screen.dart';
 import 'format.dart';
 import '../l10n/app_strings.dart';
 
-/// Экран «Музыка»: вся аудио-музыка из ленты как плейлист.
-class MusicScreen extends StatelessWidget {
+/// Экран «Музыка»: вся аудио-музыка из ленты, с плейлистами по группам.
+/// (Голосовые сообщения сюда не попадают — отдельный тип элемента.)
+class MusicScreen extends StatefulWidget {
   const MusicScreen({super.key});
+
+  @override
+  State<MusicScreen> createState() => _MusicScreenState();
+}
+
+class _MusicScreenState extends State<MusicScreen> {
+  String? _playlist; // null = все треки
 
   @override
   Widget build(BuildContext context) {
@@ -18,27 +26,64 @@ class MusicScreen extends StatelessWidget {
       body: ListenableBuilder(
         listenable: Listenable.merge([app.store, app.player]),
         builder: (context, _) {
-          final tracks = app.store.items
+          final allTracks = app.store.items
               .where((e) => e.kind == ItemKind.audio && e.filePath != null)
               .toList()
               .reversed
               .toList();
-          if (tracks.isEmpty) {
+          if (allTracks.isEmpty) {
             return Center(
               child: Text(t.noMusic,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
             );
           }
+          final playlists = <String>{
+            for (final tr in allTracks)
+              if (tr.group != null && tr.group!.isNotEmpty) tr.group!,
+          }.toList()
+            ..sort();
+          final tracks = _playlist == null
+              ? allTracks
+              : allTracks.where((e) => e.group == _playlist).toList();
           return Column(
             children: [
+              if (playlists.isNotEmpty)
+                SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(t.all),
+                          selected: _playlist == null,
+                          onSelected: (_) => setState(() => _playlist = null),
+                        ),
+                      ),
+                      for (final p in playlists)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(p),
+                            selected: _playlist == p,
+                            onSelected: (_) => setState(() => _playlist = p),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     FilledButton.icon(
-                      onPressed: () => app.player.playQueue(tracks, 0,
-                          volume: app.settings.playerVolume),
+                      onPressed: tracks.isEmpty
+                          ? null
+                          : () => app.player.playQueue(tracks, 0,
+                              volume: app.settings.playerVolume),
                       icon: const Icon(Icons.playlist_play_rounded),
                       label: Text(t.playAll),
                     ),

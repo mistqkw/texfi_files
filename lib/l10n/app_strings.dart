@@ -221,6 +221,8 @@ class AppStrings {
       'Drop to send files', 'Loslassen zum Senden', 'Upuść, aby wysłać');
   String get downloading =>
       _('Скачивание…', 'Downloading…', 'Herunterladen…', 'Pobieranie…');
+  String get downloadFailed => _('Не удалось скачать', 'Download failed',
+      'Herunterladen fehlgeschlagen', 'Nie udało się pobrać');
 
   // Подписи категорий (как в Google)
   String get catAccountSub => _('Вход, облако аккаунта',
@@ -464,6 +466,10 @@ class AppStrings {
       _('Подключиться по IP', 'Connect by IP', 'Per IP verbinden',
           'Połącz przez IP');
   String get byIp => _('По IP', 'By IP', 'Per IP', 'Przez IP');
+  String get showQr => _('Мой QR-код', 'My QR code', 'Mein QR-Code',
+      'Mój kod QR');
+  String get scanQr => _('Сканировать QR', 'Scan QR', 'QR scannen',
+      'Skanuj QR');
   String get ipAddress => _('IP адрес', 'IP address', 'IP-Adresse', 'Adres IP');
   String get port => _('Порт', 'Port', 'Port', 'Port');
   String get connect => _('Подключить', 'Connect', 'Verbinden', 'Połącz');
