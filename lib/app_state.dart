@@ -39,6 +39,9 @@ class AppState extends ChangeNotifier {
     cloud = CloudSync(auth, store, settings);
     // Локально добавленный элемент → отправить в облако аккаунта.
     store.onItemAdded = (item) => cloud.maybePush(item);
+    // Локальное удаление облачного элемента → удалить и из общего индекса
+    // аккаунта, чтобы сообщение исчезло на всех устройствах.
+    store.onItemRemoved = (item) => cloud.remove(item);
     // Вход/выход из аккаунта → перезапустить поиск и облако.
     auth.addListener(() {
       discovery.start();
@@ -62,8 +65,10 @@ class AppState extends ChangeNotifier {
         deviceHistory.recordReceived(id, name, bytes);
     // Самоуничтожающиеся сообщения: чистим раз в минуту.
     await store.purgeExpired();
-    _purgeTimer =
-        Timer.periodic(const Duration(seconds: 30), (_) => store.purgeExpired());
+    _purgeTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => store.purgeExpired(),
+    );
     notifyListeners();
   }
 
@@ -92,17 +97,19 @@ class AppState extends ChangeNotifier {
   Future<bool> sendTextTo(Peer peer, String text, {int? ttlSeconds}) async {
     final ok = await client.sendText(peer, text, ttlSeconds: ttlSeconds);
     if (ok) {
-      await store.add(SavedItem(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        kind: ItemKind.text,
-        text: text,
-        createdAt: DateTime.now(),
-        outgoing: true,
-        fromName: peer.name,
-        expiresAt: ttlSeconds != null
-            ? DateTime.now().add(Duration(seconds: ttlSeconds))
-            : null,
-      ));
+      await store.add(
+        SavedItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          kind: ItemKind.text,
+          text: text,
+          createdAt: DateTime.now(),
+          outgoing: true,
+          fromName: peer.name,
+          expiresAt: ttlSeconds != null
+              ? DateTime.now().add(Duration(seconds: ttlSeconds))
+              : null,
+        ),
+      );
       deviceHistory.recordSent(peer.id, peer.name, text.length);
     }
     return ok;
@@ -110,16 +117,18 @@ class AppState extends ChangeNotifier {
 
   /// Локально сохранить текст без отправки (личное «Избранное»).
   Future<void> saveTextLocal(String text, {int? ttlSeconds}) async {
-    await store.add(SavedItem(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      kind: ItemKind.text,
-      text: text,
-      createdAt: DateTime.now(),
-      outgoing: true,
-      expiresAt: ttlSeconds != null
-          ? DateTime.now().add(Duration(seconds: ttlSeconds))
-          : null,
-    ));
+    await store.add(
+      SavedItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        kind: ItemKind.text,
+        text: text,
+        createdAt: DateTime.now(),
+        outgoing: true,
+        expiresAt: ttlSeconds != null
+            ? DateTime.now().add(Duration(seconds: ttlSeconds))
+            : null,
+      ),
+    );
   }
 
   Stream<double> sendFileTo(Peer peer, File file, {int? ttlSeconds}) async* {

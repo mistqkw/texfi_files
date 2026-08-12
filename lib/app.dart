@@ -9,7 +9,7 @@ import 'ui/pin_lock_screen.dart';
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
   const AppScope({super.key, required AppState state, required super.child})
-      : super(notifier: state);
+    : super(notifier: state);
 
   static AppState of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
@@ -62,17 +62,19 @@ class _TexfiAppState extends State<TexfiApp> {
             builder: (context, child) {
               final mq = MediaQuery.of(context);
               return MediaQuery(
-                data: mq.copyWith(
-                  textScaler: TextScaler.linear(s.uiScale),
-                ),
+                data: mq.copyWith(textScaler: TextScaler.linear(s.uiScale)),
                 child: child!,
               );
             },
-            home: locked
-                ? PinLockScreen(onUnlocked: () => setState(() => _unlocked = true))
-                : (s.onboardingSeen
-                    ? const HomePage()
-                    : const OnboardingScreen()),
+            home: _Splash(
+              child: locked
+                  ? PinLockScreen(
+                      onUnlocked: () => setState(() => _unlocked = true),
+                    )
+                  : (s.onboardingSeen
+                        ? const HomePage()
+                        : const OnboardingScreen()),
+            ),
           );
         },
       ),
@@ -97,9 +99,7 @@ class _TexfiAppState extends State<TexfiApp> {
       colorScheme: scheme.copyWith(surface: surface),
       scaffoldBackgroundColor: surface,
       fontFamily: font,
-      visualDensity: d.dense
-          ? VisualDensity.compact
-          : VisualDensity.standard,
+      visualDensity: d.dense ? VisualDensity.compact : VisualDensity.standard,
       appBarTheme: AppBarTheme(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
@@ -129,9 +129,11 @@ class _TexfiAppState extends State<TexfiApp> {
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
-          shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(d.buttonRadius),
-          )),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(d.buttonRadius),
+            ),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -222,12 +224,94 @@ class DesignPreset {
   );
 
   static DesignPreset of(int i) => switch (i) {
-        1 => material,
-        2 => apple,
-        3 => samsung,
-        4 => windows,
-        _ => texfi,
-      };
+    1 => material,
+    2 => apple,
+    3 => samsung,
+    4 => windows,
+    _ => texfi,
+  };
 
   static const all = [texfi, material, apple, samsung, windows];
+}
+
+/// Экран запуска: лого выезжает масштабом и растворяется в контент —
+/// первое, что видит пользователь, должно выглядеть «дорого».
+class _Splash extends StatefulWidget {
+  final Widget child;
+  const _Splash({required this.child});
+
+  @override
+  State<_Splash> createState() => _SplashState();
+}
+
+class _SplashState extends State<_Splash> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  )..forward();
+  bool _done = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 950), () {
+      if (mounted) setState(() => _done = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_done) {
+      return AnimatedOpacity(
+        opacity: 1,
+        duration: const Duration(milliseconds: 220),
+        child: widget.child,
+      );
+    }
+    final cs = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final scaleCurve = CurvedAnimation(parent: _c, curve: Curves.easeOutBack);
+    final fadeCurve = CurvedAnimation(
+      parent: _c,
+      curve: const Interval(0, 0.55),
+    );
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                radius: 1.1,
+                colors: [
+                  cs.primary.withValues(alpha: dark ? 0.16 : 0.08),
+                  cs.surface,
+                ],
+              ),
+            ),
+          ),
+          FadeTransition(
+            opacity: fadeCurve,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.72, end: 1.0).animate(scaleCurve),
+              child: Image.asset(
+                dark ? 'assets/brand/mark-white.png' : 'assets/brand/mark.png',
+                width: 96,
+                height: 96,
+                errorBuilder: (_, __, ___) =>
+                    Icon(Icons.bookmark_rounded, size: 96, color: cs.primary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
