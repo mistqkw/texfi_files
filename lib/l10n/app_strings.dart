@@ -111,6 +111,26 @@ class AppStrings {
       _('Из архива', 'Unarchive', 'Aus Archiv', 'Wyjmij z archiwum');
   String get searchHint =>
       _('Поиск по сохранённому…', 'Search saved items…', 'Suche…', 'Szukaj…');
+
+  // Терминальный стиль ленты
+  String get hTerminal =>
+      _('Терминальный стиль', 'Terminal style', 'Terminal-Stil', 'Styl terminala');
+  String get terminalBubbles =>
+      _('Терминальные блоки', 'Terminal blocks', 'Terminal-Blöcke', 'Bloki terminala');
+  String get terminalBubblesSub => _(
+      'Рамка с врезанной подписью вместо пузырей',
+      'Framed blocks with inset label instead of bubbles',
+      'Rahmen mit eingelassener Beschriftung',
+      'Ramka z wpisaną etykietą');
+  String get borderBrightness =>
+      _('Яркость обводки', 'Border brightness', 'Rahmenhelligkeit', 'Jasność obramowania');
+  String get readyThemes => _('Готовые темы', 'Presets', 'Vorlagen', 'Motywy');
+  String get prefixContent =>
+      _('Содержимое врезки', 'Label content', 'Beschriftung', 'Zawartość etykiety');
+  String get prefixDevice => _('Устройство', 'Device', 'Gerät', 'Urządzenie');
+  String get prefixType => _('Тип', 'Type', 'Typ', 'Typ');
+  String get prefixSize => _('Размер', 'Size', 'Größe', 'Rozmiar');
+  String get prefixTime => _('Время', 'Time', 'Zeit', 'Czas');
   String get addToGroup =>
       _('Добавить в группу…', 'Add to group…', 'Zur Gruppe…', 'Dodaj do grupy…');
   String groupName(String g) =>

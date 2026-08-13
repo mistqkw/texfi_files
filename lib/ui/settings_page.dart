@@ -18,6 +18,7 @@ import '../net/remote_input.dart';
 import 'admin_page.dart';
 import 'format.dart';
 import 'onboarding_screen.dart';
+import 'terminal.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -91,26 +92,30 @@ class _SettingsPageState extends State<SettingsPage> {
             _accountCard(context, app),
             const SizedBox(height: 8),
             _card(cs, Icons.language_rounded, t.hLanguage,
-                _langName(s), () => _open(t.hLanguage, _sectionLanguage)),
+                _langName(s), () => _open(t.hLanguage, _sectionLanguage),
+                'language'),
             _card(cs, Icons.palette_outlined, t.hAppearance,
-                t.catAppearanceSub, () => _open(t.hAppearance, _sectionAppearance)),
+                t.catAppearanceSub, () => _open(t.hAppearance, _sectionAppearance),
+                'appearance'),
             _card(cs, Icons.wallpaper_rounded, t.hBackground,
-                t.catBackgroundSub, () => _open(t.hBackground, _sectionBackground)),
+                t.catBackgroundSub, () => _open(t.hBackground, _sectionBackground),
+                'background'),
             _card(cs, Icons.wifi_rounded, t.hNetwork, t.catNetworkSub,
-                () => _open(t.hNetwork, _sectionNetwork)),
+                () => _open(t.hNetwork, _sectionNetwork), 'network'),
             _card(cs, Icons.sync_alt_rounded, t.hFilesSync, t.catFilesSyncSub,
-                () => _open(t.hFilesSync, _sectionFilesSync)),
+                () => _open(t.hFilesSync, _sectionFilesSync), 'sync'),
             _card(cs, Icons.lock_outline_rounded, t.hSecurity, t.catSecuritySub,
-                () => _open(t.hSecurity, _sectionSecurity)),
+                () => _open(t.hSecurity, _sectionSecurity), 'security'),
             if (RemoteInput.supported)
               _card(cs, Icons.keyboard_rounded, t.hRemoteInput,
-                  t.catRemoteSub, () => _open(t.hRemoteInput, _sectionRemote)),
+                  t.catRemoteSub, () => _open(t.hRemoteInput, _sectionRemote),
+                  'remote'),
             _card(cs, Icons.play_circle_outline_rounded, t.hPlayer,
-                t.catPlayerSub, () => _open(t.hPlayer, _sectionPlayer)),
+                t.catPlayerSub, () => _open(t.hPlayer, _sectionPlayer), 'player'),
             _card(cs, Icons.badge_outlined, t.hDevice, t.catDeviceSub,
-                () => _open(t.hDevice, _sectionDevice)),
+                () => _open(t.hDevice, _sectionDevice), 'device'),
             _card(cs, Icons.info_outline_rounded, t.hAbout, t.catAboutSub,
-                () => _open(t.hAbout, _sectionAbout)),
+                () => _open(t.hAbout, _sectionAbout), 'about'),
             const SizedBox(height: 16),
             Center(
               child: TextButton(
@@ -135,8 +140,30 @@ class _SettingsPageState extends State<SettingsPage> {
       };
 
   // Карточка-категория в стиле TexFi.
+  // slug — латинская метка во врезке рамки в терминальном режиме.
   Widget _card(ColorScheme cs, IconData icon, String title, String subtitle,
-      VoidCallback onTap) {
+      VoidCallback onTap, [String? slug]) {
+    final s = AppScope.of(context).settings;
+    if (s.terminalBubbles) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+        child: TerminalBox(
+          label: slug,
+          borderColor: Colors.white.withValues(alpha: s.borderOpacity),
+          labelColor: cs.primary,
+          padding: EdgeInsets.zero,
+          child: ListTile(
+            leading: Icon(icon, color: cs.primary, size: 22),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle:
+                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: onTap,
+          ),
+        ),
+      );
+    }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -159,6 +186,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _accountCard(BuildContext context, AppState app) {
     final cs = Theme.of(context).colorScheme;
+    final s = app.settings;
+    if (s.terminalBubbles) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+        child: TerminalBox(
+          label: 'account',
+          borderColor: Colors.white.withValues(alpha: s.borderOpacity),
+          labelColor: cs.primary,
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _accountTile(context, app),
+              _cloudStatus(context, app),
+            ],
+          ),
+        ),
+      );
+    }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -214,6 +259,84 @@ class _SettingsPageState extends State<SettingsPage> {
   List<Widget> _sectionAppearance(BuildContext context) {
     final s = AppScope.of(context).settings;
     return [
+      _sub(t.hTerminal),
+      SwitchListTile(
+        secondary: const Icon(Icons.terminal_rounded),
+        title: Text(t.terminalBubbles),
+        subtitle: Text(t.terminalBubblesSub),
+        value: s.terminalBubbles,
+        onChanged: (v) => s.terminalBubbles = v,
+      ),
+      ListTile(
+        leading: const Icon(Icons.border_style_rounded),
+        title: Text(t.borderBrightness),
+        subtitle: Slider(
+          value: s.borderOpacity,
+          min: 0.06,
+          max: 1.0,
+          divisions: 24,
+          label: '${(s.borderOpacity * 100).round()}%',
+          onChanged: (v) => s.borderOpacity = v,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (var i = 0; i < kTerminalThemes.length; i++)
+              ChoiceChip(
+                avatar: CircleAvatar(
+                  backgroundColor: Color(kTerminalThemes[i].accent),
+                  radius: 8,
+                ),
+                label: Text(kTerminalThemes[i].name),
+                selected: s.themePreset == i,
+                onSelected: (_) {
+                  s.themePreset = i;
+                  // «Своя» тема не трогает выбранный вручную акцент.
+                  if (i != kTerminalThemes.length - 1) {
+                    s.seedColor = kTerminalThemes[i].accent;
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child:
+            Text(t.prefixContent, style: Theme.of(context).textTheme.labelLarge),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: Wrap(
+          spacing: 8,
+          children: [
+            FilterChip(
+              label: Text(t.prefixDevice),
+              selected: s.prefixDevice,
+              onSelected: (v) => s.prefixDevice = v,
+            ),
+            FilterChip(
+              label: Text(t.prefixType),
+              selected: s.prefixType,
+              onSelected: (v) => s.prefixType = v,
+            ),
+            FilterChip(
+              label: Text(t.prefixSize),
+              selected: s.prefixSize,
+              onSelected: (v) => s.prefixSize = v,
+            ),
+            FilterChip(
+              label: Text(t.prefixTime),
+              selected: s.prefixTime,
+              onSelected: (v) => s.prefixTime = v,
+            ),
+          ],
+        ),
+      ),
       _sub(t.hDesign),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),

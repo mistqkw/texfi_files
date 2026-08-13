@@ -39,7 +39,13 @@ All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistq
 - 🎵 **Built‑in player + Music library** — audio with album art, mini‑player, playlist of all chat audio; video with thumbnails.
 - 🖼 **Media** — swipeable, zoomable image gallery.
 - ⌨️ **Type from phone to PC** — the phone keyboard types on your computer.
-- 📌 **Pin & group** — pin items, organize into collections, filter the timeline.
+- 🔎 **Full‑text search** — find any saved message or file name instantly.
+- 📌 **Pin, group & archive** — pin items, organize into collections, move noise to the
+  archive, filter the timeline.
+- 🖥 **Terminal design** — pure‑black blocks with a thin outline and a label inset into the
+  frame (`❯ device · type`), monospace metadata, full‑width date rules. Tunable outline
+  brightness, ready‑made themes and configurable label content — or switch back to
+  classic bubbles in one tap.
 - 🎨 **Deep customization** — design skins (TexFi / Material / Apple / Samsung / Windows),
   any accent color, fonts, custom photo chat background (blur / pixelate / dim),
   snow & rain effects, per‑message colors, changeable animations, OLED theme.
