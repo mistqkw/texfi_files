@@ -6,11 +6,14 @@ import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 import '../app.dart';
 import '../core/models.dart';
+import '../core/settings.dart';
 import '../l10n/app_strings.dart';
+import 'album_art.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'image_gallery.dart';
 import 'player_page.dart';
+import 'terminal.dart';
 import 'video_thumb.dart';
 
 class ItemBubble extends StatelessWidget {
@@ -37,6 +40,48 @@ class ItemBubble extends StatelessWidget {
       end: Alignment.bottomRight,
       colors: [_shade(bubbleColor, 0.035), _shade(bubbleColor, -0.035)],
     );
+
+    // Терминальный вид: чёрный блок с белой рамкой и врезанной подписью.
+    if (s.terminalBubbles) {
+      return Container(
+        // Тянемся на всю ширину: внешний Column ленты центрирует детей, и без
+        // этого блоки вставали бы по центру вместо краёв.
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          vertical: s.compact ? 4 : 7,
+          horizontal: 12,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              item.outgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstraintsBox(
+              child: IntrinsicWidth(
+                child: GestureDetector(
+                  onLongPress: () => _menu(context),
+                  child: TerminalBox(
+                    label: _prefixLabel(s),
+                    // Белая обводка на чёрном блоке — основа стиля.
+                    borderColor: Colors.white.withValues(
+                      alpha: s.borderOpacity,
+                    ),
+                    labelColor:
+                        item.outgoing ? cs.primary : cs.onSurfaceVariant,
+                    padding: _framePadding,
+                    child: _content(context, cs),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
+              child: _meta(cs),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Align(
       alignment: align,
@@ -75,6 +120,99 @@ class ItemBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Превью аудио: настоящая обложка из тегов, если она есть.
+  /// В терминальном режиме заглушка — тонкая рамка с иконкой, без плашки.
+  Widget _mediaThumb(BuildContext context, ColorScheme cs, bool isVideo) {
+    final terminal = AppScope.of(context).settings.terminalBubbles;
+    final icon = isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded;
+    final fallback = terminal
+        ? Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Icon(icon, color: cs.primary, size: 26),
+          )
+        : Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: cs.onPrimary, size: 30),
+          );
+    if (isVideo) return fallback;
+    return AlbumArtThumb(
+      filePath: item.filePath,
+      size: 52,
+      radius: terminal ? 3 : 14,
+      fallback: fallback,
+    );
+  }
+
+  /// Медиа занимает всю ширину блока — внутренних отступов почти не даём.
+  EdgeInsets get _framePadding =>
+      (item.kind == ItemKind.image || item.kind == ItemKind.video)
+          ? const EdgeInsets.all(4)
+          // Отступы даёт само содержимое — иначе у текста был бы двойной.
+          : EdgeInsets.zero;
+
+  /// Содержимое врезки в верхней линии рамки: устройство · тип · размер · время.
+  String _prefixLabel(Settings s) {
+    final parts = <String>[];
+    if (s.prefixDevice) {
+      final name = item.fromName ?? (item.outgoing ? s.deviceName : null);
+      if (name != null && name.trim().isNotEmpty) {
+        parts.add(name.trim().toLowerCase());
+      }
+    }
+    if (s.prefixType) parts.add(_typeTag);
+    if (s.prefixSize && item.fileSize > 0) parts.add(humanSize(item.fileSize));
+    if (s.prefixTime) parts.add(clockTime(item.createdAt));
+    return parts.join(' · ');
+  }
+
+  String get _typeTag => switch (item.kind) {
+        ItemKind.text => 'txt',
+        ItemKind.image => 'img',
+        ItemKind.audio => 'aud',
+        ItemKind.video => 'vid',
+        ItemKind.voice => 'voc',
+        ItemKind.file => 'file',
+      };
+
+  /// Служебная строка под блоком: время и статусные иконки, моноширинно.
+  Widget _meta(ColorScheme cs) {
+    final dim = cs.onSurfaceVariant.withValues(alpha: 0.7);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(clockTime(item.createdAt), style: monoStyle(color: dim, size: 10)),
+        if (item.group != null) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.folder_rounded, size: 11, color: dim),
+        ],
+        if (item.pinned) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.push_pin, size: 11, color: cs.primary),
+        ],
+        if (item.archived) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.archive_rounded, size: 11, color: dim),
+        ],
+        const SizedBox(width: 6),
+        Icon(
+          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
+          size: 11,
+          color: item.cloud ? cs.primary : dim,
+        ),
+      ],
     );
   }
 
@@ -159,7 +297,16 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  Widget _footer(ColorScheme cs) => Padding(
+  /// В терминальном режиме мета вынесена под блок (`_meta`), поэтому
+  /// внутренний футер не рисуем — иначе время задвоится.
+  Widget _footer(BuildContext context, ColorScheme cs) {
+    if (AppScope.of(context).settings.terminalBubbles) {
+      return const SizedBox.shrink();
+    }
+    return _classicFooter(cs);
+  }
+
+  Widget _classicFooter(ColorScheme cs) => Padding(
     padding: const EdgeInsets.only(top: 4),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -233,40 +380,52 @@ class ItemBubble extends StatelessWidget {
             item.text ?? '',
             style: const TextStyle(fontSize: 15, height: 1.3),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                onTap: () => _copy(context),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.copy_rounded,
-                    size: 15,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              InkWell(
-                onTap: _share,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.reply_rounded,
-                    size: 15,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              _footer(cs),
-            ],
-          ),
+          _textActions(context, cs),
         ],
       ),
+    );
+  }
+
+  /// Кнопки «копировать/переслать» под текстом. В терминальном режиме они
+  /// проявляются только при наведении мышью, на телефоне — скрыты (там есть
+  /// долгое нажатие и свайп).
+  Widget _textActions(BuildContext context, ColorScheme cs) {
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: () => _copy(context),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.copy_rounded,
+              size: 15,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        InkWell(
+          onTap: _share,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.reply_rounded,
+              size: 15,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+    if (AppScope.of(context).settings.terminalBubbles) {
+      return Align(alignment: Alignment.centerLeft, child: _HoverReveal(child: row));
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [row, const Spacer(), _footer(context, cs)],
     );
   }
 
@@ -298,7 +457,7 @@ class ItemBubble extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              _footer(cs),
+              _footer(context, cs),
             ],
           ),
         ),
@@ -340,7 +499,7 @@ class ItemBubble extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                _footer(cs),
+                _footer(context, cs),
               ],
             ),
           ),
@@ -354,19 +513,7 @@ class ItemBubble extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded,
-                color: cs.onPrimary,
-                size: 30,
-              ),
-            ),
+            _mediaThumb(context, cs, isVideo),
             const SizedBox(width: 12),
             Flexible(
               child: Column(
@@ -387,7 +534,7 @@ class ItemBubble extends StatelessWidget {
                     '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(cs),
+                  _footer(context, cs),
                 ],
               ),
             ),
@@ -434,7 +581,7 @@ class ItemBubble extends StatelessWidget {
                   humanSize(item.fileSize),
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
-                _footer(cs),
+                _footer(context, cs),
               ],
             ),
           ],
@@ -482,7 +629,7 @@ class ItemBubble extends StatelessWidget {
                     humanSize(item.fileSize),
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(cs),
+                  _footer(context, cs),
                 ],
               ),
             ),
@@ -831,4 +978,34 @@ Future<void> shareItem(SavedItem item) async {
       await Share.shareXFiles([XFile(item.filePath!)]);
     }
   } catch (_) {}
+}
+
+/// Показывает содержимое только при наведении курсора. На сенсорных
+/// устройствах события наведения не приходят, поэтому там оно остаётся
+/// скрытым — и блок сообщения выглядит чистым.
+class _HoverReveal extends StatefulWidget {
+  final Widget child;
+  const _HoverReveal({required this.child});
+
+  @override
+  State<_HoverReveal> createState() => _HoverRevealState();
+}
+
+class _HoverRevealState extends State<_HoverReveal> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedOpacity(
+        opacity: _hover ? 1 : 0,
+        duration: const Duration(milliseconds: 140),
+        // IgnorePointer в невидимом состоянии, чтобы скрытые кнопки не ловили
+        // случайные нажатия.
+        child: IgnorePointer(ignoring: !_hover, child: widget.child),
+      ),
+    );
+  }
 }
