@@ -188,6 +188,53 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Терминальный дизайн ленты ---
+  // Включён ли терминальный вид сообщений (рамка с врезанной подписью).
+  bool get terminalBubbles => _p.getBool('terminalBubbles') ?? true;
+  set terminalBubbles(bool v) {
+    _p.setBool('terminalBubbles', v);
+    notifyListeners();
+  }
+
+  // Яркость обводки блоков 0.06..1.0.
+  double get borderOpacity => _p.getDouble('borderOpacity') ?? 0.55;
+  set borderOpacity(double v) {
+    _p.setDouble('borderOpacity', v.clamp(0.06, 1.0));
+    notifyListeners();
+  }
+
+  // Готовая тема: 0=Midnight, 1=Catppuccin, 2=Gruvbox, 3=Matrix, 4=своя.
+  int get themePreset => _p.getInt('themePreset') ?? 0;
+  set themePreset(int v) {
+    _p.setInt('themePreset', v.clamp(0, 4));
+    notifyListeners();
+  }
+
+  // Что показывать во врезке рамки.
+  bool get prefixDevice => _p.getBool('prefixDevice') ?? true;
+  set prefixDevice(bool v) {
+    _p.setBool('prefixDevice', v);
+    notifyListeners();
+  }
+
+  bool get prefixType => _p.getBool('prefixType') ?? true;
+  set prefixType(bool v) {
+    _p.setBool('prefixType', v);
+    notifyListeners();
+  }
+
+  bool get prefixSize => _p.getBool('prefixSize') ?? false;
+  set prefixSize(bool v) {
+    _p.setBool('prefixSize', v);
+    notifyListeners();
+  }
+
+  bool get prefixTime => _p.getBool('prefixTime') ?? false;
+  set prefixTime(bool v) {
+    _p.setBool('prefixTime', v);
+    notifyListeners();
+  }
+
   // Разблокированы ли admin-настройки (по тапам на версию).
   bool get adminUnlocked => _p.getBool('adminUnlocked') ?? false;
   set adminUnlocked(bool v) {

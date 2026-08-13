@@ -79,6 +79,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
+      # Нужен для RELEASE_NOTES.md — текст релиза правится в репозитории,
+      # а не в этом workflow.
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: texfi-files-apk
@@ -96,7 +99,4 @@ jobs:
             dist/TexFi-files-windows-x64.zip \
             -R "${GITHUB_REPOSITORY}" \
             --title "TexFi files ${GITHUB_REF_NAME}" \
-            --notes "TexFi files — local 'Saved Messages' for Android, Linux and Windows.
-
-          Install (Android): download app-release.apk, open on your phone, allow installation from unknown sources.
-          Windows: download and unzip TexFi-files-windows-x64.zip, run texfi_files.exe."
+            --notes-file RELEASE_NOTES.md

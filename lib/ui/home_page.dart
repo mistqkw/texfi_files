@@ -19,6 +19,7 @@ import 'item_bubble.dart';
 import 'music_screen.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
+import 'terminal.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
 
@@ -347,62 +348,75 @@ class _HomePageState extends State<HomePage> {
         final cs = Theme.of(context).colorScheme;
         final scaffold = Scaffold(
           appBar: _appBar(context),
-          body: Column(
+          // Обои видны и за плавающей капсулой шапки — иначе она сливается
+          // с фоном Scaffold и перестаёт читаться как отдельный блок.
+          extendBodyBehindAppBar: true,
+          body: Stack(
             children: [
-              if (_searching) _searchBar(context),
-              _filterBar(context),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _bgLayer(cs)),
-                    // Снег/дождь — ЗА сообщениями (между фоном и лентой).
-                    if (_app.settings.weather != 0)
-                      Positioned.fill(
-                        child: WeatherOverlay(
-                          type: _app.settings.weather,
-                          sizeScale: _app.settings.weatherSize,
-                          density: _app.settings.weatherDensity,
-                          speedScale: _app.settings.weatherSpeed,
+              Positioned.fill(child: _bgLayer(cs)),
+              Column(
+                children: [
+                  SizedBox(height: MediaQuery.paddingOf(context).top + 64),
+                  if (_searching) _searchBar(context),
+                  _filterBar(context),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // Снег/дождь — ЗА сообщениями (между фоном и лентой).
+                        if (_app.settings.weather != 0)
+                          Positioned.fill(
+                            child: WeatherOverlay(
+                              type: _app.settings.weather,
+                              sizeScale: _app.settings.weatherSize,
+                              density: _app.settings.weatherDensity,
+                              speedScale: _app.settings.weatherSpeed,
+                            ),
+                          ),
+                        Positioned.fill(
+                          child: items.isEmpty
+                              ? _empty(context)
+                              : _timeline(items),
                         ),
-                      ),
-                    Positioned.fill(
-                      child: items.isEmpty ? _empty(context) : _timeline(items),
-                    ),
-                    if (_dragHover)
-                      Positioned.fill(
-                        child: Container(
-                          color: cs.primary.withValues(alpha: 0.12),
-                          child: Center(
+                        if (_dragHover)
+                          Positioned.fill(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                color: cs.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: cs.primary, width: 2),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.file_download_outlined,
-                                    color: cs.primary,
+                              color: cs.primary.withValues(alpha: 0.12),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(t.dropFilesHere),
-                                ],
+                                  decoration: BoxDecoration(
+                                    color: cs.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: cs.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.file_download_outlined,
+                                        color: cs.primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(t.dropFilesHere),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
-                ),
+                      ],
+                    ),
+                  ),
+                  const MiniPlayer(),
+                  _inputBar(context),
+                ],
               ),
-              const MiniPlayer(),
-              _inputBar(context),
             ],
           ),
         );
@@ -427,12 +441,26 @@ class _HomePageState extends State<HomePage> {
     final cs = Theme.of(context).colorScheme;
     final online = _app.peers.where((p) => p.online).length;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    // Плавающая капсула: отступы от краёв, скруглённая, с тонкой обводкой.
+    final top = MediaQuery.paddingOf(context).top;
     return PreferredSize(
-      preferredSize: const Size.fromHeight(60 + 19),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: _rawAppBar(context, cs, online, dark),
+      preferredSize: Size.fromHeight(top + 64),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(10, top + 4, 10, 0),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(
+                alpha: _app.settings.borderOpacity,
+              ),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: _rawAppBar(context, cs, online, dark),
+          ),
         ),
       ),
     );
@@ -446,9 +474,11 @@ class _HomePageState extends State<HomePage> {
   ) {
     return AppBar(
       elevation: 0,
+      // primary: false — вертикальный отступ под статус-бар уже даёт капсула.
+      primary: false,
       backgroundColor: cs.surface.withValues(alpha: 0.74),
       titleSpacing: 12,
-      toolbarHeight: 60,
+      toolbarHeight: 56,
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -850,6 +880,10 @@ class _HomePageState extends State<HomePage> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _dayChip(BuildContext context, DateTime dt) {
+    // Терминальный вид: линия через всю ширину с датой посередине.
+    if (_app.settings.terminalBubbles) {
+      return TerminalDivider(text: daySeparator(dt, t));
+    }
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -869,123 +903,95 @@ class _HomePageState extends State<HomePage> {
 
   Widget _inputBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final border = Colors.white.withValues(alpha: _app.settings.borderOpacity);
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHigh.withValues(alpha: 0.86),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _targetSelector(context),
+            if (_recording)
+              _recordingRow(cs)
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Единая пилюля: вложения, текст и микрофон — всё внутри.
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(
+                          color: _ttlSeconds != null ? cs.primary : border,
+                          width: _ttlSeconds != null ? 1.2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                            onPressed: _attachMenu,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _input,
+                              minLines: 1,
+                              maxLines: 5,
+                              textInputAction: TextInputAction.newline,
+                              decoration: InputDecoration(
+                                hintText: t.messageHint,
+                                filled: false,
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.fromLTRB(
+                                  4,
+                                  12,
+                                  4,
+                                  12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_ttlSeconds != null)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                right: 4,
+                                bottom: 6,
+                              ),
+                              child: Icon(
+                                Icons.timer_rounded,
+                                size: 16,
+                                color: cs.primary,
+                              ),
+                            ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.mic_rounded),
+                            onPressed: _startRecord,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onLongPress: _pickTtl,
+                    child: FloatingActionButton.small(
+                      elevation: 0,
+                      tooltip: t.selfDestruct,
+                      backgroundColor: _ttlSeconds != null ? cs.primary : null,
+                      onPressed: _sendText,
+                      child: const Icon(Icons.send_rounded),
+                    ),
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _targetSelector(context),
-                  const SizedBox(height: 6),
-                  _recording
-                      ? _recordingRow(cs)
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(
-                                Icons.add_circle_outline_rounded,
-                              ),
-                              onPressed: _attachMenu,
-                            ),
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: _ttlSeconds != null
-                                      ? Border.all(
-                                          color: cs.primary,
-                                          width: 1.2,
-                                        )
-                                      : null,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _input,
-                                        minLines: 1,
-                                        maxLines: 5,
-                                        textInputAction:
-                                            TextInputAction.newline,
-                                        decoration: InputDecoration(
-                                          hintText: t.messageHint,
-                                          filled: false,
-                                          border: InputBorder.none,
-                                          contentPadding:
-                                              const EdgeInsets.fromLTRB(
-                                                18,
-                                                12,
-                                                4,
-                                                12,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    if (_ttlSeconds != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 4,
-                                          bottom: 6,
-                                        ),
-                                        child: Icon(
-                                          Icons.timer_rounded,
-                                          size: 16,
-                                          color: cs.primary,
-                                        ),
-                                      ),
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: const Icon(Icons.mic_rounded),
-                                      onPressed: _startRecord,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onLongPress: _pickTtl,
-                              child: FloatingActionButton.small(
-                                elevation: 0,
-                                tooltip: t.selfDestruct,
-                                backgroundColor: _ttlSeconds != null
-                                    ? cs.primary
-                                    : null,
-                                onPressed: _sendText,
-                                child: const Icon(Icons.send_rounded),
-                              ),
-                            ),
-                          ],
-                        ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -1058,31 +1064,36 @@ class _HomePageState extends State<HomePage> {
   Widget _targetSelector(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final peers = _app.peers.where((p) => p.online).toList();
-    return SizedBox(
-      height: 34,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _targetChip(
-            context,
-            label: t.saveHere,
-            icon: Icons.bookmark_border_rounded,
-            selected: _target == null,
-            onTap: () => setState(() => _target = null),
-            color: cs,
-          ),
-          for (final p in peers)
+    // Выбирать не из чего — не занимаем место строкой с единственным чипом.
+    if (peers.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: SizedBox(
+        height: 34,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
             _targetChip(
               context,
-              label: p.name,
-              icon: p.platform == 'android'
-                  ? Icons.smartphone_rounded
-                  : Icons.laptop_rounded,
-              selected: _target?.id == p.id,
-              onTap: () => setState(() => _target = p),
+              label: t.saveHere,
+              icon: Icons.bookmark_border_rounded,
+              selected: _target == null,
+              onTap: () => setState(() => _target = null),
               color: cs,
             ),
-        ],
+            for (final p in peers)
+              _targetChip(
+                context,
+                label: p.name,
+                icon: p.platform == 'android'
+                    ? Icons.smartphone_rounded
+                    : Icons.laptop_rounded,
+                selected: _target?.id == p.id,
+                onTap: () => setState(() => _target = p),
+                color: cs,
+              ),
+          ],
+        ),
       ),
     );
   }
