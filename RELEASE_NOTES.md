@@ -1,5 +1,25 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.1
+
+Follow-up polish on top of the terminal redesign:
+
+- 🎯 Input bar icons (attach/mic) no longer sit visibly lower than the placeholder text.
+- 📏 The floating app-bar capsule no longer overflows its own border — its subtitle row
+  now fits cleanly instead of poking out past the frame.
+- 🖼 The mini-player is now a small draggable square showing the track's real album art
+  instead of a full-width bar — drag it anywhere on screen, tap to open the full player.
+- 📷 QR scanner shows a clear error and a retry button instead of a dead-end
+  "unexpected error" screen.
+- 🌌 First launch now ships with a dark starfield wallpaper instead of a plain gradient.
+- 🔔 Android: playing music now shows proper media controls in the notification shade
+  and on the lock screen (play/pause/skip), via a background media session.
+- 🗑 Swipe-to-delete requires a fuller, deliberate swipe and no longer deletes instantly —
+  it hides the message with a 4s Undo snackbar first.
+- ⌨️ Settings no longer inherit a stray open keyboard from the chat input field.
+- 🖥 Linux: removed the native GTK title bar — the app already has its own header, so the
+  duplicate system strip is gone; the window is now fully borderless.
+
 ## What's new in 1.1.0
 
 **A completely new look — terminal design.**
