@@ -460,17 +460,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Высота содержимого капсулы (тулбар + строка статуса) — используется и
-  // здесь, и в SizedBox-спейсере тела, чтобы они не расходились и капсула
-  // не обрезала/выталкивала свой нижний ряд.
-  static const double _kToolbarH = 42;
-  static const double _kSubtitleH = 16;
+  // Единая компактная капсула: один ряд (лого + статус двухстрочным
+  // заголовком слева, кнопки справа), без отдельной нижней подстроки —
+  // именно она раньше раздувала шапку. Значение используется и здесь, и в
+  // SizedBox-спейсере тела, чтобы они не расходились.
+  static const double _kBarH = 46;
   static const double _kAppBarTopGap = 4;
   static double appBarTotalHeight(BuildContext context) =>
-      MediaQuery.paddingOf(context).top +
-      _kAppBarTopGap +
-      _kToolbarH +
-      _kSubtitleH;
+      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _kBarH;
 
   PreferredSizeWidget _appBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -518,41 +515,60 @@ class _HomePageState extends State<HomePage> {
     int online,
     bool dark,
   ) {
+    final status = !_app.auth.isLoggedIn
+        ? t.signInPrompt
+        : online > 0
+        ? t.devicesInAccount(online)
+        : t.searchingDevices;
     return AppBar(
       elevation: 0,
       // primary: false — вертикальный отступ под статус-бар уже даёт капсула.
       primary: false,
       backgroundColor: cs.surface.withValues(alpha: 0.74),
       titleSpacing: 12,
-      toolbarHeight: _kToolbarH,
-      title: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      toolbarHeight: _kBarH,
+      // Лого + мелкая строка статуса в две строки внутри одного ряда —
+      // компактнее, чем отдельный bottom-сабтайтл.
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(
-            dark
-                ? 'assets/brand/logo-horizontal-white.png'
-                : 'assets/brand/logo-horizontal.png',
-            height: 18,
-            fit: BoxFit.contain,
-            alignment: Alignment.centerLeft,
-            errorBuilder: (_, __, ___) => Image.asset(
-              'assets/brand/logo-horizontal-white.png',
-              height: 18,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: Text(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                dark
+                    ? 'assets/brand/logo-horizontal-white.png'
+                    : 'assets/brand/logo-horizontal.png',
+                height: 17,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/brand/logo-horizontal-white.png',
+                  height: 17,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
                 'files',
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: cs.onSurfaceVariant,
                 ),
               ),
+            ],
+          ),
+          Text(
+            status,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 9.5,
+              height: 1.1,
+              fontWeight: FontWeight.w500,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.85),
             ),
           ),
         ],
@@ -561,7 +577,7 @@ class _HomePageState extends State<HomePage> {
         _tonalIcon(
           cs: cs,
           tooltip: t.searchHint,
-          icon: const Icon(Icons.search_rounded, size: 20),
+          icon: const Icon(Icons.search_rounded, size: 19),
           onPressed: () => setState(() => _searching = !_searching),
         ),
         _tonalIcon(
@@ -629,29 +645,6 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(width: 4),
       ],
-      // Капсула уже сама очерчена рамкой снизу — второй разделитель здесь не
-      // нужен, он только раздувал высоту сверх заявленной в preferredSize.
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(_kSubtitleH),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              !_app.auth.isLoggedIn
-                  ? t.signInPrompt
-                  : online > 0
-                  ? t.devicesInAccount(online)
-                  : t.searchingDevices,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 

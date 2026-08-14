@@ -66,7 +66,11 @@ Future<void> main() async {
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'app.texfi.texfi_files.audio',
         androidNotificationChannelName: 'TexFi files playback',
-        androidNotificationOngoing: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        // false — уведомление не «прилипшее»: остаётся видимым и на паузе,
+        // и его можно смахнуть, когда музыка не играет.
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: false,
       ),
     );
   }

@@ -304,6 +304,8 @@ class _QrScannerPageState extends State<_QrScannerPage> {
   // частая причина, по которой CameraX не успевает забиндиться и плагин
   // репортит расплывчатый "unexpected error" вместо конкретной причины.
   late final _controller = MobileScannerController(autoStart: false);
+  bool _handled = false; // защита от многократного pop по одному коду
+  bool _torch = false;
 
   @override
   void initState() {
@@ -329,14 +331,33 @@ class _QrScannerPageState extends State<_QrScannerPage> {
   Widget build(BuildContext context) {
     final t = tr(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.scanQr)),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(t.scanQr),
+        actions: [
+          IconButton(
+            icon: Icon(_torch ? Icons.flash_on_rounded : Icons.flash_off_rounded),
+            onPressed: () {
+              _controller.toggleTorch();
+              setState(() => _torch = !_torch);
+            },
+          ),
+        ],
+      ),
       body: MobileScanner(
         controller: _controller,
+        overlayBuilder: (context, constraints) => const _ScanFrame(),
         onDetect: (capture) {
+          if (_handled) return;
           final codes = capture.barcodes;
           if (codes.isEmpty) return;
           final value = codes.first.rawValue;
-          if (value != null) Navigator.of(context).pop(value);
+          if (value != null) {
+            _handled = true;
+            Navigator.of(context).pop(value);
+          }
         },
         errorBuilder: (context, error, child) {
           final denied =
@@ -371,6 +392,27 @@ class _QrScannerPageState extends State<_QrScannerPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Полупрозрачная маска с прозрачным «окном»-прицелом по центру.
+class _ScanFrame extends StatelessWidget {
+  const _ScanFrame();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Center(
+        child: Container(
+          width: 240,
+          height: 240,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white, width: 2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
     );
   }

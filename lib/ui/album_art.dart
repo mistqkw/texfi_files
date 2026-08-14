@@ -1,11 +1,24 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-/// Обложка аудиотрека из тегов файла. Результат кэшируется по пути,
-/// чтобы не перечитывать метаданные при каждой перестройке ленты.
+/// Чтение обложки в фоновом изоляте — теги парсятся синхронно и на UI-потоке
+/// давали заметные фризы при скролле списка треков.
+Uint8List? _readArtInIsolate(String path) {
+  try {
+    final f = File(path);
+    if (!f.existsSync()) return null;
+    final meta = readMetadata(f, getImage: true);
+    if (meta.pictures.isNotEmpty) return meta.pictures.first.bytes;
+  } catch (_) {}
+  return null;
+}
+
+/// Обложка аудиотрека из тегов файла. Результат кэшируется по пути; чтение
+/// идёт в фоновом изоляте, одинаковые запросы дедуплицируются, чтобы список
+/// не парсил один и тот же файл несколько раз одновременно.
 class AlbumArtThumb extends StatefulWidget {
   final String? filePath;
   final double size;
@@ -23,6 +36,17 @@ class AlbumArtThumb extends StatefulWidget {
   });
 
   static final Map<String, Uint8List?> _cache = {};
+  static final Map<String, Future<Uint8List?>> _inFlight = {};
+
+  static Future<Uint8List?> _artFor(String path) {
+    if (_cache.containsKey(path)) return Future.value(_cache[path]);
+    return _inFlight.putIfAbsent(path, () async {
+      final bytes = await compute(_readArtInIsolate, path);
+      _cache[path] = bytes;
+      _inFlight.remove(path);
+      return bytes;
+    });
+  }
 
   @override
   State<AlbumArtThumb> createState() => _AlbumArtThumbState();
@@ -46,30 +70,18 @@ class _AlbumArtThumbState extends State<AlbumArtThumb> {
   Future<void> _load() async {
     final path = widget.filePath;
     if (path == null) return;
-    if (AlbumArtThumb._cache.containsKey(path)) {
-      setState(() => _art = AlbumArtThumb._cache[path]);
-      return;
-    }
-    Uint8List? bytes;
-    try {
-      // Чтение тегов синхронное, поэтому уводим его с первого кадра.
-      await Future<void>.delayed(Duration.zero);
-      final f = File(path);
-      if (f.existsSync()) {
-        final meta = readMetadata(f, getImage: true);
-        if (meta.pictures.isNotEmpty) bytes = meta.pictures.first.bytes;
-      }
-    } catch (_) {
-      // нет метаданных — останется заглушка
-    }
-    AlbumArtThumb._cache[path] = bytes;
-    if (mounted) setState(() => _art = bytes);
+    final bytes = await AlbumArtThumb._artFor(path);
+    if (mounted && path == widget.filePath) setState(() => _art = bytes);
   }
 
   @override
   Widget build(BuildContext context) {
     final art = _art;
     if (art == null) return widget.fallback;
+    // cacheWidth — декодируем под фактический размер миниатюры (×2 под DPR),
+    // а не полноразмерную обложку: меньше памяти и быстрее первый кадр.
+    final decodeW = (widget.size * MediaQuery.devicePixelRatioOf(context))
+        .round();
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.radius),
       child: Image.memory(
@@ -78,6 +90,7 @@ class _AlbumArtThumbState extends State<AlbumArtThumb> {
         height: widget.size,
         fit: BoxFit.cover,
         gaplessPlayback: true,
+        cacheWidth: decodeW,
         errorBuilder: (_, __, ___) => widget.fallback,
       ),
     );
