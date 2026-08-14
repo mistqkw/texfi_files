@@ -32,6 +32,12 @@ class CloudSync extends ChangeNotifier {
   bool syncing = false;
   bool needsReauth = false; // токен без права repo → нужен повторный вход
 
+  // Сколько пуллов подряд элемент отсутствовал в удалённом индексе, прежде
+  // чем мы поверим, что его удалили на другом устройстве, а не что это
+  // сетевой сбой/гонка с maybePush. Без этого один неполный/неудачный ответ
+  // GitHub стирал (и надгробил — без возврата) всю облачную ленту локально.
+  final Map<String, int> _missingStreak = {};
+
   bool get available => auth.isLoggedIn && auth.token != null;
   String? get _owner => auth.account?.login;
 
@@ -200,15 +206,34 @@ class CloudSync extends ChangeNotifier {
       }
       // Удаления с других устройств: если элемент был получен из облака,
       // но его больше нет в общем индексе — убираем и здесь.
+      //
+      // Пустой список записей почти наверняка означает сбой/неполный ответ
+      // при чтении индекса, а не то, что пользователь и правда всё удалил —
+      // в этом случае просто пропускаем цикл сверки, ничего не трогая.
+      final hasCloudItems = store.items.any((it) => it.cloud);
+      if (entries.isEmpty && hasCloudItems) {
+        lastError = null;
+        return;
+      }
       final remoteIds = entries
           .map((e) => e['id'] as String?)
           .whereType<String>()
           .toSet();
-      final goneLocally = store.items
-          .where((it) => it.cloud && !remoteIds.contains(it.id))
-          .toList();
+      // Элемент, только что отправленный этим же устройством, может ещё не
+      // попасть в индекс из-за гонки с maybePush — не считаем это удалением.
+      _missingStreak.removeWhere((id, _) => remoteIds.contains(id));
+      final goneLocally = <SavedItem>[];
+      for (final it in store.items.where((it) => it.cloud)) {
+        if (remoteIds.contains(it.id)) continue;
+        final streak = (_missingStreak[it.id] ?? 0) + 1;
+        _missingStreak[it.id] = streak;
+        // Требуем несколько пуллов подряд без элемента, прежде чем поверить
+        // в удаление — один неудачный/неполный ответ не должен стирать ленту.
+        if (streak >= 3) goneLocally.add(it);
+      }
       for (final it in goneLocally) {
         await store.remove(it, notifyCloud: false);
+        _missingStreak.remove(it.id);
       }
       lastError = null;
     } catch (e) {

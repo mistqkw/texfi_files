@@ -1,5 +1,21 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.2
+
+**Important data-loss fix.** A bug in cloud sync could treat a single failed or
+incomplete GitHub API response as "this message was deleted on another device" and
+wipe it out locally — sometimes permanently, with no way to bring it back. Deletions
+now require the message to be confirmed missing across several sync cycles in a row
+before anything is removed, and an empty/broken index response no longer triggers any
+deletions at all.
+
+- 🐛 **Fixed: messages disappearing on their own.** See above — this was the big one.
+- 🖱 Right-click on a message now opens the same menu as long-press (desktop).
+- 📏 App-bar capsule shrunk further — it was still noticeably taller than it needed to be.
+- 🔔 Android: explicitly requests notification permission before starting the media
+  session, so the shade/lock-screen controls aren't silently blocked by the OS on
+  Android 13+ when background-receive is off.
+
 ## What's new in 1.1.1
 
 Follow-up polish on top of the terminal redesign:

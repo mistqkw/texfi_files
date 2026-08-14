@@ -52,22 +52,25 @@ class ItemBubble extends StatelessWidget {
           horizontal: 12,
         ),
         child: Column(
-          crossAxisAlignment:
-              item.outgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: item.outgoing
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             ConstraintsBox(
               child: IntrinsicWidth(
                 child: GestureDetector(
                   onLongPress: () => _menu(context),
+                  onSecondaryTap: () => _menu(context),
                   child: TerminalBox(
                     label: _prefixLabel(s),
                     // Белая обводка на чёрном блоке — основа стиля.
                     borderColor: Colors.white.withValues(
                       alpha: s.borderOpacity,
                     ),
-                    labelColor:
-                        item.outgoing ? cs.primary : cs.onSurfaceVariant,
+                    labelColor: item.outgoing
+                        ? cs.primary
+                        : cs.onSurfaceVariant,
                     padding: _framePadding,
                     child: _content(context, cs),
                   ),
@@ -91,6 +94,7 @@ class ItemBubble extends StatelessWidget {
         child: IntrinsicWidth(
           child: GestureDetector(
             onLongPress: () => _menu(context),
+            onSecondaryTap: () => _menu(context),
             child: Container(
               margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
               decoration: BoxDecoration(
@@ -159,9 +163,9 @@ class ItemBubble extends StatelessWidget {
   /// Медиа занимает всю ширину блока — внутренних отступов почти не даём.
   EdgeInsets get _framePadding =>
       (item.kind == ItemKind.image || item.kind == ItemKind.video)
-          ? const EdgeInsets.all(4)
-          // Отступы даёт само содержимое — иначе у текста был бы двойной.
-          : EdgeInsets.zero;
+      ? const EdgeInsets.all(4)
+      // Отступы даёт само содержимое — иначе у текста был бы двойной.
+      : EdgeInsets.zero;
 
   /// Содержимое врезки в верхней линии рамки: устройство · тип · размер · время.
   String _prefixLabel(Settings s) {
@@ -179,13 +183,13 @@ class ItemBubble extends StatelessWidget {
   }
 
   String get _typeTag => switch (item.kind) {
-        ItemKind.text => 'txt',
-        ItemKind.image => 'img',
-        ItemKind.audio => 'aud',
-        ItemKind.video => 'vid',
-        ItemKind.voice => 'voc',
-        ItemKind.file => 'file',
-      };
+    ItemKind.text => 'txt',
+    ItemKind.image => 'img',
+    ItemKind.audio => 'aud',
+    ItemKind.video => 'vid',
+    ItemKind.voice => 'voc',
+    ItemKind.file => 'file',
+  };
 
   /// Служебная строка под блоком: время и статусные иконки, моноширинно.
   Widget _meta(ColorScheme cs) {
@@ -421,7 +425,10 @@ class ItemBubble extends StatelessWidget {
       ],
     );
     if (AppScope.of(context).settings.terminalBubbles) {
-      return Align(alignment: Alignment.centerLeft, child: _HoverReveal(child: row));
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: _HoverReveal(child: row),
+      );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
