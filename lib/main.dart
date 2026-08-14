@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'app.dart';
 import 'app_state.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'core/audio_handler.dart';
 import 'core/auth_service.dart';
 import 'core/background.dart';
@@ -38,6 +39,12 @@ Future<void> main() async {
   // Медиа-уведомление в шторке/на экране блокировки — только Android
   // (audio_service поддерживает iOS/desktop, но здесь их пока нет).
   if (Platform.isAndroid) {
+    // Без POST_NOTIFICATIONS (Android 13+) система молча не покажет вообще
+    // никаких уведомлений — в том числе медиа-уведомление плеера. Запрос
+    // в Background.start() срабатывает, только если включён фоновый приём;
+    // здесь просим разрешение безусловно, раз оно нужно и плееру тоже.
+    Background.init();
+    await FlutterForegroundTask.requestNotificationPermission();
     await AudioService.init(
       builder: () => TexFiAudioHandler(state.player),
       config: const AudioServiceConfig(

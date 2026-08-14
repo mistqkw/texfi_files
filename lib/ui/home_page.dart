@@ -443,8 +443,8 @@ class _HomePageState extends State<HomePage> {
   // Высота содержимого капсулы (тулбар + строка статуса) — используется и
   // здесь, и в SizedBox-спейсере тела, чтобы они не расходились и капсула
   // не обрезала/выталкивала свой нижний ряд.
-  static const double _kToolbarH = 52;
-  static const double _kSubtitleH = 22;
+  static const double _kToolbarH = 42;
+  static const double _kSubtitleH = 16;
   static const double _kAppBarTopGap = 4;
   static double appBarTotalHeight(BuildContext context) =>
       MediaQuery.paddingOf(context).top +
@@ -603,7 +603,7 @@ class _HomePageState extends State<HomePage> {
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(_kSubtitleH),
         child: Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          padding: const EdgeInsets.only(left: 16, bottom: 4),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -613,7 +613,7 @@ class _HomePageState extends State<HomePage> {
                   ? t.devicesInAccount(online)
                   : t.searchingDevices,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w500,
                 color: cs.onSurfaceVariant,
               ),
