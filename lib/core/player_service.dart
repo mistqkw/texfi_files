@@ -9,6 +9,23 @@ import 'models.dart';
 /// Режим повтора плейлиста.
 enum PlayerRepeatMode { off, one, all }
 
+/// Чтение тегов трека в фоновом изоляте (title/artist/обложка) — синхронный
+/// парсинг на UI-потоке подлагивал при каждом старте трека.
+Map<String, dynamic> _readTrackMeta(String path) {
+  final out = <String, dynamic>{};
+  try {
+    final meta = readMetadata(File(path), getImage: true);
+    if (meta.title != null && meta.title!.trim().isNotEmpty) {
+      out['title'] = meta.title;
+    }
+    if (meta.artist != null && meta.artist!.trim().isNotEmpty) {
+      out['artist'] = meta.artist;
+    }
+    if (meta.pictures.isNotEmpty) out['art'] = meta.pictures.first.bytes;
+  } catch (_) {}
+  return out;
+}
+
 /// Глобальный аудио-плеер: один на всё приложение, чтобы работал мини-плеер
 /// и музыка не останавливалась при уходе с экрана.
 class PlayerService extends ChangeNotifier {
@@ -138,16 +155,16 @@ class PlayerService extends ChangeNotifier {
     await _player.open(Media('file://${item.filePath}'), play: true);
   }
 
-  void _loadArt(SavedItem item) {
+  Future<void> _loadArt(SavedItem item) async {
     final path = item.filePath;
     if (path == null) return;
     try {
-      final meta = readMetadata(File(path), getImage: true);
-      if (meta.pictures.isNotEmpty) art = meta.pictures.first.bytes;
-      if (meta.title != null && meta.title!.trim().isNotEmpty) {
-        title = meta.title;
-      }
-      artist = meta.artist;
+      final meta = await compute(_readTrackMeta, path);
+      // Пока читали теги в фоне, пользователь мог переключить трек.
+      if (current?.id != item.id) return;
+      if (meta['art'] is Uint8List) art = meta['art'] as Uint8List;
+      if (meta['title'] is String) title = meta['title'] as String;
+      if (meta['artist'] is String) artist = meta['artist'] as String;
       notifyListeners();
     } catch (_) {}
   }

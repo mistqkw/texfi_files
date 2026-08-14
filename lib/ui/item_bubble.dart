@@ -60,8 +60,8 @@ class ItemBubble extends StatelessWidget {
             ConstraintsBox(
               child: IntrinsicWidth(
                 child: GestureDetector(
-                  onLongPress: () => _menu(context),
-                  onSecondaryTap: () => _menu(context),
+                  onLongPressStart: (d) => _menu(context, d.globalPosition),
+                  onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
                   child: TerminalBox(
                     label: _prefixLabel(s),
                     // Белая обводка на чёрном блоке — основа стиля.
@@ -93,8 +93,8 @@ class ItemBubble extends StatelessWidget {
       child: ConstraintsBox(
         child: IntrinsicWidth(
           child: GestureDetector(
-            onLongPress: () => _menu(context),
-            onSecondaryTap: () => _menu(context),
+            onLongPressStart: (d) => _menu(context, d.globalPosition),
+            onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
             child: Container(
               margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
               decoration: BoxDecoration(
@@ -777,106 +777,117 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  void _menu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+  /// Контекстное меню — маленькое всплывающее окно возле точки нажатия
+  /// (долгий тап на мобильном, правый клик на десктопе), с фирменной
+  /// scale+fade анимацией самого `showMenu`. Раньше это была полноэкранная
+  /// шторка снизу — она перекрывала половину экрана и не «якорилась» к
+  /// сообщению.
+  Future<void> _menu(BuildContext context, Offset globalPos) async {
+    final t = tr(context);
+    final store = AppScope.of(context).store;
+    final terminal = AppScope.of(context).settings.terminalBubbles;
+    final cs = Theme.of(context).colorScheme;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromLTWH(globalPos.dx, globalPos.dy, 40, 40),
+      Offset.zero & overlay.size,
+    );
+
+    PopupMenuItem<_MenuAction> tile(
+      _MenuAction value,
+      IconData icon,
+      String label, {
+      bool danger = false,
+    }) {
+      final color = danger ? cs.error : (terminal ? cs.onSurface : null);
+      return PopupMenuItem<_MenuAction>(
+        value: value,
+        height: 44,
+        child: Row(
           children: [
-            if (item.kind == ItemKind.text)
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: Text(tr(context).copy),
-                onTap: () {
-                  Navigator.pop(context);
-                  _copy(context);
-                },
-              ),
-            if (item.filePath != null)
-              ListTile(
-                leading: const Icon(Icons.open_in_new_rounded),
-                title: Text(tr(context).open),
-                onTap: () {
-                  Navigator.pop(context);
-                  OpenFilex.open(item.filePath!);
-                },
-              ),
-            if (item.filePath != null)
-              ListTile(
-                leading: const Icon(Icons.download_rounded),
-                title: Text(tr(context).saveAs),
-                onTap: () {
-                  Navigator.pop(context);
-                  _saveAs(context);
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.ios_share_rounded),
-              title: Text(tr(context).share),
-              onTap: () {
-                Navigator.pop(context);
-                _share();
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                item.pinned ? Icons.push_pin : Icons.push_pin_outlined,
-              ),
-              title: Text(item.pinned ? tr(context).unpin : tr(context).pin),
-              onTap: () {
-                Navigator.pop(context);
-                AppScope.of(context).store.togglePin(item);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                item.archived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
-              ),
-              title: Text(
-                item.archived ? tr(context).unarchive : tr(context).archive,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                AppScope.of(context).store.toggleArchive(item);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.folder_outlined),
-              title: Text(
-                item.group == null
-                    ? tr(context).addToGroup
-                    : tr(context).groupName(item.group!),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _groupDialog(context);
-              },
-            ),
-            if (item.group != null)
-              ListTile(
-                leading: const Icon(Icons.folder_off_outlined),
-                title: Text(tr(context).removeFromGroup),
-                onTap: () {
-                  Navigator.pop(context);
-                  AppScope.of(context).store.setGroup(item, null);
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline_rounded),
-              title: Text(tr(context).delete),
-              onTap: () {
-                Navigator.pop(context);
-                onDelete();
-              },
-            ),
+            Icon(icon, size: 19, color: danger ? cs.error : cs.onSurfaceVariant),
+            const SizedBox(width: 14),
+            Text(label, style: TextStyle(color: color)),
           ],
         ),
+      );
+    }
+
+    final action = await showMenu<_MenuAction>(
+      context: context,
+      position: position,
+      elevation: terminal ? 0 : 8,
+      color: terminal ? Colors.black : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(terminal ? 6 : 16),
+        side: terminal
+            ? BorderSide(color: Colors.white.withValues(alpha: 0.4))
+            : BorderSide.none,
       ),
+      items: [
+        if (item.kind == ItemKind.text)
+          tile(_MenuAction.copy, Icons.copy_rounded, t.copy),
+        if (item.filePath != null)
+          tile(_MenuAction.open, Icons.open_in_new_rounded, t.open),
+        if (item.filePath != null)
+          tile(_MenuAction.saveAs, Icons.download_rounded, t.saveAs),
+        tile(_MenuAction.share, Icons.ios_share_rounded, t.share),
+        tile(
+          _MenuAction.pin,
+          item.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+          item.pinned ? t.unpin : t.pin,
+        ),
+        tile(
+          _MenuAction.archive,
+          item.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+          item.archived ? t.unarchive : t.archive,
+        ),
+        tile(
+          _MenuAction.group,
+          Icons.folder_outlined,
+          item.group == null ? t.addToGroup : t.groupName(item.group!),
+        ),
+        if (item.group != null)
+          tile(_MenuAction.ungroup, Icons.folder_off_outlined, t.removeFromGroup),
+        tile(_MenuAction.delete, Icons.delete_outline_rounded, t.delete,
+            danger: true),
+      ],
     );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _MenuAction.copy:
+        _copy(context);
+      case _MenuAction.open:
+        if (item.filePath != null) OpenFilex.open(item.filePath!);
+      case _MenuAction.saveAs:
+        _saveAs(context);
+      case _MenuAction.share:
+        _share();
+      case _MenuAction.pin:
+        store.togglePin(item);
+      case _MenuAction.archive:
+        store.toggleArchive(item);
+      case _MenuAction.group:
+        _groupDialog(context);
+      case _MenuAction.ungroup:
+        store.setGroup(item, null);
+      case _MenuAction.delete:
+        onDelete();
+    }
   }
+}
+
+enum _MenuAction {
+  copy,
+  open,
+  saveAs,
+  share,
+  pin,
+  archive,
+  group,
+  ungroup,
+  delete,
 }
 
 class ConstraintsBox extends StatelessWidget {

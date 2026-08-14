@@ -38,6 +38,28 @@ class CloudSync extends ChangeNotifier {
   // GitHub стирал (и надгробил — без возврата) всю облачную ленту локально.
   final Map<String, int> _missingStreak = {};
 
+  // Индекс в облаке (index.json) обновляется через optimistic-concurrency по
+  // sha: параллельные записи, стартовавшие с одного sha, конфликтуют (409).
+  // Когда быстро отправляется много сообщений, каждое `maybePush` дёргает
+  // `_appendIndex` одновременно → лавина конфликтов, и часть сообщений вообще
+  // не сохранялась в облако. Сериализуем ВСЕ мутации индекса одной цепочкой
+  // Future, чтобы они шли строго по очереди (файлы при этом грузятся
+  // параллельно — они пишутся по уникальным путям и не конфликтуют).
+  Future<void> _indexGate = Future.value();
+
+  /// Выполнить [action] эксклюзивно относительно других мутаций индекса.
+  Future<T> _lockIndex<T>(Future<T> Function() action) {
+    final completer = Completer<T>();
+    _indexGate = _indexGate.then((_) async {
+      try {
+        completer.complete(await action());
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
+
   bool get available => auth.isLoggedIn && auth.token != null;
   String? get _owner => auth.account?.login;
 
@@ -128,8 +150,8 @@ class CloudSync extends ChangeNotifier {
     }
   }
 
-  Future<void> _removeFromIndex(String id) async {
-    for (var attempt = 0; attempt < 4; attempt++) {
+  Future<void> _removeFromIndex(String id) => _lockIndex(() async {
+    for (var attempt = 0; attempt < 8; attempt++) {
       final (list, sha) = await _getIndex();
       final before = list.length;
       list.removeWhere((e) => e['id'] == id);
@@ -146,13 +168,13 @@ class CloudSync extends ChangeNotifier {
       );
       if (resp.statusCode == 200 || resp.statusCode == 201) return;
       if (resp.statusCode == 409 || resp.statusCode == 422) {
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(Duration(milliseconds: 250 + attempt * 250));
         continue; // конфликт версий — перечитаем и повторим
       }
       throw Exception('index put ${resp.statusCode}: ${resp.body}');
     }
     throw Exception('index remove: не удалось после повторов');
-  }
+  });
 
   /// Ищет в уже загруженном индексе запись с тем же хэшем файла (дедуп).
   Future<SavedItem?> _findByHash(String hash) async {
@@ -243,6 +265,28 @@ class CloudSync extends ChangeNotifier {
       _busy = false;
       syncing = false;
       notifyListeners();
+    }
+    // Самовосстановление: если прошлый maybePush не смог сохранить элемент в
+    // облако (сеть/лимиты), он навсегда оставался cloud=false и не появлялся
+    // на других устройствах. Раз в цикл пуллинга досылаем такие «зависшие»
+    // локальные элементы. maybePush идемпотентен и дёшев для того, что и так
+    // не должно уходить в облако (большие файлы).
+    await _repushPending();
+  }
+
+  Future<void> _repushPending() async {
+    if (!available) return;
+    final pending = store.items
+        .where(
+          (it) =>
+              !it.cloud &&
+              it.outgoing &&
+              !it.receiving &&
+              (it.kind == ItemKind.text || it.filePath != null),
+        )
+        .toList();
+    for (final it in pending) {
+      await maybePush(it);
     }
   }
 
@@ -375,8 +419,11 @@ class CloudSync extends ChangeNotifier {
     return (list, sha);
   }
 
-  Future<void> _appendIndex(Map<String, dynamic> entry) async {
-    for (var attempt = 0; attempt < 4; attempt++) {
+  Future<void> _appendIndex(Map<String, dynamic> entry) => _lockIndex(() async {
+    // 8 попыток с растущей задержкой — на случай, если параллельно пишет
+    // ДРУГОЕ устройство того же аккаунта (наш собственный поток уже
+    // сериализован _lockIndex).
+    for (var attempt = 0; attempt < 8; attempt++) {
       final (list, sha) = await _getIndex();
       if (list.any((e) => e['id'] == entry['id'])) return; // уже есть
       list.add(entry);
@@ -392,13 +439,13 @@ class CloudSync extends ChangeNotifier {
       );
       if (resp.statusCode == 200 || resp.statusCode == 201) return;
       if (resp.statusCode == 409 || resp.statusCode == 422) {
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(Duration(milliseconds: 250 + attempt * 250));
         continue; // конфликт версий — перечитаем и повторим
       }
       throw Exception('index put ${resp.statusCode}: ${resp.body}');
     }
     throw Exception('index put: не удалось после повторов');
-  }
+  });
 
   Future<void> _putFile(String path, List<int> bytes) async {
     final resp = await http.put(

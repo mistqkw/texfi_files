@@ -1,5 +1,29 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.4
+
+Bug-fix and polish pass across the whole app.
+
+- 🐛 **Cloud now saves bursts of messages.** Sending many messages quickly could
+  drop some from the cloud: every message hit the shared index at once and the
+  optimistic-concurrency writes fought each other (409s) until some gave up. Index
+  writes are now strictly serialized, retried more, and any item that still failed to
+  upload is automatically re-pushed on the next sync — so nothing silently stays local.
+- 👆 **Fingerprint unlock works on Android.** The activity now extends a FragmentActivity
+  (required by the biometric prompt); before, it silently failed.
+- 🎨 **Album art in the notification shade.** The media notification now carries the real
+  cover (written out and passed as artUri), and stays visible when paused.
+- 🪟 **Context menu is now a small popup next to the message** with a scale/fade animation,
+  anchored at your finger / cursor — instead of the big bottom sheet. Right-click works too.
+- 📏 **Top bar is genuinely compact now** — logo and status collapsed into a single short
+  row, the separate subtitle strip is gone.
+- 🖼 **Photo viewer upgraded** — swipe down to dismiss (background fades as you drag),
+  double-tap to zoom to a point, tap to hide/show the chrome, plus share/open actions.
+- ⚡ **Less lag** — album-art and track-tag reading moved off the UI thread into a
+  background isolate (with caching), so scrolling the music list and starting tracks no
+  longer janks.
+- 📷 QR scanner: torch toggle, a centered scan frame, and a guard against double-handling.
+
 ## What's new in 1.1.3
 
 **Music tab redesign** — tracks now show their real album art (or a framed icon in
