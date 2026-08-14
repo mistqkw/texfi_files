@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'models.dart';
+
+/// Режим повтора плейлиста.
+enum PlayerRepeatMode { off, one, all }
 
 /// Глобальный аудио-плеер: один на всё приложение, чтобы работал мини-плеер
 /// и музыка не останавливалась при уходе с экрана.
@@ -23,6 +27,9 @@ class PlayerService extends ChangeNotifier {
   List<SavedItem> queue = [];
   int qIndex = 0;
   double _volume = 100;
+  bool shuffle = false;
+  PlayerRepeatMode repeatMode = PlayerRepeatMode.off;
+  final _rand = Random();
 
   Player get raw => _player;
 
@@ -41,8 +48,28 @@ class PlayerService extends ChangeNotifier {
     }));
     // Автопереход к следующему треку.
     _subs.add(_player.stream.completed.listen((done) {
-      if (done && queue.isNotEmpty) next();
+      if (!done) return;
+      if (repeatMode == PlayerRepeatMode.one) {
+        _player.seek(Duration.zero);
+        _player.play();
+        return;
+      }
+      if (queue.isNotEmpty) next();
     }));
+  }
+
+  void toggleShuffle() {
+    shuffle = !shuffle;
+    notifyListeners();
+  }
+
+  void cycleRepeat() {
+    repeatMode = switch (repeatMode) {
+      PlayerRepeatMode.off => PlayerRepeatMode.all,
+      PlayerRepeatMode.all => PlayerRepeatMode.one,
+      PlayerRepeatMode.one => PlayerRepeatMode.off,
+    };
+    notifyListeners();
   }
 
   /// Проиграть плейлист начиная с index.
@@ -55,8 +82,20 @@ class PlayerService extends ChangeNotifier {
 
   Future<void> next() async {
     if (queue.isEmpty) return;
+    if (shuffle && queue.length > 1) {
+      int idx;
+      do {
+        idx = _rand.nextInt(queue.length);
+      } while (idx == qIndex);
+      qIndex = idx;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+      return;
+    }
     if (qIndex < queue.length - 1) {
       qIndex++;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+    } else if (repeatMode == PlayerRepeatMode.all) {
+      qIndex = 0;
       await playItem(queue[qIndex], volume: _volume, keepQueue: true);
     }
   }
@@ -67,8 +106,20 @@ class PlayerService extends ChangeNotifier {
       seek(Duration.zero);
       return;
     }
+    if (shuffle && queue.length > 1) {
+      int idx;
+      do {
+        idx = _rand.nextInt(queue.length);
+      } while (idx == qIndex);
+      qIndex = idx;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+      return;
+    }
     if (qIndex > 0) {
       qIndex--;
+      await playItem(queue[qIndex], volume: _volume, keepQueue: true);
+    } else if (repeatMode == PlayerRepeatMode.all) {
+      qIndex = queue.length - 1;
       await playItem(queue[qIndex], volume: _volume, keepQueue: true);
     }
   }

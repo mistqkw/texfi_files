@@ -1,5 +1,28 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.3
+
+**Music tab redesign** — tracks now show their real album art (or a framed icon in
+terminal mode), and the header gained shuffle/repeat toggles (the full-screen player
+has them too).
+
+- 🎵 Music tab: real album art per track, terminal-style framed rows with track number
+  in the inset label, shuffle and repeat (off/all/one) both in the list and full player.
+- 🔍 Search field restyled to match the terminal look (black pill, white border) — it
+  was rendering with the plain default style before and was easy to miss.
+- 📱 Android: switched to true edge-to-edge display with a transparent status bar. The
+  opaque system status bar was sitting on top of the app-bar capsule and the two
+  visually merged into one oversized bar — that combination doesn't exist on desktop,
+  which is why it looked fine there but not on phones.
+- ⌨️ Settings screen now force-clears focus on entry regardless of how it was reached,
+  as an extra guard against the keyboard leaking in from wherever it was last open.
+- 🔔 Android media notification: the permission request now also retries once the app's
+  UI is fully up, in case the very early request (before the first frame) didn't have a
+  ready Activity to prompt through on some devices.
+- ✨ New boot animation: a terminal boot sequence (logo, then `❯ texfi files_` typed out
+  with a blinking cursor) instead of the old plain fade-in.
+- 👋 Welcome/onboarding screens restyled to match the terminal look when it's enabled.
+
 ## What's new in 1.1.2
 
 **Important data-loss fix.** A bug in cloud sync could treat a single failed or
