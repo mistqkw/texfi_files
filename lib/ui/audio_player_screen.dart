@@ -163,6 +163,37 @@ class AudioPlayerScreen extends StatelessWidget {
                 ),
             ],
           ),
+          if (p.queue.length > 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: tr(context).shuffle,
+                  icon: Icon(
+                    Icons.shuffle_rounded,
+                    color: p.shuffle ? cs.primary : cs.onSurfaceVariant,
+                  ),
+                  onPressed: p.toggleShuffle,
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  tooltip: switch (p.repeatMode) {
+                    PlayerRepeatMode.off => tr(context).repeatOff,
+                    PlayerRepeatMode.all => tr(context).repeatAll,
+                    PlayerRepeatMode.one => tr(context).repeatOne,
+                  },
+                  icon: Icon(
+                    p.repeatMode == PlayerRepeatMode.one
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
+                    color: p.repeatMode == PlayerRepeatMode.off
+                        ? cs.onSurfaceVariant
+                        : cs.primary,
+                  ),
+                  onPressed: p.cycleRepeat,
+                ),
+              ],
+            ),
         ],
       ),
     );

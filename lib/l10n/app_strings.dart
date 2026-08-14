@@ -365,6 +365,10 @@ class AppStrings {
   String get noMusic => _('Пока нет музыки в ленте', 'No music in the chat yet',
       'Noch keine Musik', 'Brak muzyki');
   String get playAll => _('Играть всё', 'Play all', 'Alle abspielen', 'Odtwórz wszystko');
+  String get shuffle => _('Перемешать', 'Shuffle', 'Zufallswiedergabe', 'Losowo');
+  String get repeatOff => _('Без повтора', 'No repeat', 'Keine Wiederholung', 'Bez powtarzania');
+  String get repeatAll => _('Повтор плейлиста', 'Repeat playlist', 'Playlist wiederholen', 'Powtarzaj playlistę');
+  String get repeatOne => _('Повтор трека', 'Repeat track', 'Titel wiederholen', 'Powtarzaj utwór');
   String get msgColors => _('Цвет сообщений', 'Message colors',
       'Nachrichtenfarben', 'Kolory wiadomości');
   String get outgoing =>

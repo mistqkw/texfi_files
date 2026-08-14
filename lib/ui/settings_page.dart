@@ -65,6 +65,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    // Подстраховка независимо от того, откуда попали на экран: если
+    // где-то ещё осталось открытое поле ввода с фокусом, клавиатура иначе
+    // «протекает» на этот экран поверх списка настроек.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FocusManager.instance.primaryFocus?.unfocus();
+    });
     RemoteInput.check().then((v) async {
       final e = await RemoteInput.engine();
       if (mounted) {

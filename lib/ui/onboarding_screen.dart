@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
+import 'terminal.dart';
 
 class _Slide {
   final IconData icon;
@@ -54,23 +55,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = AppScope.of(context).settings;
+    final terminal = s.terminalBubbles;
     final t = tr(context);
     final slides = _buildSlides(t);
     _count = slides.length;
     final last = _index == slides.length - 1;
     return Scaffold(
+      backgroundColor: terminal ? Colors.black : null,
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: AnimatedOpacity(
-                opacity: last ? 0 : 1,
-                duration: const Duration(milliseconds: 200),
-                child: TextButton(
-                  onPressed: last ? null : _finish,
-                  child: Text(t.skip),
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  if (terminal)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        '❯ ${_index + 1}/${slides.length}',
+                        style: monoStyle(
+                          color: cs.primary.withValues(alpha: 0.8),
+                          size: 12,
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  AnimatedOpacity(
+                    opacity: last ? 0 : 1,
+                    duration: const Duration(milliseconds: 200),
+                    child: TextButton(
+                      onPressed: last ? null : _finish,
+                      child: Text(t.skip),
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -78,8 +98,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: _controller,
                 itemCount: slides.length,
                 onPageChanged: (i) => setState(() => _index = i),
-                itemBuilder: (context, i) =>
-                    _SlideView(slide: slides[i], active: _index == i),
+                itemBuilder: (context, i) => _SlideView(
+                  slide: slides[i],
+                  active: _index == i,
+                  terminal: terminal,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -92,10 +115,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: FilledButton(
                   onPressed: _next,
                   style: FilledButton.styleFrom(
+                    backgroundColor: terminal ? cs.primary : null,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: Text(last ? t.start : t.next,
-                      style: const TextStyle(fontSize: 16)),
+                  child: Text(
+                    last ? t.start : t.next,
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ),
@@ -129,7 +155,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _SlideView extends StatelessWidget {
   final _Slide slide;
   final bool active;
-  const _SlideView({required this.slide, required this.active});
+  final bool terminal;
+  const _SlideView({
+    required this.slide,
+    required this.active,
+    required this.terminal,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -146,38 +177,7 @@ class _SlideView extends StatelessWidget {
             child: AnimatedOpacity(
               opacity: active ? 1 : 0.4,
               duration: const Duration(milliseconds: 300),
-              child: Container(
-                width: 168,
-                height: 168,
-                decoration: BoxDecoration(
-                  // Для картинки-лого — заметная подложка и рамка, чтобы
-                  // чёрный круг логотипа был виден на тёмном фоне.
-                  color: slide.image != null
-                      ? cs.surfaceContainerHighest
-                      : null,
-                  gradient: slide.image == null
-                      ? LinearGradient(
-                          colors: [cs.primary, cs.tertiary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  shape: BoxShape.circle,
-                  border: slide.image != null
-                      ? Border.all(color: cs.primary, width: 2)
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                        color: cs.primary.withValues(alpha: 0.4),
-                        blurRadius: 40,
-                        spreadRadius: 4),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: slide.image != null
-                    ? Image.asset(slide.image!, fit: BoxFit.cover)
-                    : Icon(slide.icon, size: 76, color: cs.onPrimary),
-              ),
+              child: terminal ? _terminalIcon(cs) : _classicIcon(cs),
             ),
           ),
           const SizedBox(height: 48),
@@ -190,23 +190,89 @@ class _SlideView extends StatelessWidget {
               duration: const Duration(milliseconds: 350),
               child: Column(
                 children: [
-                  Text(slide.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 26, fontWeight: FontWeight.w800)),
+                  Text(
+                    slide.title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: terminal ? cs.primary : null,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  Text(slide.text,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 16,
-                          height: 1.4,
-                          color: cs.onSurfaceVariant)),
+                  Text(
+                    slide.text,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.4,
+                      color: terminal
+                          ? Colors.white70
+                          : cs.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Терминальный вид: чёрный квадрат с белой рамкой вместо градиентного
+  /// круга — та же врезанная подпись, что и у блоков в ленте.
+  Widget _terminalIcon(ColorScheme cs) {
+    return TerminalBox(
+      label: slide.image != null ? 'texfi' : 'preview',
+      borderColor: Colors.white.withValues(alpha: 0.55),
+      labelColor: cs.primary,
+      radius: 12,
+      padding: const EdgeInsets.all(28),
+      child: SizedBox(
+        width: 96,
+        height: 96,
+        child: slide.image != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(slide.image!, fit: BoxFit.cover),
+              )
+            : Icon(slide.icon, size: 64, color: cs.primary),
+      ),
+    );
+  }
+
+  Widget _classicIcon(ColorScheme cs) {
+    return Container(
+      width: 168,
+      height: 168,
+      decoration: BoxDecoration(
+        // Для картинки-лого — заметная подложка и рамка, чтобы чёрный круг
+        // логотипа был виден на тёмном фоне.
+        color: slide.image != null ? cs.surfaceContainerHighest : null,
+        gradient: slide.image == null
+            ? LinearGradient(
+                colors: [cs.primary, cs.tertiary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        shape: BoxShape.circle,
+        border: slide.image != null
+            ? Border.all(color: cs.primary, width: 2)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.4),
+            blurRadius: 40,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: slide.image != null
+          ? Image.asset(slide.image!, fit: BoxFit.cover)
+          : Icon(slide.icon, size: 76, color: cs.onPrimary),
     );
   }
 }

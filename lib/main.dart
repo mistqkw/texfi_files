@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'app.dart';
 import 'app_state.dart';
@@ -16,6 +17,13 @@ import 'store/store.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+
+  // Edge-to-edge: без этого на Android системная строка статуса рисуется
+  // непрозрачной ПОВЕРХ капсулы шапки, и вместе они визуально сливаются в
+  // одну толстую полосу — на десктопе такой строки нет, поэтому там капсула
+  // сама по себе смотрелась компактно. Цвет/яркость иконок статус-бара —
+  // реактивно, в home_page.dart (там известна текущая тема).
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   final settings = await Settings.load();
   final store = Store();
@@ -43,8 +51,16 @@ Future<void> main() async {
     // никаких уведомлений — в том числе медиа-уведомление плеера. Запрос
     // в Background.start() срабатывает, только если включён фоновый приём;
     // здесь просим разрешение безусловно, раз оно нужно и плееру тоже.
-    Background.init();
-    await FlutterForegroundTask.requestNotificationPermission();
+    // На этом шаге (до runApp/до полного attach активности) запрос может
+    // тихо не сработать на некоторых прошивках — оборачиваем в try, а
+    // повторный запрос с гарантированно готовым контекстом делаем ещё раз
+    // из HomePage (см. home_page.dart, initState).
+    try {
+      Background.init();
+      await FlutterForegroundTask.requestNotificationPermission();
+    } catch (_) {
+      // Не критично — повторим из HomePage.
+    }
     await AudioService.init(
       builder: () => TexFiAudioHandler(state.player),
       config: const AudioServiceConfig(

@@ -5,6 +5,7 @@ import 'core/settings.dart';
 import 'ui/home_page.dart';
 import 'ui/onboarding_screen.dart';
 import 'ui/pin_lock_screen.dart';
+import 'ui/terminal.dart';
 
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
@@ -67,6 +68,7 @@ class _TexfiAppState extends State<TexfiApp> {
               );
             },
             home: _Splash(
+              terminal: s.terminalBubbles,
               child: locked
                   ? PinLockScreen(
                       onUnlocked: () => setState(() => _unlocked = true),
@@ -234,34 +236,46 @@ class DesignPreset {
   static const all = [texfi, material, apple, samsung, windows];
 }
 
-/// Экран запуска: лого выезжает масштабом и растворяется в контент —
-/// первое, что видит пользователь, должно выглядеть «дорого».
+/// Экран запуска. В терминальном режиме — чёрный фон, лого проступает
+/// сквозь свечение, снизу печатается строка `❯ texfi files_` посимвольно
+/// с мигающим курсором. Иначе — прежний вариант с масштабом и радиальным
+/// градиентом под тему.
 class _Splash extends StatefulWidget {
   final Widget child;
-  const _Splash({required this.child});
+  final bool terminal;
+  const _Splash({required this.child, required this.terminal});
 
   @override
   State<_Splash> createState() => _SplashState();
 }
 
 class _SplashState extends State<_Splash> with SingleTickerProviderStateMixin {
+  static const _bootText = '❯ texfi files';
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 700),
+    duration: Duration(milliseconds: widget.terminal ? 1500 : 700),
   )..forward();
+  late final AnimationController _cursor = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+  )..repeat(reverse: true);
   bool _done = false;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 950), () {
-      if (mounted) setState(() => _done = true);
-    });
+    Future.delayed(
+      Duration(milliseconds: widget.terminal ? 1750 : 950),
+      () {
+        if (mounted) setState(() => _done = true);
+      },
+    );
   }
 
   @override
   void dispose() {
     _c.dispose();
+    _cursor.dispose();
     super.dispose();
   }
 
@@ -274,6 +288,97 @@ class _SplashState extends State<_Splash> with SingleTickerProviderStateMixin {
         child: widget.child,
       );
     }
+    return widget.terminal ? _terminalSplash(context) : _classicSplash(context);
+  }
+
+  Widget _terminalSplash(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // Лого проступает первым (0–45%), строка загрузки печатается следом
+    // (35–90%), курсор мигает независимо всё время.
+    final logoFade = CurvedAnimation(
+      parent: _c,
+      curve: const Interval(0, 0.45, curve: Curves.easeOut),
+    );
+    final typeCurve = CurvedAnimation(
+      parent: _c,
+      curve: const Interval(0.35, 0.9, curve: Curves.easeIn),
+    );
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                radius: 1.1,
+                colors: [
+                  cs.primary.withValues(alpha: 0.22),
+                  Colors.black,
+                ],
+              ),
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FadeTransition(
+                opacity: logoFade,
+                child: ScaleTransition(
+                  scale: Tween(
+                    begin: 0.8,
+                    end: 1.0,
+                  ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack)),
+                  child: Image.asset(
+                    'assets/brand/mark-white.png',
+                    width: 88,
+                    height: 88,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.bookmark_rounded,
+                      size: 88,
+                      color: cs.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              AnimatedBuilder(
+                animation: Listenable.merge([_c, _cursor]),
+                builder: (context, _) {
+                  final n = (typeCurve.value * _bootText.length)
+                      .floor()
+                      .clamp(0, _bootText.length);
+                  final shown = _bootText.substring(0, n);
+                  final cursorOn = _cursor.value > 0.5;
+                  return Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: shown,
+                          style: monoStyle(color: cs.primary, size: 16),
+                        ),
+                        TextSpan(
+                          text: '_',
+                          style: monoStyle(
+                            color: cursorOn
+                                ? cs.primary
+                                : Colors.transparent,
+                            size: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _classicSplash(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final scaleCurve = CurvedAnimation(parent: _c, curve: Curves.easeOutBack);

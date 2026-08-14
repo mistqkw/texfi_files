@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter/services.dart'
+    show HapticFeedback, SystemUiOverlayStyle;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -81,6 +83,24 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       setState(() => _recording = false);
+    }
+  }
+
+  // Раз на процесс: main.dart уже пробует запросить POST_NOTIFICATIONS до
+  // runApp, но там Activity может быть ещё не полностью готова на части
+  // прошивок. Здесь контекст гарантированно валиден — подстраховка, чтобы
+  // медиа-уведомление плеера не блокировалось молча из-за неполученного
+  // разрешения.
+  static bool _notifPermissionAsked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isAndroid && !_notifPermissionAsked) {
+      _notifPermissionAsked = true;
+      FlutterForegroundTask.requestNotificationPermission().catchError(
+        (_) => NotificationPermission.denied,
+      );
     }
   }
 
@@ -460,21 +480,32 @@ class _HomePageState extends State<HomePage> {
     final top = MediaQuery.paddingOf(context).top;
     return PreferredSize(
       preferredSize: Size.fromHeight(appBarTotalHeight(context)),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(
-                alpha: _app.settings.borderOpacity,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        // Статус-бар прозрачный (см. edgeToEdge в main.dart) — здесь только
+        // яркость его иконок, синхронизированная с текущей темой.
+        value: dark
+            ? SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
+              )
+            : SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+              ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(
+                  alpha: _app.settings.borderOpacity,
+                ),
               ),
             ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: _rawAppBar(context, cs, online, dark),
+            clipBehavior: Clip.antiAlias,
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: _rawAppBar(context, cs, online, dark),
+            ),
           ),
         ),
       ),
@@ -728,25 +759,52 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _searchBar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final terminal = _app.settings.terminalBubbles;
+    final field = TextField(
+      controller: _search,
+      autofocus: true,
+      onChanged: (v) => setState(() => _query = v),
+      style: terminal ? TextStyle(color: cs.onSurface) : null,
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: t.searchHint,
+        filled: terminal,
+        fillColor: terminal ? Colors.black : null,
+        border: terminal ? InputBorder.none : null,
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: terminal ? cs.primary : null,
+        ),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => setState(() {
+            _searching = false;
+            _query = '';
+            _search.clear();
+          }),
+        ),
+      ),
+    );
+    if (!terminal) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+        child: field,
+      );
+    }
+    // Терминальный вид: та же чёрная пилюля с белой обводкой, что у поля
+    // ввода сообщения — иначе стандартный TextField терялся на чёрном фоне.
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-      child: TextField(
-        controller: _search,
-        autofocus: true,
-        onChanged: (v) => setState(() => _query = v),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: t.searchHint,
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () => setState(() {
-              _searching = false;
-              _query = '';
-              _search.clear();
-            }),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: _app.settings.borderOpacity),
           ),
         ),
+        child: field,
       ),
     );
   }
