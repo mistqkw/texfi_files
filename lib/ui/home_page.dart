@@ -8,8 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../l10n/app_strings.dart';
-import 'audio_player_screen.dart';
 import 'effects.dart';
+import 'floating_player.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -34,6 +34,8 @@ class _HomePageState extends State<HomePage> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final Set<String> _seen = {}; // элементы, уже проигравшие анимацию появления
+  // Скрыты свайпом/меню, но ещё не удалены физически — ждут Undo из снекбара.
+  final Set<String> _pendingDelete = {};
   bool _didInitialScroll = false;
   Peer? _target; // null = сохранить локально
   String?
@@ -356,7 +358,7 @@ class _HomePageState extends State<HomePage> {
               Positioned.fill(child: _bgLayer(cs)),
               Column(
                 children: [
-                  SizedBox(height: MediaQuery.paddingOf(context).top + 64),
+                  SizedBox(height: appBarTotalHeight(context)),
                   if (_searching) _searchBar(context),
                   _filterBar(context),
                   Expanded(
@@ -413,10 +415,11 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  const MiniPlayer(),
                   _inputBar(context),
                 ],
               ),
+              // Плавающий квадратик плеера — поверх всего, можно перетащить.
+              const FloatingMiniPlayer(),
             ],
           ),
         );
@@ -437,6 +440,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Высота содержимого капсулы (тулбар + строка статуса) — используется и
+  // здесь, и в SizedBox-спейсере тела, чтобы они не расходились и капсула
+  // не обрезала/выталкивала свой нижний ряд.
+  static const double _kToolbarH = 52;
+  static const double _kSubtitleH = 22;
+  static const double _kAppBarTopGap = 4;
+  static double appBarTotalHeight(BuildContext context) =>
+      MediaQuery.paddingOf(context).top +
+      _kAppBarTopGap +
+      _kToolbarH +
+      _kSubtitleH;
+
   PreferredSizeWidget _appBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final online = _app.peers.where((p) => p.online).length;
@@ -444,9 +459,9 @@ class _HomePageState extends State<HomePage> {
     // Плавающая капсула: отступы от краёв, скруглённая, с тонкой обводкой.
     final top = MediaQuery.paddingOf(context).top;
     return PreferredSize(
-      preferredSize: Size.fromHeight(top + 64),
+      preferredSize: Size.fromHeight(appBarTotalHeight(context)),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(10, top + 4, 10, 0),
+        padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -478,7 +493,7 @@ class _HomePageState extends State<HomePage> {
       primary: false,
       backgroundColor: cs.surface.withValues(alpha: 0.74),
       titleSpacing: 12,
-      toolbarHeight: 56,
+      toolbarHeight: _kToolbarH,
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -526,9 +541,12 @@ class _HomePageState extends State<HomePage> {
             label: Text('$online'),
             child: const Icon(Icons.devices_rounded, size: 20),
           ),
-          onPressed: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const PeersPage())),
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PeersPage()));
+          },
         ),
         PopupMenuButton<int>(
           tooltip: '',
@@ -539,6 +557,10 @@ class _HomePageState extends State<HomePage> {
               1 => const RemoteKeyboardPage(),
               _ => const SettingsPage(),
             };
+            // Клавиатура от поля ввода сообщения не закрывается сама при
+            // пуше нового роута — без этого она «протекала» на следующий
+            // экран (например, в настройки).
+            FocusScope.of(context).unfocus();
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
           },
           itemBuilder: (context) => [
@@ -576,34 +598,27 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(width: 4),
       ],
+      // Капсула уже сама очерчена рамкой снизу — второй разделитель здесь не
+      // нужен, он только раздувал высоту сверх заявленной в preferredSize.
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(19),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 5),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  !_app.auth.isLoggedIn
-                      ? t.signInPrompt
-                      : online > 0
-                      ? t.devicesInAccount(online)
-                      : t.searchingDevices,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
+        preferredSize: const Size.fromHeight(_kSubtitleH),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              !_app.auth.isLoggedIn
+                  ? t.signInPrompt
+                  : online > 0
+                  ? t.devicesInAccount(online)
+                  : t.searchingDevices,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant,
               ),
             ),
-            Container(
-              height: 1,
-              color: cs.outlineVariant.withValues(alpha: 0.3),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -833,9 +848,40 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Свайп-удаление и удаление из меню не стирают элемент сразу — прячут его
+  /// и на несколько секунд дают отменить через снекбар с Undo. Это защита от
+  /// случайного свайпа: физическое удаление происходит только когда снекбар
+  /// закрылся, а Undo не был нажат.
+  void _requestDelete(SavedItem item) {
+    setState(() => _pendingDelete.add(item.id));
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger
+        .showSnackBar(
+          SnackBar(
+            content: Text(t.deleted),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: t.undo,
+              onPressed: () {
+                if (mounted) setState(() => _pendingDelete.remove(item.id));
+              },
+            ),
+          ),
+        )
+        .closed
+        .then((_) {
+          if (!mounted || !_pendingDelete.contains(item.id)) return;
+          _pendingDelete.remove(item.id);
+          _app.store.remove(item);
+        });
+  }
+
   Widget _timeline(List<SavedItem> items) {
     // items идут от новых к старым (store.items = reversed). Развернём для ленты.
-    final ordered = items.reversed.toList();
+    final ordered = items.reversed
+        .where((e) => !_pendingDelete.contains(e.id))
+        .toList();
     return SmoothScroll(
       controller: _scroll,
       builder: (physics) => ListView.builder(
@@ -856,10 +902,10 @@ class _HomePageState extends State<HomePage> {
               _SwipeRow(
                 itemId: item.id,
                 onShare: () => shareItem(item),
-                onDelete: () => _app.store.remove(item),
+                onDelete: () => _requestDelete(item),
                 child: ItemBubble(
                   item: item,
-                  onDelete: () => _app.store.remove(item),
+                  onDelete: () => _requestDelete(item),
                 ),
               ),
             ],
@@ -931,7 +977,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        // .center, а не .end — иначе IconButton (48px тап-таргет)
+                        // выравнивался по нижнему краю текстового поля и
+                        // визуально «сползал» ниже плейсхолдера.
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           IconButton(
                             visualDensity: VisualDensity.compact,
@@ -1242,6 +1291,14 @@ class _SwipeRowState extends State<_SwipeRow> {
     return Dismissible(
       key: ValueKey('dismiss_${widget.itemId}'),
       direction: DismissDirection.horizontal,
+      // По умолчанию порог 0.4 — слишком легко удалить случайным свайпом
+      // при скролле. Для удаления (влево) требуем почти весь экран; для
+      // пересылки (вправо) он и так безопасен — confirmDismiss всегда
+      // отменяет анимацию, поэтому здесь порог можно оставить мягче.
+      dismissThresholds: const {
+        DismissDirection.endToStart: 0.68,
+        DismissDirection.startToEnd: 0.4,
+      },
       onUpdate: (details) {
         final signed = details.direction == DismissDirection.endToStart
             ? -details.progress

@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -17,7 +19,35 @@ class Settings extends ChangeNotifier {
     if (!p.containsKey('deviceName')) {
       await p.setString('deviceName', _defaultName());
     }
+    // Один раз на установку: подставляем фирменные обои по умолчанию,
+    // чтобы приложение сразу выглядело «как надо», а не голым градиентом.
+    // Флаг отдельный от chatBgImage — иначе если юзер потом сам уберёт
+    // обои (chatBgImage становится null), при следующем запуске мы бы их
+    // тут же подставили обратно.
+    if (!p.containsKey('wallpaperSeeded')) {
+      await p.setBool('wallpaperSeeded', true);
+      // Не трогаем, если это апгрейд и человек уже выбрал свою картинку.
+      if (!p.containsKey('chatBgImage')) {
+        await _seedDefaultWallpaper(p);
+      }
+    }
     return s;
+  }
+
+  static Future<void> _seedDefaultWallpaper(SharedPreferences p) async {
+    try {
+      final data = await rootBundle.load('assets/wallpapers/default_space.jpg');
+      final base = await getApplicationSupportDirectory();
+      final dir = Directory('${base.path}/texfi');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final file = File('${dir.path}/default_wallpaper.jpg');
+      await file.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      );
+      await p.setString('chatBgImage', file.path);
+    } catch (_) {
+      // Не критично — останется обычный градиентный фон.
+    }
   }
 
   static String _defaultName() {

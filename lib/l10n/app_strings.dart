@@ -20,6 +20,8 @@ class AppStrings {
   String get close => _('Закрыть', 'Close', 'Schließen', 'Zamknij');
   String get save => _('Сохранить', 'Save', 'Speichern', 'Zapisz');
   String get delete => _('Удалить', 'Delete', 'Löschen', 'Usuń');
+  String get deleted => _('Удалено', 'Deleted', 'Gelöscht', 'Usunięto');
+  String get undo => _('Отменить', 'Undo', 'Rückgängig', 'Cofnij');
   String get open => _('Открыть', 'Open', 'Öffnen', 'Otwórz');
   String get copy => _('Копировать', 'Copy', 'Kopieren', 'Kopiuj');
   String get copied => _('Скопировано', 'Copied', 'Kopiert', 'Skopiowano');
@@ -490,6 +492,17 @@ class AppStrings {
       'Mój kod QR');
   String get scanQr => _('Сканировать QR', 'Scan QR', 'QR scannen',
       'Skanuj QR');
+  String get scanQrError => _(
+      'Не удалось запустить камеру. Попробуйте ещё раз.',
+      'Could not start the camera. Please try again.',
+      'Kamera konnte nicht gestartet werden. Bitte erneut versuchen.',
+      'Nie udało się uruchomić aparatu. Spróbuj ponownie.');
+  String get cameraPermissionDenied => _(
+      'Нет доступа к камере. Разрешите его в настройках системы.',
+      'Camera access denied. Allow it in system settings.',
+      'Kein Kamerazugriff. Bitte in den Systemeinstellungen erlauben.',
+      'Brak dostępu do aparatu. Zezwól w ustawieniach systemu.');
+  String get retry => _('Повторить', 'Retry', 'Erneut versuchen', 'Ponów');
   String get ipAddress => _('IP адрес', 'IP address', 'IP-Adresse', 'Adres IP');
   String get port => _('Порт', 'Port', 'Port', 'Port');
   String get connect => _('Подключить', 'Connect', 'Verbinden', 'Połącz');
