@@ -1,2 +1,2 @@
 /// Версия приложения (обновлять при релизе).
-const String kAppVersion = '1.1.0';
+const String kAppVersion = '1.1.1';
