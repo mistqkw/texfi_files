@@ -10,6 +10,12 @@ class PinLockScreen extends StatefulWidget {
   final VoidCallback onUnlocked;
   const PinLockScreen({super.key, required this.onUnlocked});
 
+  // Идёт системный биометрический диалог. Он сам уводит приложение в
+  // inactive/paused, поэтому наблюдатель жизненного цикла (app.dart) на это
+  // время не должен заново перекрывать экран блокировки — иначе двойной
+  // запрос отпечатка по кругу.
+  static bool authenticating = false;
+
   @override
   State<PinLockScreen> createState() => _PinLockScreenState();
 }
@@ -29,8 +35,10 @@ class _PinLockScreenState extends State<PinLockScreen> {
     final s = AppScope.of(context).settings;
     if (!s.biometricEnabled) return;
     try {
-      final can = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
+      final can =
+          await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!can) return;
+      PinLockScreen.authenticating = true;
       final ok = await _auth.authenticate(
         localizedReason: tr(context).unlockReason,
         options: const AuthenticationOptions(biometricOnly: false),
@@ -38,6 +46,8 @@ class _PinLockScreenState extends State<PinLockScreen> {
       if (ok) widget.onUnlocked();
     } catch (_) {
       // недоступно на этой платформе/устройстве — просто останется PIN
+    } finally {
+      PinLockScreen.authenticating = false;
     }
   }
 

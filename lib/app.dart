@@ -27,9 +27,39 @@ class TexfiApp extends StatefulWidget {
   State<TexfiApp> createState() => _TexfiAppState();
 }
 
-class _TexfiAppState extends State<TexfiApp> {
-  // Разблокировано на время текущего запуска приложения.
+class _TexfiAppState extends State<TexfiApp> with WidgetsBindingObserver {
+  // Разблокировано на текущий «сеанс» на переднем плане. Сбрасывается, когда
+  // приложение уходит в фон, — чтобы при каждом возврате снова спрашивало
+  // PIN/отпечаток (иначе висящее в фоне приложение мог открыть кто угодно).
   bool _unlocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Перекрываем экран блокировки только при реальном сворачивании
+    // (paused/detached), но НЕ во время системного биометрического диалога —
+    // он тоже уводит приложение в фон, и иначе отпечаток спрашивался бы
+    // дважды по кругу.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      final s = widget.state.settings;
+      final lockEnabled = s.pinEnabled && s.pinHash != null;
+      if (lockEnabled && _unlocked && !PinLockScreen.authenticating) {
+        setState(() => _unlocked = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
@@ -271,6 +272,27 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Future<void> _scanQr() async {
+    // Просим доступ к камере ЗАРАНЕЕ и явно: внутренний запрос mobile_scanner
+    // гонится со стартом CameraX и часто падал с расплывчатым «Could not start
+    // the camera». Когда разрешение уже выдано, сканер стартует чисто.
+    if (Platform.isAndroid || Platform.isIOS) {
+      final status = await Permission.camera.request();
+      if (!mounted) return;
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t.cameraPermissionDenied),
+            action: status.isPermanentlyDenied
+                ? SnackBarAction(
+                    label: t.settings,
+                    onPressed: openAppSettings,
+                  )
+                : null,
+          ),
+        );
+        return;
+      }
+    }
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const _QrScannerPage()),
     );
@@ -299,19 +321,13 @@ class _QrScannerPage extends StatefulWidget {
 }
 
 class _QrScannerPageState extends State<_QrScannerPage> {
-  // autoStart:false — запускаем камеру сами постфреймом, а не во время
-  // самой анимации перехода на экран. Старт во время push-транзишна —
-  // частая причина, по которой CameraX не успевает забиндиться и плагин
-  // репортит расплывчатый "unexpected error" вместо конкретной причины.
-  late final _controller = MobileScannerController(autoStart: false);
+  // Разрешение камеры уже выдано до открытия этого экрана (см. _scanQr),
+  // поэтому даём mobile_scanner стартовать штатно (autoStart по умолчанию) —
+  // это самый обкатанный путь; ручной старт постфреймом раньше конфликтовал
+  // с внутренним запросом разрешения и давал generic-ошибку.
+  final _controller = MobileScannerController();
   bool _handled = false; // защита от многократного pop по одному коду
   bool _torch = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
-  }
 
   Future<void> _start() async {
     try {
