@@ -291,19 +291,85 @@ class _PeersPageState extends State<PeersPage> {
 
 /// Полноэкранный сканер QR (Android/iOS) — считывает код пары другого
 /// устройства и возвращает его строковое содержимое.
-class _QrScannerPage extends StatelessWidget {
+class _QrScannerPage extends StatefulWidget {
   const _QrScannerPage();
 
   @override
+  State<_QrScannerPage> createState() => _QrScannerPageState();
+}
+
+class _QrScannerPageState extends State<_QrScannerPage> {
+  // autoStart:false — запускаем камеру сами постфреймом, а не во время
+  // самой анимации перехода на экран. Старт во время push-транзишна —
+  // частая причина, по которой CameraX не успевает забиндиться и плагин
+  // репортит расплывчатый "unexpected error" вместо конкретной причины.
+  late final _controller = MobileScannerController(autoStart: false);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  Future<void> _start() async {
+    try {
+      await _controller.start();
+    } catch (_) {
+      // Ошибка попадёт в value.error и обработается в errorBuilder ниже.
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final t = tr(context);
     return Scaffold(
-      appBar: AppBar(title: Text(tr(context).scanQr)),
+      appBar: AppBar(title: Text(t.scanQr)),
       body: MobileScanner(
+        controller: _controller,
         onDetect: (capture) {
           final codes = capture.barcodes;
           if (codes.isEmpty) return;
           final value = codes.first.rawValue;
           if (value != null) Navigator.of(context).pop(value);
+        },
+        errorBuilder: (context, error, child) {
+          final denied =
+              error.errorCode == MobileScannerErrorCode.permissionDenied;
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    denied
+                        ? Icons.no_photography_outlined
+                        : Icons.error_outline_rounded,
+                    size: 48,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    denied ? t.cameraPermissionDenied : t.scanQrError,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _start,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(t.retry),
+                  ),
+                ],
+              ),
+            ),
+          );
         },
       ),
     );

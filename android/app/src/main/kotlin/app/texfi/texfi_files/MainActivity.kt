@@ -1,5 +1,7 @@
 package app.texfi.texfi_files
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// AudioServiceActivity (не FlutterActivity) — нужно audio_service, чтобы
+// плеер жил в общем FlutterEngine и переживал переход в фоновый сервис.
+class MainActivity : AudioServiceActivity()

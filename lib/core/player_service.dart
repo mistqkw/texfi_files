@@ -102,6 +102,8 @@ class PlayerService extends ChangeNotifier {
   }
 
   void toggle() => _player.playOrPause();
+  void play() => _player.play();
+  void pause() => _player.pause();
   void seek(Duration d) => _player.seek(d);
   void nudge(int seconds) => _player.seek(pos + Duration(seconds: seconds));
   void setVolume(double v) => _player.setVolume(v);

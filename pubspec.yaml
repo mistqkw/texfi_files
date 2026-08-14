@@ -39,6 +39,7 @@ dependencies:
   media_kit: ^1.1.11
   media_kit_video: ^1.2.5
   media_kit_libs_video: ^1.0.5
+  audio_service: ^0.18.15
 
   # Storage & platform
   path_provider: ^2.1.4
@@ -120,6 +121,7 @@ flutter:
     - assets/icon_1024.png
     - assets/icon_512.png
     - assets/brand/
+    - assets/wallpapers/default_space.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:
