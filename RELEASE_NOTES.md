@@ -1,5 +1,23 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.5
+
+- 🔒 **App re-locks every time you reopen it.** If PIN/fingerprint lock is on, the app now
+  re-locks whenever it goes to the background — before, unlocking once left it open for
+  anyone while it sat in the background. The biometric prompt itself no longer counts as
+  "backgrounding", so it won't double-ask.
+- 📷 **QR scanner: camera permission is now requested up-front** (via permission_handler)
+  before the scanner opens, which fixes the "Could not start the camera" dead-end — the
+  scanner's own permission request used to race the camera start and fail. If it was
+  permanently denied, the message now offers a shortcut to app settings.
+- 🔔 **Media-shade notification, another go:** notification permission is requested through
+  permission_handler (more reliable than the plugin's own request), and the notification
+  now uses a proper monochrome status icon — a colored launcher icon as the small icon
+  silently breaks the notification on some Android builds.
+
+If music still doesn't appear in the shade after this, it's most likely that notification
+permission is turned off for the app in Android settings — enable it there.
+
 ## What's new in 1.1.4
 
 Bug-fix and polish pass across the whole app.

@@ -3,9 +3,9 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'app.dart';
 import 'app_state.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'core/audio_handler.dart';
 import 'core/auth_service.dart';
 import 'core/background.dart';
@@ -57,7 +57,12 @@ Future<void> main() async {
     // из HomePage (см. home_page.dart, initState).
     try {
       Background.init();
-      await FlutterForegroundTask.requestNotificationPermission();
+      // permission_handler надёжнее показывает системный диалог
+      // POST_NOTIFICATIONS, чем внутренний запрос плагина; без этого
+      // разрешения Android 13+ молча прячет ЛЮБЫЕ уведомления, включая
+      // медиа-уведомление плеера в шторке.
+      final st = await Permission.notification.status;
+      if (st.isDenied) await Permission.notification.request();
     } catch (_) {
       // Не критично — повторим из HomePage.
     }
@@ -66,7 +71,9 @@ Future<void> main() async {
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'app.texfi.texfi_files.audio',
         androidNotificationChannelName: 'TexFi files playback',
-        androidNotificationIcon: 'mipmap/ic_launcher',
+        // Монохромная small-icon (см. res/drawable/ic_stat_music.xml) —
+        // цветной ic_launcher как small-icon на части прошивок ломает показ.
+        androidNotificationIcon: 'drawable/ic_stat_music',
         // false — уведомление не «прилипшее»: остаётся видимым и на паузе,
         // и его можно смахнуть, когда музыка не играет.
         androidNotificationOngoing: false,

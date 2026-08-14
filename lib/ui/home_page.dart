@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart'
     show HapticFeedback, SystemUiOverlayStyle;
 import 'package:image_picker/image_picker.dart';
@@ -98,8 +98,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     if (Platform.isAndroid && !_notifPermissionAsked) {
       _notifPermissionAsked = true;
-      FlutterForegroundTask.requestNotificationPermission().catchError(
-        (_) => NotificationPermission.denied,
+      Permission.notification.request().catchError(
+        (_) => PermissionStatus.denied,
       );
     }
   }
