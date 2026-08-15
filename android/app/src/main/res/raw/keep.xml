@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Flutter включает Android resource shrinking для release-сборок по
+  умолчанию (FlutterPlugin.kt, shouldShrinkResources() == true, если явно
+  не передать -Pshrink=false). Шринкер режет ресурсы, на которые не видит
+  СТАТИЧЕСКИХ ссылок в коде — а иконки медиа-уведомления (audio_service)
+  и small-icon шторки резолвятся в рантайме по строке через
+  getResources().getIdentifier(), поэтому вырезались молча, что валило
+  создание медиасессии (см. commit "Fix media-shade crash").
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_media_play,@drawable/ic_media_pause,@drawable/ic_media_stop,@drawable/ic_media_next,@drawable/ic_media_previous,@drawable/ic_stat_music" />
