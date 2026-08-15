@@ -25,6 +25,16 @@ class _PinLockScreenState extends State<PinLockScreen> {
   bool _error = false;
   final _auth = LocalAuthentication();
 
+  // Локальная защита от повторного/параллельного вызова. Без неё — если
+  // _tryBiometric() успевает стартовать дважды почти одновременно (например,
+  // от автозапуска в initState и одновременного лишнего пересоздания
+  // экрана) — второй вызов ArrayList native BiometricPrompt на Android
+  // заклинивает: он не поддерживает конкурентные показы, и ВСЕ последующие
+  // попытки (включая ручной тап по иконке отпечатка) молча зависают навсегда
+  // без единого лога с нативной стороны. Именно это отдельно от статического
+  // PinLockScreen.authenticating (тот защищает от re-lock жизненным циклом).
+  bool _bioBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,13 +42,16 @@ class _PinLockScreenState extends State<PinLockScreen> {
   }
 
   Future<void> _tryBiometric() async {
+    if (_bioBusy) return;
     final s = AppScope.of(context).settings;
     if (!s.biometricEnabled) return;
+    _bioBusy = true;
+    PinLockScreen.authenticating = true;
     try {
       final can =
           await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!can) return;
-      PinLockScreen.authenticating = true;
+      if (!mounted) return;
       final ok = await _auth.authenticate(
         localizedReason: tr(context).unlockReason,
         options: const AuthenticationOptions(biometricOnly: false),
@@ -47,6 +60,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
     } catch (_) {
       // недоступно на этой платформе/устройстве — просто останется PIN
     } finally {
+      _bioBusy = false;
       PinLockScreen.authenticating = false;
     }
   }
