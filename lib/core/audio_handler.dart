@@ -9,6 +9,38 @@ import 'player_service.dart';
 /// плеера в медиа-уведомление (шторка, экран блокировки, гарнитура).
 /// PlayerService остаётся единственным источником истины — этот класс только
 /// зеркалит его состояние наружу и транслирует системные команды обратно.
+// Свои иконки в android/app/src/main/res/drawable — библиотечные
+// 'drawable/audio_service_*' надёжно НЕ резолвятся через getIdentifier() на
+// части устройств (Android 13+ строит из них CustomAction и без валидной
+// иконки падает с IllegalArgumentException прямо при первом
+// setPlaybackState, из-за чего медиасессия не поднимается и уведомление в
+// шторке не появляется вовсе).
+const _ctrlPrevious = MediaControl(
+  androidIcon: 'drawable/ic_media_previous',
+  label: 'Previous',
+  action: MediaAction.skipToPrevious,
+);
+const _ctrlPlay = MediaControl(
+  androidIcon: 'drawable/ic_media_play',
+  label: 'Play',
+  action: MediaAction.play,
+);
+const _ctrlPause = MediaControl(
+  androidIcon: 'drawable/ic_media_pause',
+  label: 'Pause',
+  action: MediaAction.pause,
+);
+const _ctrlStop = MediaControl(
+  androidIcon: 'drawable/ic_media_stop',
+  label: 'Stop',
+  action: MediaAction.stop,
+);
+const _ctrlNext = MediaControl(
+  androidIcon: 'drawable/ic_media_next',
+  label: 'Next',
+  action: MediaAction.skipToNext,
+);
+
 class TexFiAudioHandler extends BaseAudioHandler with SeekHandler {
   final PlayerService _player;
   String? _lastItemId;
@@ -87,10 +119,10 @@ class TexFiAudioHandler extends BaseAudioHandler with SeekHandler {
     playbackState.add(
       playbackState.value.copyWith(
         controls: [
-          MediaControl.skipToPrevious,
-          _player.playing ? MediaControl.pause : MediaControl.play,
-          MediaControl.stop,
-          MediaControl.skipToNext,
+          _ctrlPrevious,
+          _player.playing ? _ctrlPause : _ctrlPlay,
+          _ctrlStop,
+          _ctrlNext,
         ],
         systemActions: const {
           MediaAction.seek,

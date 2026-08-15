@@ -1,5 +1,25 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.6
+
+Both remaining Android issues are fixed and confirmed working on a real device this time.
+
+- 🔔 **Music now shows up in the notification shade with album art** — found via live
+  device logs: `audio_service`'s bundled notification-button icons don't reliably resolve
+  on modern Android, which threw an exception on the very first `setPlaybackState` call
+  and silently prevented the whole media session (and notification) from ever being
+  created. Added our own icon resources for play/pause/stop/skip and wired them in —
+  verified live: the shade now shows the real media player with cover art and controls.
+- 📷 **QR scanner actually opens the camera now.** Not a permission issue after all —
+  confirmed via device log that camera access was already granted while the scanner
+  still failed to start. Root cause is unclear on mobile_scanner's side, but reverting to
+  its default camera-start sequence (instead of a manual delayed start) fixed it —
+  verified live with the camera preview and scan frame rendering correctly.
+- 🐛 **Fixed an upload retry loop.** The automatic re-push added in 1.1.4 could get stuck
+  retrying a file upload forever if a previous attempt partially succeeded (file uploaded
+  but the index update failed) — GitHub correctly rejected the repeat upload, but nothing
+  stopped the retry. Uploads now check whether the file is already there before retrying.
+
 ## What's new in 1.1.5
 
 - 🔒 **App re-locks every time you reopen it.** If PIN/fingerprint lock is on, the app now
