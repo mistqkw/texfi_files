@@ -1,5 +1,18 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.7
+
+The 1.1.6 media-shade fix worked in local debug testing but not in the actual GitHub
+release — because a *release* build is different in one specific way: Flutter enables
+Android resource shrinking by default for release APKs. Our new notification icons are
+only referenced by string at runtime (`getResources().getIdentifier(...)`), which the
+shrinker can't see as "used", so it silently deleted them from the release build only —
+verified by pulling the real GitHub-release APK from a device and checking its resources
+directly, they weren't in there. Added an explicit keep-rule
+(`android/app/src/main/res/raw/keep.xml`) instead of disabling shrinking altogether;
+confirmed this time by building a real `--release` APK locally and checking its resources
+before publishing — the icons are in there now.
+
 ## What's new in 1.1.6
 
 Both remaining Android issues are fixed and confirmed working on a real device this time.
