@@ -1,5 +1,15 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.8
+
+- 🔒 **Fixed: fingerprint unlock stopped responding after the first try.** Found live on
+  device: the automatic biometric prompt on the lock screen could end up starting twice in
+  close succession, and Android's BiometricPrompt doesn't handle two overlapping requests —
+  once that happens, it wedges completely, so even a manual tap on the fingerprint icon does
+  nothing at all (confirmed via an empty device log right after the tap). Added a guard so
+  only one biometric attempt can be in flight at a time; further taps while one is already
+  running are ignored instead of triggering a second, conflicting request.
+
 ## What's new in 1.1.7
 
 The 1.1.6 media-shade fix worked in local debug testing but not in the actual GitHub
