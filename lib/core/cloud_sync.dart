@@ -448,6 +448,17 @@ class CloudSync extends ChangeNotifier {
   });
 
   Future<void> _putFile(String path, List<int> bytes) async {
+    // Путь детерминирован по хэшу содержимого (см. maybePush), поэтому файл
+    // на этом пути МОЖЕТ уже существовать — например, если предыдущая
+    // попытка успела загрузить файл, но упала на следующем шаге
+    // (_appendIndex), и retry (_repushPending) пришёл сюда снова. GitHub
+    // отклоняет PUT по существующему пути без sha с 422 "sha wasn't
+    // supplied" — без этой проверки такой retry долбился бы в 422 вечно.
+    final existing = await http.get(
+      Uri.parse('$_repoBase/contents/$path'),
+      headers: _headers,
+    );
+    if (existing.statusCode == 200) return; // уже загружен — нечего делать
     final resp = await http.put(
       Uri.parse('$_repoBase/contents/$path'),
       headers: _headers,
