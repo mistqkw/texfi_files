@@ -79,7 +79,7 @@ class ItemBubble extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
-              child: _meta(cs),
+              child: _meta(context, cs),
             ),
           ],
         ),
@@ -192,7 +192,7 @@ class ItemBubble extends StatelessWidget {
   };
 
   /// Служебная строка под блоком: время и статусные иконки, моноширинно.
-  Widget _meta(ColorScheme cs) {
+  Widget _meta(BuildContext context, ColorScheme cs) {
     final dim = cs.onSurfaceVariant.withValues(alpha: 0.7);
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -216,7 +216,24 @@ class ItemBubble extends StatelessWidget {
           size: 11,
           color: item.cloud ? cs.primary : dim,
         ),
+        _moreButton(context, dim),
       ],
+    );
+  }
+
+  /// Явная точка входа в меню (архив/группа/пин/удаление), не завязанная на
+  /// долгое нажатие — на строке сообщения оно конкурирует с горизонтальным
+  /// свайпом-удалением/пересылкой в одной и той же жестовой арене Flutter
+  /// (оба висят на одной и той же области), из-за чего долгий тап иногда
+  /// не срабатывает. Обычный короткий тап по этой иконке — надёжен всегда.
+  Widget _moreButton(BuildContext context, Color color) {
+    return GestureDetector(
+      onTapUp: (d) => _menu(context, d.globalPosition),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: Icon(Icons.more_horiz_rounded, size: 14, color: color),
+      ),
     );
   }
 
@@ -307,10 +324,10 @@ class ItemBubble extends StatelessWidget {
     if (AppScope.of(context).settings.terminalBubbles) {
       return const SizedBox.shrink();
     }
-    return _classicFooter(cs);
+    return _classicFooter(context, cs);
   }
 
-  Widget _classicFooter(ColorScheme cs) => Padding(
+  Widget _classicFooter(BuildContext context, ColorScheme cs) => Padding(
     padding: const EdgeInsets.only(top: 4),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -360,6 +377,7 @@ class ItemBubble extends StatelessWidget {
             style: TextStyle(fontSize: 10, color: cs.error),
           ),
         ],
+        _moreButton(context, cs.onSurfaceVariant.withValues(alpha: 0.7)),
       ],
     ),
   );

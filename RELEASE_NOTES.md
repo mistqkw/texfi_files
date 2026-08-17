@@ -1,5 +1,31 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.1.9
+
+- 📁 **Archive/group are now reliably reachable.** Both were only accessible via a
+  long-press on a message — but every message is also wrapped in a swipeable row
+  (swipe-to-delete/forward), and that swipe gesture and the long-press gesture compete
+  for the same touch, so the long-press could silently lose and the menu never opened.
+  Added a small always-tappable "⋯" icon next to each message's timestamp/status row
+  that opens the same menu with a plain tap — no gesture race involved.
+- ☁️ **Archive/group/pin now actually sync to the cloud.** They were being saved
+  locally but never sent to the shared account index after the first upload, so
+  archiving or grouping a message that was already synced silently didn't show up on
+  your other devices. Now every change is pushed, and incoming changes from other
+  devices are picked up on the next sync.
+- 🔒 **Biometric unlock, round two.** Closed a gap in the 1.1.8 fix: the guard against
+  overlapping fingerprint prompts was per-screen-instance, so it wouldn't have helped
+  if the lock screen ever got recreated mid-attempt. Also: if biometrics genuinely
+  aren't available (not enrolled, hardware busy, etc.), the app now says so instead of
+  the fingerprint button silently doing nothing.
+- 🐛 Fixed a crash risk in voice recording (start/stop could call setState after the
+  screen was already gone) and a couple of other minor async-safety gaps found in a
+  full sweep.
+- ⚡ Filter bar (All/Pinned/Archive/groups) now computes from a single pass over the
+  list instead of four separate passes on every redraw.
+- ✨ Small animation pass: the filter bar animates in/out instead of popping, and
+  switching between All/Pinned/Archive/a group now cross-fades instead of jump-cutting.
+
 ## What's new in 1.1.8
 
 - 🔒 **Fixed: fingerprint unlock stopped responding after the first try.** Found live on

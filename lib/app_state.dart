@@ -42,6 +42,9 @@ class AppState extends ChangeNotifier {
     // Локальное удаление облачного элемента → удалить и из общего индекса
     // аккаунта, чтобы сообщение исчезло на всех устройствах.
     store.onItemRemoved = (item) => cloud.remove(item);
+    // Пин/архив/группа изменились локально → обновить запись в общем
+    // индексе, иначе изменение не долетало бы до других устройств.
+    store.onItemChanged = (item) => cloud.updateMeta(item);
     // Вход/выход из аккаунта → перезапустить поиск и облако.
     auth.addListener(() {
       discovery.start();
