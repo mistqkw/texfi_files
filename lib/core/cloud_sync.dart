@@ -204,12 +204,58 @@ class CloudSync extends ChangeNotifier {
     'mime': it.mime,
     'createdAt': it.createdAt.toIso8601String(),
     'pinned': it.pinned,
+    'archived': it.archived,
     'group': it.group,
     'remotePath': it.remotePath,
     'fileHash': it.fileHash,
     'encrypted': it.encrypted,
     'expiresAt': it.expiresAt?.toIso8601String(),
   };
+
+  // ── Обновление метаданных уже загруженного элемента (архив/группа/пин) ──
+  // maybePush() отправляет запись только один раз (`if (item.cloud) return`)
+  // — toggleArchive/setGroup/togglePin на элементе, который уже в облаке,
+  // раньше никак туда не долетали: изменение оставалось только локальным
+  // и не появлялось на других устройствах аккаунта.
+  Future<void> updateMeta(SavedItem item) async {
+    if (!available || !item.cloud) return;
+    try {
+      await _ensureRepo();
+      await _replaceIndexEntry(_entryOf(item));
+    } catch (e) {
+      lastError = '$e';
+      debugPrint('CloudSync updateMeta: $e');
+    }
+  }
+
+  Future<void> _replaceIndexEntry(Map<String, dynamic> entry) =>
+      _lockIndex(() async {
+        for (var attempt = 0; attempt < 8; attempt++) {
+          final (list, sha) = await _getIndex();
+          final i = list.indexWhere((e) => e['id'] == entry['id']);
+          // Записи ещё нет (гонка с самым первым maybePush) — тот push сам
+          // уйдёт с уже актуальными метаданными, повторять нечего.
+          if (i == -1) return;
+          list[i] = entry;
+          final content = base64.encode(utf8.encode(jsonEncode(list)));
+          final resp = await http.put(
+            Uri.parse('$_repoBase/contents/$_indexPath'),
+            headers: _headers,
+            body: jsonEncode({
+              'message': 'update ${entry['id']}',
+              'content': content,
+              if (sha != null) 'sha': sha,
+            }),
+          );
+          if (resp.statusCode == 200 || resp.statusCode == 201) return;
+          if (resp.statusCode == 409 || resp.statusCode == 422) {
+            await Future.delayed(Duration(milliseconds: 250 + attempt * 250));
+            continue; // конфликт версий — перечитаем и повторим
+          }
+          throw Exception('index put ${resp.statusCode}: ${resp.body}');
+        }
+        throw Exception('index update: не удалось после повторов');
+      });
 
   // ── Забрать ленту из облака ──
   Future<void> pull() async {
@@ -223,8 +269,23 @@ class CloudSync extends ChangeNotifier {
       final entries = idx.$1;
       for (final e in entries) {
         final id = e['id'] as String?;
-        if (id == null || store.has(id)) continue;
-        await _materialize(e);
+        if (id == null) continue;
+        final local = store.byId(id);
+        if (local == null) {
+          await _materialize(e);
+          continue;
+        }
+        // Уже есть локально — подтягиваем пин/архив/группу, если их
+        // поменяли на другом устройстве (materialize() выше делает это
+        // только при первом появлении элемента).
+        if (local.cloud) {
+          await store.applyRemoteMeta(
+            local,
+            pinned: e['pinned'] as bool? ?? false,
+            archived: e['archived'] as bool? ?? false,
+            group: e['group'] as String?,
+          );
+        }
       }
       // Удаления с других устройств: если элемент был получен из облака,
       // но его больше нет в общем индексе — убираем и здесь.
@@ -338,6 +399,7 @@ class CloudSync extends ChangeNotifier {
         outgoing: false,
         fromName: 'Аккаунт',
         pinned: e['pinned'] as bool? ?? false,
+        archived: e['archived'] as bool? ?? false,
         group: e['group'] as String?,
         cloud: true,
         remotePath: remote,

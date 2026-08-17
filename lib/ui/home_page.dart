@@ -65,8 +65,10 @@ class _HomePageState extends State<HomePage> {
         const RecordConfig(encoder: AudioEncoder.aacLc),
         path: path,
       );
+      if (!mounted) return;
       setState(() => _recording = true);
     } catch (e) {
+      if (!mounted) return;
       _toast(t.failed('$e'));
     }
   }
@@ -74,6 +76,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _stopRecord({bool cancel = false}) async {
     try {
       final path = await _recorder.stop();
+      if (!mounted) return;
       setState(() => _recording = false);
       if (cancel || path == null) return;
       final f = File(path);
@@ -82,6 +85,7 @@ class _HomePageState extends State<HomePage> {
         _scrollToBottom();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _recording = false);
     }
   }
@@ -380,7 +384,12 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   SizedBox(height: appBarTotalHeight(context)),
                   if (_searching) _searchBar(context),
-                  _filterBar(context),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: _filterBar(context, all),
+                  ),
                   Expanded(
                     child: Stack(
                       children: [
@@ -395,9 +404,15 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         Positioned.fill(
-                          child: items.isEmpty
-                              ? _empty(context)
-                              : _timeline(items),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: items.isEmpty
+                                ? _empty(context)
+                                : KeyedSubtree(
+                                    key: ValueKey(_filter),
+                                    child: _timeline(items),
+                                  ),
+                          ),
                         ),
                         if (_dragHover)
                           Positioned.fill(
@@ -802,10 +817,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _filterBar(BuildContext context) {
-    final groups = _app.store.groups;
-    final hasPinned = _app.store.items.any((e) => e.pinned && !e.archived);
-    final hasArchived = _app.store.items.any((e) => e.archived);
+  Widget _filterBar(BuildContext context, List<SavedItem> all) {
+    // Один проход по ленте вместо трёх отдельных (store.groups +
+    // store.items.any ×2), каждый из которых заново обходил бы весь список
+    // и пересобирал store.items (реверс + копия) при каждой перерисовке.
+    final groupSet = <String>{};
+    var hasPinned = false;
+    var hasArchived = false;
+    for (final it in all) {
+      if (it.group != null && it.group!.isNotEmpty) groupSet.add(it.group!);
+      if (it.archived) {
+        hasArchived = true;
+      } else if (it.pinned) {
+        hasPinned = true;
+      }
+    }
+    final groups = groupSet.toList()..sort();
     if (groups.isEmpty && !hasPinned && !hasArchived) {
       return const SizedBox.shrink();
     }

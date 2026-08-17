@@ -27,7 +27,20 @@ class Store extends ChangeNotifier {
   /// записи из общего индекса аккаунта).
   void Function(SavedItem item)? onItemRemoved;
 
+  /// Вызывается при изменении метаданных элемента (пин/архив/группа), чтобы
+  /// отправить обновление в общий облачный индекс — без этого такие
+  /// изменения оставались только локальными и не появлялись на других
+  /// устройствах того же аккаунта.
+  void Function(SavedItem item)? onItemChanged;
+
   bool has(String id) => _items.any((e) => e.id == id);
+
+  SavedItem? byId(String id) {
+    for (final it in _items) {
+      if (it.id == id) return it;
+    }
+    return null;
+  }
 
   /// Был ли элемент с таким id удалён (чтобы не воскрешать его из облака).
   bool isDeleted(String id) => _tombstones.contains(id);
@@ -146,6 +159,7 @@ class Store extends ChangeNotifier {
     item.pinned = !item.pinned;
     notifyListeners();
     await _persist();
+    onItemChanged?.call(item);
   }
 
   /// После отложенной загрузки (избирательная синхронизация) — проставить
@@ -160,10 +174,34 @@ class Store extends ChangeNotifier {
     item.archived = !item.archived;
     notifyListeners();
     await _persist();
+    onItemChanged?.call(item);
   }
 
   Future<void> setGroup(SavedItem item, String? group) async {
     item.group = (group != null && group.trim().isEmpty) ? null : group?.trim();
+    notifyListeners();
+    await _persist();
+    onItemChanged?.call(item);
+  }
+
+  /// Применяет пин/архив/группу, пришедшие из общего облачного индекса с
+  /// другого устройства, к уже существующему локальному элементу. Отдельно
+  /// от toggle*/setGroup, чтобы не вызывать onItemChanged и не зациклить
+  /// pull() → updateMeta() → pull() между устройствами.
+  Future<void> applyRemoteMeta(
+    SavedItem item, {
+    required bool pinned,
+    required bool archived,
+    required String? group,
+  }) async {
+    if (item.pinned == pinned &&
+        item.archived == archived &&
+        item.group == group) {
+      return;
+    }
+    item.pinned = pinned;
+    item.archived = archived;
+    item.group = group;
     notifyListeners();
     await _persist();
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:local_auth/local_auth.dart';
 import '../app.dart';
 import '../core/crypto_util.dart';
@@ -42,7 +43,11 @@ class _PinLockScreenState extends State<PinLockScreen> {
   }
 
   Future<void> _tryBiometric() async {
-    if (_bioBusy) return;
+    // Проверяем и инстанс-флаг (_bioBusy), и статический (authenticating):
+    // если этот экран когда-либо пересоздавался (новый State-инстанс),
+    // _bioBusy сбросился бы в false и не спас от повторного параллельного
+    // вызова, пока предыдущий ещё не завершился на нативной стороне.
+    if (_bioBusy || PinLockScreen.authenticating) return;
     final s = AppScope.of(context).settings;
     if (!s.biometricEnabled) return;
     _bioBusy = true;
@@ -50,19 +55,39 @@ class _PinLockScreenState extends State<PinLockScreen> {
     try {
       final can =
           await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
-      if (!can) return;
+      if (!can) {
+        // Раньше здесь молча выходили — с точки зрения пользователя кнопка
+        // с отпечатком просто "не реагирует" без объяснений. Теперь хотя бы
+        // видно, что дело в самом устройстве (отпечаток не настроен/не
+        // поддерживается), а не в баге.
+        _showUnavailable();
+        return;
+      }
       if (!mounted) return;
       final ok = await _auth.authenticate(
         localizedReason: tr(context).unlockReason,
         options: const AuthenticationOptions(biometricOnly: false),
       );
-      if (ok) widget.onUnlocked();
+      if (ok && mounted) widget.onUnlocked();
+    } on PlatformException catch (e) {
+      // 'auth_in_progress' — гонка с ещё идущей попыткой (не должна больше
+      // случаться благодаря _bioBusy/authenticating, но на всякий случай не
+      // пугаем пользователя; сам отказ/отмена пользователем приходит как
+      // ok == false, без исключения — сюда попадают только реальные сбои).
+      if (e.code != 'auth_in_progress') _showUnavailable();
     } catch (_) {
-      // недоступно на этой платформе/устройстве — просто останется PIN
+      _showUnavailable();
     } finally {
       _bioBusy = false;
       PinLockScreen.authenticating = false;
     }
+  }
+
+  void _showUnavailable() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(tr(context).biometricUnavailable)));
   }
 
   Future<void> _tap(String d) async {

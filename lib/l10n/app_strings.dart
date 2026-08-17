@@ -82,6 +82,11 @@ class AppStrings {
       'Pytaj o kod przy otwieraniu aplikacji');
   String get biometric => _('Биометрия', 'Biometric unlock', 'Biometrie',
       'Odblokowanie biometryczne');
+  String get biometricUnavailable => _(
+      'Биометрия недоступна на этом устройстве — введите PIN',
+      'Biometric unlock is unavailable on this device — enter your PIN',
+      'Biometrie ist auf diesem Gerät nicht verfügbar — PIN eingeben',
+      'Odblokowanie biometryczne jest niedostępne — wprowadź PIN');
   String get createPinStep1 =>
       _('Придумайте 4-значный PIN', 'Create a 4-digit PIN', 'PIN erstellen',
           'Utwórz 4-cyfrowy PIN');
