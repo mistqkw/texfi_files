@@ -9,6 +9,7 @@ import '../app.dart';
 import '../core/models.dart';
 import '../l10n/app_strings.dart';
 import 'format.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Красивый встроенный плеер для аудио и видео.
 class PlayerPage extends StatefulWidget {
@@ -177,7 +178,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 color: onColor,
                 onPressed: () => _player.seek(
                     _pos - const Duration(seconds: 10)),
-                icon: const Icon(Icons.replay_10_rounded),
+                icon: PixelIcon('chevron_left'),
               ),
               const SizedBox(width: 12),
               Container(
@@ -189,9 +190,8 @@ class _PlayerPageState extends State<PlayerPage> {
                   iconSize: 40,
                   color: cs.onPrimary,
                   onPressed: () => _player.playOrPause(),
-                  icon: Icon(_playing
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded),
+                  icon: PixelIcon(_playing ? 'pause' : 'play',
+                      size: 40, color: cs.onPrimary),
                 ),
               ),
               const SizedBox(width: 12),
@@ -200,7 +200,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 color: onColor,
                 onPressed: () => _player.seek(
                     _pos + const Duration(seconds: 10)),
-                icon: const Icon(Icons.forward_10_rounded),
+                icon: PixelIcon('chevron_right'),
               ),
             ],
           ),
@@ -261,7 +261,7 @@ class _AudioArt extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: art != null
                 ? Image.memory(art!, fit: BoxFit.cover)
-                : Icon(Icons.music_note_rounded,
+                : PixelIcon('note',
                     size: 110, color: color.onPrimary),
           ),
         ),

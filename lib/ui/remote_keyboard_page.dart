@@ -4,6 +4,7 @@ import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
 import '../l10n/app_strings.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Примитивная операция ввода: либо текст, либо нажатие клавиши N раз.
 class _Op {
@@ -165,7 +166,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.desktop_access_disabled_rounded,
+          PixelIcon('devices',
               size: 64, color: cs.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(t.noPcTitle,
@@ -189,7 +190,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          const Icon(Icons.laptop_rounded),
+          PixelIcon('devices'),
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButton<String>(
@@ -251,7 +252,7 @@ class _RemoteKeyboardPageState extends State<RemoteKeyboardPage> {
             if (!_live)
               FilledButton.icon(
                 onPressed: _sendAll,
-                icon: const Icon(Icons.send_rounded),
+                icon: PixelIcon('send'),
                 label: Text(t.send),
               ),
           ],

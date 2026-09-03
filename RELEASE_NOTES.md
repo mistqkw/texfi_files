@@ -1,5 +1,26 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.2.0
+
+- 🎨 **Full pixel-art redesign**, bringing the app in line with the rest of the
+  TexFi ecosystem (f0kus, m0ney): black/dark-gray background by default, the
+  brand blue accent, square-ish 2px-bordered cards with a solid offset shadow,
+  a pixel font for screen/section titles, and custom pixel checkboxes/switches/
+  radios in place of the stock Material controls.
+- 🖼️ **New app icon** — a two-arrow P2P exchange symbol instead of the old
+  text-based mark, matching the object-style icons of the sibling apps.
+- 🧹 **Settings, cut down.** Removed the weather/snow/rain background effects,
+  custom per-message bubble colors, the 5-way design-skin picker, and the
+  animation style/speed pickers — all cosmetic knobs with no real functional
+  value. The network discovery port moved under a new "Advanced" section.
+  Everything else (security, sync, account, background photo) is unchanged.
+- 🌌 **No more auto-applied wallpaper on fresh installs** — the app now starts
+  on a flat dark background; picking your own chat photo is still fully
+  supported from Settings → Background.
+- ✨ **New pixel-art splash screen and reskinned welcome screen**, both quick
+  (under ~1.5s for the splash) and in the same crisp, no-slow-fades style as
+  the rest of the redesign.
+
 ## What's new in 1.1.9
 
 - 📁 **Archive/group are now reliably reachable.** Both were only accessible via a

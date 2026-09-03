@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.9+20
+version: 1.2.0+21
 
 environment:
   sdk: ^3.12.2
@@ -98,9 +98,13 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon_1024.png"
-  adaptive_icon_background: "#0E0F11"
+  adaptive_icon_background: "#0B0B0E"
   adaptive_icon_foreground: "assets/icon_1024.png"
   remove_alpha_ios: false
+  windows:
+    generate: true
+    image_path: "assets/icon_1024.png"
+    icon_size: 256
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -125,7 +129,11 @@ flutter:
     - assets/icon_1024.png
     - assets/icon_512.png
     - assets/brand/
-    - assets/wallpapers/default_space.jpg
+
+  fonts:
+    - family: PressStart2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -7,6 +7,8 @@ import '../app.dart';
 import '../l10n/app_strings.dart';
 import '../app_state.dart';
 import '../core/models.dart';
+import 'pixel/pixel_controls.dart';
+import 'pixel/pixel_icons.dart';
 
 const _qrScheme = 'texfi';
 
@@ -52,20 +54,20 @@ class _PeersPageState extends State<PeersPage> {
         actions: [
           IconButton(
             tooltip: t.showQr,
-            icon: const Icon(Icons.qr_code_rounded),
+            icon: PixelIcon('qr_code'),
             onPressed: _showMyQr,
           ),
           if (mobile)
             IconButton(
               tooltip: t.scanQr,
-              icon: const Icon(Icons.qr_code_scanner_rounded),
+              icon: PixelIcon('qr_scan'),
               onPressed: _scanQr,
             ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addByIp,
-        icon: const Icon(Icons.add_link_rounded),
+        icon: PixelIcon('link'),
         label: Text(t.byIp),
       ),
       body: ListenableBuilder(
@@ -99,16 +101,15 @@ class _PeersPageState extends State<PeersPage> {
     final cs = Theme.of(context).colorScheme;
     final port = _app.server.port;
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cs.primaryContainer,
-        child: Icon(Icons.laptop_rounded, color: cs.onPrimaryContainer),
+      leading: PixelAvatar(
+        child: PixelIcon('devices', color: cs.onPrimaryContainer),
       ),
       title: Text(_app.settings.deviceName,
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(_localIp != null
           ? '${t.thisDevice} · $_localIp:$port'
           : '${t.thisDevice} · $port'),
-      trailing: const Icon(Icons.circle, size: 10, color: Colors.green),
+      trailing: PixelIcon('check', size: 10, color: Colors.green),
     );
   }
 
@@ -145,7 +146,7 @@ class _PeersPageState extends State<PeersPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_circle_outlined,
+            PixelIcon('badge',
                 size: 64, color: cs.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(t.needLoginTitle,
@@ -165,13 +166,11 @@ class _PeersPageState extends State<PeersPage> {
   Widget _peerTile(BuildContext context, Peer p) {
     final cs = Theme.of(context).colorScheme;
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor:
-            p.online ? cs.tertiaryContainer : cs.surfaceContainerHighest,
-        child: Icon(
-          p.platform == 'android'
-              ? Icons.smartphone_rounded
-              : Icons.laptop_rounded,
+      leading: PixelAvatar(
+        background: p.online ? cs.tertiaryContainer : cs.surfaceContainerHighest,
+        borderColor: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
+        child: PixelIcon(
+          p.platform == 'android' ? 'phone' : 'devices',
           color: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
         ),
       ),
@@ -180,14 +179,14 @@ class _PeersPageState extends State<PeersPage> {
           Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
           if (_app.isTrusted(p)) ...[
             const SizedBox(width: 6),
-            Icon(Icons.verified_rounded, size: 16, color: cs.primary),
+            PixelIcon('check', size: 16, color: cs.primary),
           ],
         ],
       ),
       subtitle: Text(_app.isTrusted(p)
           ? '${p.address} · ${t.yourAccount}'
           : '${p.address} · ${p.online ? t.online : t.offline}'),
-      trailing: Icon(Icons.circle,
+      trailing: PixelIcon('check',
           size: 10, color: p.online ? Colors.green : cs.outline),
     );
   }
@@ -354,7 +353,7 @@ class _QrScannerPageState extends State<_QrScannerPage> {
         title: Text(t.scanQr),
         actions: [
           IconButton(
-            icon: Icon(_torch ? Icons.flash_on_rounded : Icons.flash_off_rounded),
+            icon: PixelIcon('flash', color: _torch ? Colors.amber : Colors.white),
             onPressed: () {
               _controller.toggleTorch();
               setState(() => _torch = !_torch);
@@ -384,10 +383,8 @@ class _QrScannerPageState extends State<_QrScannerPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    denied
-                        ? Icons.no_photography_outlined
-                        : Icons.error_outline_rounded,
+                  PixelIcon(
+                    denied ? 'camera' : 'warn',
                     size: 48,
                     color: Colors.white70,
                   ),
@@ -400,7 +397,7 @@ class _QrScannerPageState extends State<_QrScannerPage> {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _start,
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: PixelIcon('sync'),
                     label: Text(t.retry),
                   ),
                 ],

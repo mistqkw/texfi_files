@@ -3,6 +3,8 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import '../app.dart';
 import 'album_art.dart';
 import 'audio_player_screen.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_theme.dart';
 
 /// Плеер поверх ленты — маленький квадратик с обложкой трека, который можно
 /// перетащить в любое место экрана (а не панель на всю ширину внизу).
@@ -51,7 +53,6 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
         final pos = _clamped(_pos!, screen, safe);
 
         final cs = Theme.of(context).colorScheme;
-        final terminal = app.settings.terminalBubbles;
         final maxMs = player.dur.inMilliseconds;
         final progress = maxMs <= 0
             ? 0.0
@@ -76,13 +77,11 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
               height: _size,
               decoration: BoxDecoration(
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(terminal ? 10 : 18),
                 border: Border.all(
-                  color: terminal
-                      ? Colors.white.withValues(
-                          alpha: app.settings.borderOpacity,
-                        )
-                      : Colors.white24,
+                  color: Colors.white.withValues(
+                    alpha: app.settings.borderOpacity,
+                  ),
+                  width: PixelTheme.borderWidth,
                 ),
                 boxShadow: const [
                   BoxShadow(
@@ -107,8 +106,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                           colors: [cs.primary, cs.tertiary],
                         ),
                       ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
+                      child: PixelIcon('note',
                         color: Colors.white,
                         size: 26,
                       ),
@@ -119,8 +117,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       width: _size,
                       height: _size,
                       color: Colors.black45,
-                      child: const Icon(
-                        Icons.pause_rounded,
+                      child: PixelIcon('pause',
                         color: Colors.white,
                         size: 22,
                       ),

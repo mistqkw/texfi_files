@@ -12,6 +12,7 @@ import 'album_art.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'image_gallery.dart';
+import 'pixel/pixel_icons.dart';
 import 'player_page.dart';
 import 'terminal.dart';
 import 'video_thumb.dart';
@@ -25,137 +26,67 @@ class ItemBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final s = AppScope.of(context).settings;
-    final align = item.outgoing ? Alignment.centerRight : Alignment.centerLeft;
-    final override = item.outgoing ? s.msgOutColor : s.msgInColor;
-    final bubbleColor = override != -1
-        ? Color(override)
-        : (item.outgoing ? cs.primaryContainer : cs.surfaceContainerHighest);
-    final r = s.bubbleRadius;
-    final tail = r * 0.28;
-    final vMargin = s.compact ? 2.0 : 4.0;
-    // Едва заметный диагональный глянец вместо плоской заливки — то, что
-    // отличает «премиальный» пузырь от плоского цвета из коробки.
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [_shade(bubbleColor, 0.035), _shade(bubbleColor, -0.035)],
-    );
-
-    // Терминальный вид: чёрный блок с белой рамкой и врезанной подписью.
-    if (s.terminalBubbles) {
-      return Container(
-        // Тянемся на всю ширину: внешний Column ленты центрирует детей, и без
-        // этого блоки вставали бы по центру вместо краёв.
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          vertical: s.compact ? 4 : 7,
-          horizontal: 12,
-        ),
-        child: Column(
-          crossAxisAlignment: item.outgoing
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstraintsBox(
-              child: IntrinsicWidth(
-                child: GestureDetector(
-                  onLongPressStart: (d) => _menu(context, d.globalPosition),
-                  onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-                  child: TerminalBox(
-                    label: _prefixLabel(s),
-                    // Белая обводка на чёрном блоке — основа стиля.
-                    borderColor: Colors.white.withValues(
-                      alpha: s.borderOpacity,
-                    ),
-                    labelColor: item.outgoing
-                        ? cs.primary
-                        : cs.onSurfaceVariant,
-                    padding: _framePadding,
-                    child: _content(context, cs),
+    // Пиксель-карточка: чёрный блок с белой рамкой и врезанной подписью.
+    return Container(
+      // Тянемся на всю ширину: внешний Column ленты центрирует детей, и без
+      // этого блоки вставали бы по центру вместо краёв.
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        vertical: s.compact ? 4 : 7,
+        horizontal: 12,
+      ),
+      child: Column(
+        crossAxisAlignment: item.outgoing
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstraintsBox(
+            child: IntrinsicWidth(
+              child: GestureDetector(
+                onLongPressStart: (d) => _menu(context, d.globalPosition),
+                onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
+                child: TerminalBox(
+                  label: _prefixLabel(s),
+                  // Белая обводка на чёрном блоке — основа стиля.
+                  borderColor: Colors.white.withValues(
+                    alpha: s.borderOpacity,
                   ),
+                  labelColor: item.outgoing
+                      ? cs.primary
+                      : cs.onSurfaceVariant,
+                  padding: _framePadding,
+                  child: _content(context, cs),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
-              child: _meta(context, cs),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Align(
-      alignment: align,
-      // IntrinsicWidth — чтобы короткие сообщения не растягивались во всю
-      // ширину, а обёртывались по содержимому (как в обычных мессенджерах).
-      child: ConstraintsBox(
-        child: IntrinsicWidth(
-          child: GestureDetector(
-            onLongPressStart: (d) => _menu(context, d.globalPosition),
-            onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-            child: Container(
-              margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(r),
-                  topRight: Radius.circular(r),
-                  bottomLeft: Radius.circular(item.outgoing ? r : tail),
-                  bottomRight: Radius.circular(item.outgoing ? tail : r),
-                ),
-                border: !item.outgoing
-                    ? Border.all(
-                        color: cs.outlineVariant.withValues(alpha: 0.18),
-                      )
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _content(context, cs),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
+            child: _meta(context, cs),
+          ),
+        ],
       ),
     );
   }
 
-  /// Превью аудио: настоящая обложка из тегов, если она есть.
-  /// В терминальном режиме заглушка — тонкая рамка с иконкой, без плашки.
+  /// Превью аудио: настоящая обложка из тегов, если она есть, иначе
+  /// заглушка — тонкая рамка с иконкой.
   Widget _mediaThumb(BuildContext context, ColorScheme cs, bool isVideo) {
-    final terminal = AppScope.of(context).settings.terminalBubbles;
-    final icon = isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded;
-    final fallback = terminal
-        ? Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Icon(icon, color: cs.primary, size: 26),
-          )
-        : Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: cs.onPrimary, size: 30),
-          );
+    final name = isVideo ? 'play' : 'volume';
+    final fallback = Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
+      ),
+      child: Center(child: PixelIcon(name, size: 26, color: cs.primary)),
+    );
     if (isVideo) return fallback;
     return AlbumArtThumb(
       filePath: item.filePath,
       size: 52,
-      radius: terminal ? 3 : 14,
+      radius: 0,
       fallback: fallback,
     );
   }
@@ -200,22 +131,25 @@ class ItemBubble extends StatelessWidget {
         Text(clockTime(item.createdAt), style: monoStyle(color: dim, size: 10)),
         if (item.group != null) ...[
           const SizedBox(width: 6),
-          Icon(Icons.folder_rounded, size: 11, color: dim),
+          PixelIcon('link', size: 11, color: dim),
         ],
         if (item.pinned) ...[
           const SizedBox(width: 6),
-          Icon(Icons.push_pin, size: 11, color: cs.primary),
+          PixelIcon('drop', size: 11, color: cs.primary),
         ],
         if (item.archived) ...[
           const SizedBox(width: 6),
-          Icon(Icons.archive_rounded, size: 11, color: dim),
+          PixelIcon('picture', size: 11, color: dim),
         ],
         const SizedBox(width: 6),
-        Icon(
-          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
-          size: 11,
-          color: item.cloud ? cs.primary : dim,
-        ),
+        PixelIcon(item.cloud ? 'cloud' : 'devices', size: 11, color: item.cloud ? cs.primary : dim),
+        if (item.expiresAt != null) ...[
+          const SizedBox(width: 6),
+          PixelIcon('clock', size: 11, color: cs.error),
+          const SizedBox(width: 2),
+          Text(_ttlLeft(item.expiresAt!),
+              style: monoStyle(color: cs.error, size: 10)),
+        ],
         _moreButton(context, dim),
       ],
     );
@@ -232,16 +166,9 @@ class ItemBubble extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.only(left: 6),
-        child: Icon(Icons.more_horiz_rounded, size: 14, color: color),
+        child: PixelIcon('menu', size: 14, color: color),
       ),
     );
-  }
-
-  /// Слегка осветляет/затемняет цвет по HSL-светлоте — используется для
-  /// диагонального глянца пузыря без потери контраста с текстом поверх.
-  static Color _shade(Color c, double delta) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
   }
 
   Widget _content(BuildContext context, ColorScheme cs) {
@@ -287,7 +214,7 @@ class ItemBubble extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(value: progress, strokeWidth: 3),
-                Icon(Icons.download_rounded, size: 18, color: cs.primary),
+                PixelIcon('sync', size: 18, color: cs.primary),
               ],
             ),
           ),
@@ -318,70 +245,6 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  /// В терминальном режиме мета вынесена под блок (`_meta`), поэтому
-  /// внутренний футер не рисуем — иначе время задвоится.
-  Widget _footer(BuildContext context, ColorScheme cs) {
-    if (AppScope.of(context).settings.terminalBubbles) {
-      return const SizedBox.shrink();
-    }
-    return _classicFooter(context, cs);
-  }
-
-  Widget _classicFooter(BuildContext context, ColorScheme cs) => Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!item.outgoing && item.fromName != null) ...[
-          Icon(Icons.smartphone_rounded, size: 12, color: cs.onSurfaceVariant),
-          const SizedBox(width: 3),
-          Text(
-            item.fromName!,
-            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          clockTime(item.createdAt),
-          style: TextStyle(
-            fontSize: 11,
-            color: cs.onSurfaceVariant.withValues(alpha: 0.8),
-          ),
-        ),
-        if (item.group != null) ...[
-          const SizedBox(width: 6),
-          Icon(Icons.folder_rounded, size: 11, color: cs.onSurfaceVariant),
-        ],
-        if (item.pinned) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.push_pin, size: 11, color: cs.primary),
-        ],
-        if (item.archived) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.archive_rounded, size: 11, color: cs.onSurfaceVariant),
-        ],
-        const SizedBox(width: 4),
-        Icon(
-          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
-          size: 11,
-          color: item.cloud
-              ? cs.primary
-              : cs.onSurfaceVariant.withValues(alpha: 0.6),
-        ),
-        if (item.expiresAt != null) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.timer_outlined, size: 11, color: cs.error),
-          const SizedBox(width: 2),
-          Text(
-            _ttlLeft(item.expiresAt!),
-            style: TextStyle(fontSize: 10, color: cs.error),
-          ),
-        ],
-        _moreButton(context, cs.onSurfaceVariant.withValues(alpha: 0.7)),
-      ],
-    ),
-  );
-
   String _ttlLeft(DateTime at) {
     final left = at.difference(DateTime.now());
     if (left.isNegative) return '0s';
@@ -408,49 +271,32 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  /// Кнопки «копировать/переслать» под текстом. В терминальном режиме они
-  /// проявляются только при наведении мышью, на телефоне — скрыты (там есть
-  /// долгое нажатие и свайп).
+  /// Кнопки «копировать/переслать» под текстом — проявляются при наведении
+  /// мышью, на телефоне скрыты (там есть долгое нажатие и свайп).
   Widget _textActions(BuildContext context, ColorScheme cs) {
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
           onTap: () => _copy(context),
-          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: Icon(
-              Icons.copy_rounded,
-              size: 15,
-              color: cs.onSurfaceVariant,
-            ),
+            child: PixelIcon('copy', size: 13, color: cs.onSurfaceVariant),
           ),
         ),
         const SizedBox(width: 2),
         InkWell(
           onTap: _share,
-          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: Icon(
-              Icons.reply_rounded,
-              size: 15,
-              color: cs.onSurfaceVariant,
-            ),
+            child: PixelIcon('send', size: 13, color: cs.onSurfaceVariant),
           ),
         ),
       ],
     );
-    if (AppScope.of(context).settings.terminalBubbles) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: _HoverReveal(child: row),
-      );
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [row, const Spacer(), _footer(context, cs)],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: _HoverReveal(child: row),
     );
   }
 
@@ -482,7 +328,6 @@ class ItemBubble extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              _footer(context, cs),
             ],
           ),
         ),
@@ -524,7 +369,6 @@ class ItemBubble extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                _footer(context, cs),
               ],
             ),
           ),
@@ -559,7 +403,6 @@ class ItemBubble extends StatelessWidget {
                     '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(context, cs),
                 ],
               ),
             ),
@@ -590,7 +433,7 @@ class ItemBubble extends StatelessWidget {
                 color: cs.primary,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.mic_rounded, color: cs.onPrimary, size: 24),
+              child: PixelIcon('mic', color: cs.onPrimary, size: 24),
             ),
             const SizedBox(width: 12),
             Column(
@@ -606,7 +449,6 @@ class ItemBubble extends StatelessWidget {
                   humanSize(item.fileSize),
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
-                _footer(context, cs),
               ],
             ),
           ],
@@ -632,8 +474,7 @@ class ItemBubble extends StatelessWidget {
                 color: cs.secondaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.insert_drive_file_rounded,
+              child: PixelIcon('file',
                 color: cs.onSecondaryContainer,
               ),
             ),
@@ -654,13 +495,12 @@ class ItemBubble extends StatelessWidget {
                     humanSize(item.fileSize),
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(context, cs),
                 ],
               ),
             ),
             IconButton(
               tooltip: tr(context).save,
-              icon: const Icon(Icons.download_rounded),
+              icon: PixelIcon('sync'),
               onPressed: () => _saveAs(context),
             ),
           ],
@@ -756,9 +596,9 @@ class ItemBubble extends StatelessWidget {
           children: [
             for (final g in groups)
               ListTile(
-                leading: const Icon(Icons.folder_rounded),
+                leading: PixelIcon('folder'),
                 title: Text(g),
-                trailing: item.group == g ? const Icon(Icons.check) : null,
+                trailing: item.group == g ? PixelIcon('check') : null,
                 onTap: () {
                   store.setGroup(item, g);
                   Navigator.pop(context);
@@ -773,7 +613,7 @@ class ItemBubble extends StatelessWidget {
                       controller: controller,
                       decoration: InputDecoration(
                         hintText: tr(context).newGroup,
-                        prefixIcon: Icon(Icons.create_new_folder_outlined),
+                        prefixIcon: PixelIcon('folder'),
                       ),
                     ),
                   ),
@@ -803,7 +643,6 @@ class ItemBubble extends StatelessWidget {
   Future<void> _menu(BuildContext context, Offset globalPos) async {
     final t = tr(context);
     final store = AppScope.of(context).store;
-    final terminal = AppScope.of(context).settings.terminalBubbles;
     final cs = Theme.of(context).colorScheme;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
@@ -814,17 +653,17 @@ class ItemBubble extends StatelessWidget {
 
     PopupMenuItem<_MenuAction> tile(
       _MenuAction value,
-      IconData icon,
+      String icon,
       String label, {
       bool danger = false,
     }) {
-      final color = danger ? cs.error : (terminal ? cs.onSurface : null);
+      final color = danger ? cs.error : cs.onSurface;
       return PopupMenuItem<_MenuAction>(
         value: value,
         height: 44,
         child: Row(
           children: [
-            Icon(icon, size: 19, color: danger ? cs.error : cs.onSurfaceVariant),
+            PixelIcon(icon, size: 16, color: danger ? cs.error : cs.onSurfaceVariant),
             const SizedBox(width: 14),
             Text(label, style: TextStyle(color: color)),
           ],
@@ -835,41 +674,38 @@ class ItemBubble extends StatelessWidget {
     final action = await showMenu<_MenuAction>(
       context: context,
       position: position,
-      elevation: terminal ? 0 : 8,
-      color: terminal ? Colors.black : null,
+      elevation: 0,
+      color: Colors.black,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(terminal ? 6 : 16),
-        side: terminal
-            ? BorderSide(color: Colors.white.withValues(alpha: 0.4))
-            : BorderSide.none,
+        borderRadius: BorderRadius.zero,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
       ),
       items: [
         if (item.kind == ItemKind.text)
-          tile(_MenuAction.copy, Icons.copy_rounded, t.copy),
+          tile(_MenuAction.copy, 'copy', t.copy),
         if (item.filePath != null)
-          tile(_MenuAction.open, Icons.open_in_new_rounded, t.open),
+          tile(_MenuAction.open, 'link', t.open),
         if (item.filePath != null)
-          tile(_MenuAction.saveAs, Icons.download_rounded, t.saveAs),
-        tile(_MenuAction.share, Icons.ios_share_rounded, t.share),
+          tile(_MenuAction.saveAs, 'sync', t.saveAs),
+        tile(_MenuAction.share, 'send', t.share),
         tile(
           _MenuAction.pin,
-          item.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+          'thumbtack',
           item.pinned ? t.unpin : t.pin,
         ),
         tile(
           _MenuAction.archive,
-          item.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+          'archive',
           item.archived ? t.unarchive : t.archive,
         ),
         tile(
           _MenuAction.group,
-          Icons.folder_outlined,
+          'folder',
           item.group == null ? t.addToGroup : t.groupName(item.group!),
         ),
         if (item.group != null)
-          tile(_MenuAction.ungroup, Icons.folder_off_outlined, t.removeFromGroup),
-        tile(_MenuAction.delete, Icons.delete_outline_rounded, t.delete,
-            danger: true),
+          tile(_MenuAction.ungroup, 'folder', t.removeFromGroup),
+        tile(_MenuAction.delete, 'trash', t.delete, danger: true),
       ],
     );
     if (action == null || !context.mounted) return;
@@ -969,8 +805,7 @@ class _DownloadTileState extends State<_DownloadTile> {
                         color: cs.primaryContainer,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        Icons.cloud_download_rounded,
+                      child: PixelIcon('cloud',
                         color: cs.onPrimaryContainer,
                       ),
                     ),

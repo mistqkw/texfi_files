@@ -9,6 +9,7 @@ import 'audio_player_screen.dart';
 import 'format.dart';
 import 'terminal.dart';
 import '../l10n/app_strings.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Экран «Музыка»: вся аудио-музыка из ленты, с плейлистами по группам.
 /// (Голосовые сообщения сюда не попадают — отдельный тип элемента.)
@@ -27,25 +28,21 @@ class _MusicScreenState extends State<MusicScreen> {
     final app = AppScope.of(context);
     final t = tr(context);
     final s = app.settings;
-    final terminal = s.terminalBubbles;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: terminal ? Colors.black : null,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: terminal ? Colors.black : null,
-        title: terminal
-            ? Text(
-                t.music,
-                style: monoStyle(color: cs.onSurface, size: 18, weight: FontWeight.w700),
-              )
-            : Text(t.music),
+        backgroundColor: Colors.black,
+        title: Text(
+          t.music,
+          style: monoStyle(color: cs.onSurface, size: 18, weight: FontWeight.w700),
+        ),
         actions: [
           ListenableBuilder(
             listenable: app.player,
             builder: (context, _) => IconButton(
               tooltip: t.shuffle,
-              icon: Icon(
-                Icons.shuffle_rounded,
+              icon: PixelIcon('shuffle',
                 color: app.player.shuffle ? cs.primary : null,
               ),
               onPressed: app.player.toggleShuffle,
@@ -61,10 +58,8 @@ class _MusicScreenState extends State<MusicScreen> {
                   PlayerRepeatMode.all => t.repeatAll,
                   PlayerRepeatMode.one => t.repeatOne,
                 },
-                icon: Icon(
-                  mode == PlayerRepeatMode.one
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
+                icon: PixelIcon(
+                  'sync',
                   color: mode == PlayerRepeatMode.off ? null : cs.primary,
                 ),
                 onPressed: app.player.cycleRepeat,
@@ -138,29 +133,25 @@ class _MusicScreenState extends State<MusicScreen> {
                               0,
                               volume: app.settings.playerVolume,
                             ),
-                      icon: const Icon(Icons.playlist_play_rounded),
+                      icon: PixelIcon('note'),
                       label: Text(t.playAll),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       '${tracks.length}',
-                      style: terminal
-                          ? monoStyle(color: cs.onSurfaceVariant, size: 13)
-                          : TextStyle(color: cs.onSurfaceVariant),
+                      style: monoStyle(color: cs.onSurfaceVariant, size: 13),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.only(bottom: 8, top: terminal ? 0 : 4),
+                  padding: const EdgeInsets.only(bottom: 8),
                   itemCount: tracks.length,
                   itemBuilder: (context, i) {
                     final it = tracks[i];
                     final isCur = app.player.current?.id == it.id;
-                    return terminal
-                        ? _terminalTile(context, app, it, tracks, i, isCur, s, cs, t)
-                        : _classicTile(context, app, it, tracks, i, isCur, cs, t);
+                    return _terminalTile(context, app, it, tracks, i, isCur, s, cs, t);
                   },
                 ),
               ),
@@ -203,10 +194,8 @@ class _MusicScreenState extends State<MusicScreen> {
                 border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
                 borderRadius: BorderRadius.circular(3),
               ),
-              child: Icon(
-                isCur && app.player.playing
-                    ? Icons.graphic_eq_rounded
-                    : Icons.music_note_rounded,
+              child: PixelIcon(
+                isCur && app.player.playing ? 'waveform' : 'note',
                 color: cs.primary,
                 size: 22,
               ),
@@ -226,7 +215,7 @@ class _MusicScreenState extends State<MusicScreen> {
             style: monoStyle(color: cs.onSurfaceVariant, size: 11),
           ),
           trailing: isCur && app.player.playing
-              ? Icon(Icons.graphic_eq_rounded, color: cs.primary, size: 20)
+              ? PixelIcon('waveform', color: cs.primary, size: 20)
               : null,
           onTap: () {
             app.player.playQueue(tracks, i, volume: app.settings.playerVolume);
@@ -239,46 +228,4 @@ class _MusicScreenState extends State<MusicScreen> {
     );
   }
 
-  Widget _classicTile(
-    BuildContext context,
-    AppState app,
-    SavedItem it,
-    List<SavedItem> tracks,
-    int i,
-    bool isCur,
-    ColorScheme cs,
-    AppStrings t,
-  ) {
-    return ListTile(
-      leading: AlbumArtThumb(
-        filePath: it.filePath,
-        size: 44,
-        radius: 12,
-        fallback: CircleAvatar(
-          backgroundColor: isCur ? cs.primary : cs.surfaceContainerHighest,
-          child: Icon(
-            isCur && app.player.playing
-                ? Icons.equalizer_rounded
-                : Icons.music_note_rounded,
-            color: isCur ? cs.onPrimary : cs.onSurfaceVariant,
-          ),
-        ),
-      ),
-      title: Text(
-        it.fileName ?? t.audioWord,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: isCur ? FontWeight.w700 : FontWeight.w400,
-        ),
-      ),
-      subtitle: Text(humanSize(it.fileSize)),
-      onTap: () {
-        app.player.playQueue(tracks, i, volume: app.settings.playerVolume);
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
-        );
-      },
-    );
-  }
 }

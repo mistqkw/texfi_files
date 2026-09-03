@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import '../app.dart';
 import '../core/crypto_util.dart';
 import '../l10n/app_strings.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Экран блокировки: запрашивает PIN (и/или биометрию) при запуске
 /// приложения, если включено в настройках.
@@ -127,7 +128,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_rounded, size: 48, color: cs.primary),
+            PixelIcon('lock', size: 48, color: cs.primary),
             const SizedBox(height: 16),
             Text(t.enterPin, style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 24),
@@ -171,13 +172,13 @@ class _PinLockScreenState extends State<PinLockScreen> {
                           if (d.isEmpty) return const SizedBox(width: 64);
                           if (d == 'back') {
                             return _key(
-                              icon: Icons.backspace_outlined,
+                              icon: 'backspace',
                               onTap: _backspace,
                             );
                           }
                           if (d == 'bio') {
                             return _key(
-                              icon: Icons.fingerprint_rounded,
+                              icon: 'fingerprint',
                               onTap: _tryBiometric,
                             );
                           }
@@ -194,7 +195,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
     );
   }
 
-  Widget _key({String? label, IconData? icon, required VoidCallback onTap}) {
+  Widget _key({String? label, String? icon, required VoidCallback onTap}) {
     return InkResponse(
       onTap: onTap,
       radius: 36,
@@ -203,7 +204,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
         height: 64,
         child: Center(
           child: icon != null
-              ? Icon(icon)
+              ? PixelIcon(icon)
               : Text(label!, style: const TextStyle(fontSize: 24)),
         ),
       ),

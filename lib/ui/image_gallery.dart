@@ -4,6 +4,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/models.dart';
 import '../l10n/app_strings.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Просмотр изображений: свайпы между всеми картинками ленты, зум, а также
 /// свайп вниз для закрытия (фон плавно затемняется/светлеет по ходу жеста).
@@ -71,12 +72,12 @@ class _ImageGalleryState extends State<ImageGallery> {
               actions: [
                 IconButton(
                   tooltip: t.share,
-                  icon: const Icon(Icons.ios_share_rounded),
+                  icon: PixelIcon('send'),
                   onPressed: () => _shareCurrent(item),
                 ),
                 IconButton(
                   tooltip: t.open,
-                  icon: const Icon(Icons.open_in_new_rounded),
+                  icon: PixelIcon('link'),
                   onPressed: () {
                     if (item.filePath != null) OpenFilex.open(item.filePath!);
                   },
@@ -98,8 +99,7 @@ class _ImageGalleryState extends State<ImageGallery> {
               final path = widget.images[i].filePath;
               if (path == null || !File(path).existsSync()) {
                 return const Center(
-                  child: Icon(
-                    Icons.broken_image_outlined,
+                  child: PixelIcon('picture',
                     color: Colors.white54,
                     size: 64,
                   ),

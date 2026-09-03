@@ -411,6 +411,8 @@ class AppStrings {
       'Znajduj urządzenia automatycznie');
   String get discoveryPort =>
       _('Порт поиска', 'Discovery port', 'Suchport', 'Port wyszukiwania');
+  String get advanced =>
+      _('Дополнительно', 'Advanced', 'Erweitert', 'Zaawansowane');
   String get autoAccept => _('Принимать файлы автоматически',
       'Accept files automatically', 'Dateien automatisch annehmen',
       'Akceptuj pliki automatycznie');

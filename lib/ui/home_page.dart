@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../l10n/app_strings.dart';
-import 'effects.dart';
 import 'floating_player.dart';
 import '../app.dart';
 import '../app_state.dart';
@@ -24,6 +23,9 @@ import 'smooth_scroll.dart';
 import 'terminal.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
+import 'pixel/pixel_controls.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_theme.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -192,7 +194,7 @@ class _HomePageState extends State<HomePage> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.insert_drive_file_outlined),
+              leading: PixelIcon('file'),
               title: Text(t.files),
               onTap: () {
                 Navigator.pop(context);
@@ -201,7 +203,7 @@ class _HomePageState extends State<HomePage> {
             ),
             if (mobile)
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
+                leading: PixelIcon('picture'),
                 title: Text(t.gallery),
                 onTap: () {
                   Navigator.pop(context);
@@ -210,7 +212,7 @@ class _HomePageState extends State<HomePage> {
               ),
             if (mobile)
               ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
+                leading: PixelIcon('camera'),
                 title: Text(t.camera),
                 onTap: () {
                   Navigator.pop(context);
@@ -393,16 +395,6 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: Stack(
                       children: [
-                        // Снег/дождь — ЗА сообщениями (между фоном и лентой).
-                        if (_app.settings.weather != 0)
-                          Positioned.fill(
-                            child: WeatherOverlay(
-                              type: _app.settings.weather,
-                              sizeScale: _app.settings.weatherSize,
-                              density: _app.settings.weatherDensity,
-                              speedScale: _app.settings.weatherSpeed,
-                            ),
-                          ),
                         Positioned.fill(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -419,24 +411,16 @@ class _HomePageState extends State<HomePage> {
                             child: Container(
                               color: cs.primary.withValues(alpha: 0.12),
                               child: Center(
-                                child: Container(
+                                child: PixelCard(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 24,
                                     vertical: 16,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: cs.surface,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: cs.primary,
-                                      width: 2,
-                                    ),
-                                  ),
+                                  borderColor: cs.primary,
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
-                                        Icons.file_download_outlined,
+                                      PixelIcon('file',
                                         color: cs.primary,
                                       ),
                                       const SizedBox(width: 8),
@@ -506,11 +490,11 @@ class _HomePageState extends State<HomePage> {
           padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: cs.outlineVariant.withValues(
                   alpha: _app.settings.borderOpacity,
                 ),
+                width: PixelTheme.borderWidth,
               ),
             ),
             clipBehavior: Clip.antiAlias,
@@ -592,7 +576,7 @@ class _HomePageState extends State<HomePage> {
         _tonalIcon(
           cs: cs,
           tooltip: t.searchHint,
-          icon: const Icon(Icons.search_rounded, size: 19),
+          icon: PixelIcon('search', size: 19),
           onPressed: () => setState(() => _searching = !_searching),
         ),
         _tonalIcon(
@@ -601,7 +585,7 @@ class _HomePageState extends State<HomePage> {
           icon: Badge(
             isLabelVisible: online > 0,
             label: Text('$online'),
-            child: const Icon(Icons.devices_rounded, size: 20),
+            child: PixelIcon('devices', size: 20),
           ),
           onPressed: () {
             FocusScope.of(context).unfocus();
@@ -612,7 +596,7 @@ class _HomePageState extends State<HomePage> {
         ),
         PopupMenuButton<int>(
           tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 22),
+          icon: PixelIcon('menu', size: 22),
           onSelected: (v) {
             final page = switch (v) {
               0 => const MusicScreen(),
@@ -630,7 +614,7 @@ class _HomePageState extends State<HomePage> {
               value: 0,
               child: Row(
                 children: [
-                  const Icon(Icons.library_music_outlined, size: 20),
+                  PixelIcon('note', size: 20),
                   const SizedBox(width: 12),
                   Text(t.music),
                 ],
@@ -640,7 +624,7 @@ class _HomePageState extends State<HomePage> {
               value: 1,
               child: Row(
                 children: [
-                  const Icon(Icons.keyboard_alt_outlined, size: 20),
+                  PixelIcon('keyboard', size: 20),
                   const SizedBox(width: 12),
                   Text(t.ttKeyboard),
                 ],
@@ -650,7 +634,7 @@ class _HomePageState extends State<HomePage> {
               value: 2,
               child: Row(
                 children: [
-                  const Icon(Icons.settings_outlined, size: 20),
+                  PixelIcon('gear', size: 20),
                   const SizedBox(width: 12),
                   Text(t.ttSettings),
                 ],
@@ -726,21 +710,7 @@ class _HomePageState extends State<HomePage> {
         ],
       );
     }
-    if (s.chatBackground == 1) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              cs.primary.withValues(alpha: 0.06),
-              cs.surface,
-              cs.tertiary.withValues(alpha: 0.05),
-            ],
-          ),
-        ),
-      );
-    }
+    // Плоский тёмный фон по умолчанию — обои остаются опцией (выше).
     return const SizedBox.shrink();
   }
 
@@ -768,24 +738,20 @@ class _HomePageState extends State<HomePage> {
 
   Widget _searchBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final terminal = _app.settings.terminalBubbles;
     final field = TextField(
       controller: _search,
       autofocus: true,
       onChanged: (v) => setState(() => _query = v),
-      style: terminal ? TextStyle(color: cs.onSurface) : null,
+      style: TextStyle(color: cs.onSurface),
       decoration: InputDecoration(
         isDense: true,
         hintText: t.searchHint,
-        filled: terminal,
-        fillColor: terminal ? Colors.black : null,
-        border: terminal ? InputBorder.none : null,
-        prefixIcon: Icon(
-          Icons.search_rounded,
-          color: terminal ? cs.primary : null,
-        ),
+        filled: true,
+        fillColor: Colors.black,
+        border: InputBorder.none,
+        prefixIcon: PixelIcon('search', color: cs.primary),
         suffixIcon: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: PixelIcon('close'),
           onPressed: () => setState(() {
             _searching = false;
             _query = '';
@@ -794,22 +760,15 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-    if (!terminal) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-        child: field,
-      );
-    }
-    // Терминальный вид: та же чёрная пилюля с белой обводкой, что у поля
-    // ввода сообщения — иначе стандартный TextField терялся на чёрном фоне.
+    // Та же чёрная пилюля с белой обводкой, что у поля ввода сообщения.
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
-          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Colors.white.withValues(alpha: _app.settings.borderOpacity),
+            width: PixelTheme.borderWidth,
           ),
         ),
         child: field,
@@ -853,28 +812,28 @@ class _HomePageState extends State<HomePage> {
             context,
             label: t.all,
             value: null,
-            icon: Icons.apps_rounded,
+            icon: 'devices',
           ),
           if (hasPinned)
             _filterChip(
               context,
               label: t.pinned,
               value: '__pinned__',
-              icon: Icons.push_pin_rounded,
+              icon: 'thumbtack',
             ),
           if (hasArchived)
             _filterChip(
               context,
               label: t.archived,
               value: '__archive__',
-              icon: Icons.archive_rounded,
+              icon: 'archive',
             ),
           for (final g in groups)
             _filterChip(
               context,
               label: g,
               value: g,
-              icon: Icons.folder_rounded,
+              icon: 'folder',
             ),
         ],
       ),
@@ -885,13 +844,13 @@ class _HomePageState extends State<HomePage> {
     BuildContext context, {
     required String label,
     required String? value,
-    required IconData icon,
+    required String icon,
   }) {
     final selected = _filter == value;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
-        avatar: Icon(icon, size: 16),
+        avatar: PixelIcon(icon, size: 16),
         label: Text(label),
         selected: selected,
         onSelected: (_) => setState(() => _filter = value),
@@ -906,7 +865,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bookmark_rounded, size: 72, color: cs.primary),
+          PixelIcon('bookmark_filled', size: 72, color: cs.primary),
           const SizedBox(height: 16),
           Text(
             t.emptyTitle,
@@ -988,13 +947,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           );
-          return animate
-              ? _Entrance(
-                  style: _app.settings.animStyle,
-                  durationMs: _app.settings.animDurationMs,
-                  child: row,
-                )
-              : row;
+          return animate ? _Entrance(child: row) : row;
         },
       ),
     );
@@ -1004,25 +957,8 @@ class _HomePageState extends State<HomePage> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _dayChip(BuildContext context, DateTime dt) {
-    // Терминальный вид: линия через всю ширину с датой посередине.
-    if (_app.settings.terminalBubbles) {
-      return TerminalDivider(text: daySeparator(dt, t));
-    }
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          daySeparator(dt, t),
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-      ),
-    );
+    // Линия через всю ширину с датой посередине.
+    return TerminalDivider(text: daySeparator(dt, t));
   }
 
   Widget _inputBar(BuildContext context) {
@@ -1048,10 +984,9 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
                           color: _ttlSeconds != null ? cs.primary : border,
-                          width: _ttlSeconds != null ? 1.2 : 1,
+                          width: PixelTheme.borderWidth,
                         ),
                       ),
                       child: Row(
@@ -1062,7 +997,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.add_circle_outline_rounded),
+                            icon: PixelIcon('add'),
                             onPressed: _attachMenu,
                           ),
                           Expanded(
@@ -1090,15 +1025,14 @@ class _HomePageState extends State<HomePage> {
                                 right: 4,
                                 bottom: 6,
                               ),
-                              child: Icon(
-                                Icons.timer_rounded,
+                              child: PixelIcon('clock',
                                 size: 16,
                                 color: cs.primary,
                               ),
                             ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.mic_rounded),
+                            icon: PixelIcon('mic'),
                             onPressed: _startRecord,
                           ),
                         ],
@@ -1113,7 +1047,7 @@ class _HomePageState extends State<HomePage> {
                       tooltip: t.selfDestruct,
                       backgroundColor: _ttlSeconds != null ? cs.primary : null,
                       onPressed: _sendText,
-                      child: const Icon(Icons.send_rounded),
+                      child: PixelIcon('send'),
                     ),
                   ),
                 ],
@@ -1134,12 +1068,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             for (final v in options)
               ListTile(
-                leading: Icon(
-                  v == null ? Icons.timer_off_outlined : Icons.timer_outlined,
-                ),
+                leading: PixelIcon('clock'),
                 title: Text(_ttlLabel(v)),
                 trailing: _ttlSeconds == v
-                    ? const Icon(Icons.check_rounded)
+                    ? PixelIcon('check')
                     : null,
                 onTap: () {
                   setState(() => _ttlSeconds = v);
@@ -1175,14 +1107,14 @@ class _HomePageState extends State<HomePage> {
         ),
         IconButton(
           tooltip: t.cancel,
-          icon: const Icon(Icons.delete_outline_rounded),
+          icon: PixelIcon('trash'),
           onPressed: () => _stopRecord(cancel: true),
         ),
         const SizedBox(width: 4),
         FloatingActionButton.small(
           elevation: 0,
           onPressed: () => _stopRecord(),
-          child: const Icon(Icons.send_rounded),
+          child: PixelIcon('send'),
         ),
       ],
     );
@@ -1203,7 +1135,7 @@ class _HomePageState extends State<HomePage> {
             _targetChip(
               context,
               label: t.saveHere,
-              icon: Icons.bookmark_border_rounded,
+              icon: 'bookmark',
               selected: _target == null,
               onTap: () => setState(() => _target = null),
               color: cs,
@@ -1212,9 +1144,7 @@ class _HomePageState extends State<HomePage> {
               _targetChip(
                 context,
                 label: p.name,
-                icon: p.platform == 'android'
-                    ? Icons.smartphone_rounded
-                    : Icons.laptop_rounded,
+                icon: p.platform == 'android' ? 'phone' : 'devices',
                 selected: _target?.id == p.id,
                 onTap: () => setState(() => _target = p),
                 color: cs,
@@ -1228,7 +1158,7 @@ class _HomePageState extends State<HomePage> {
   Widget _targetChip(
     BuildContext context, {
     required String label,
-    required IconData icon,
+    required String icon,
     required bool selected,
     required VoidCallback onTap,
     required ColorScheme color,
@@ -1236,7 +1166,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.only(left: 6),
       child: ChoiceChip(
-        avatar: Icon(
+        avatar: PixelIcon(
           icon,
           size: 16,
           color: selected ? color.onSecondaryContainer : color.onSurface,
@@ -1274,21 +1204,17 @@ class _PulsingMicState extends State<_PulsingMic>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: Tween(begin: 0.4, end: 1.0).animate(_c),
-      child: const Icon(Icons.mic_rounded, color: Colors.red),
+      child: PixelIcon('mic', color: Colors.red),
     );
   }
 }
 
 /// Плавное появление нового элемента ленты. Стиль и скорость — из настроек.
+/// Появление нового сообщения: быстрый, чёткий подъём+fade — в духе
+/// пиксель-арт языка (не плавная iOS-анимация), фиксированная скорость.
 class _Entrance extends StatefulWidget {
   final Widget child;
-  final int style; // 0=fade,1=подъём,2=масштаб,3=подъём+fade
-  final int durationMs;
-  const _Entrance({
-    required this.child,
-    required this.style,
-    required this.durationMs,
-  });
+  const _Entrance({required this.child});
 
   @override
   State<_Entrance> createState() => _EntranceState();
@@ -1298,11 +1224,11 @@ class _EntranceState extends State<_Entrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: Duration(milliseconds: widget.durationMs),
+    duration: const Duration(milliseconds: 160),
   )..forward();
   late final Animation<double> _curve = CurvedAnimation(
     parent: _c,
-    curve: Curves.easeOutCubic,
+    curve: Curves.easeOut,
   );
 
   @override
@@ -1313,32 +1239,13 @@ class _EntranceState extends State<_Entrance>
 
   @override
   Widget build(BuildContext context) {
-    final fade = FadeTransition(opacity: _curve, child: widget.child);
-    switch (widget.style) {
-      case 0: // только fade
-        return fade;
-      case 1: // подъём
-        return SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 0.14),
-            end: Offset.zero,
-          ).animate(_curve),
-          child: widget.child,
-        );
-      case 2: // масштаб
-        return ScaleTransition(
-          scale: Tween(begin: 0.85, end: 1.0).animate(_curve),
-          child: fade,
-        );
-      default: // подъём + fade
-        return SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 0.12),
-            end: Offset.zero,
-          ).animate(_curve),
-          child: fade,
-        );
-    }
+    return SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 0.1),
+        end: Offset.zero,
+      ).animate(_curve),
+      child: FadeTransition(opacity: _curve, child: widget.child),
+    );
   }
 }
 
@@ -1398,14 +1305,14 @@ class _SwipeRowState extends State<_SwipeRow> {
       onDismissed: (_) => widget.onDelete(),
       background: _swipeReveal(
         align: Alignment.centerLeft,
-        icon: Icons.reply_rounded,
+        icon: 'send',
         label: tr(context).share,
         color: Colors.blue,
         progress: _progress.clamp(0, 1),
       ),
       secondaryBackground: _swipeReveal(
         align: Alignment.centerRight,
-        icon: Icons.delete_outline_rounded,
+        icon: 'trash',
         label: tr(context).delete,
         color: Colors.red,
         progress: (-_progress).clamp(0, 1),
@@ -1416,7 +1323,7 @@ class _SwipeRowState extends State<_SwipeRow> {
 
   Widget _swipeReveal({
     required Alignment align,
-    required IconData icon,
+    required String icon,
     required String label,
     required Color color,
     required double progress,
@@ -1438,7 +1345,7 @@ class _SwipeRowState extends State<_SwipeRow> {
                 color: color.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: PixelIcon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 2),
             Text(label, style: TextStyle(color: color, fontSize: 10.5)),

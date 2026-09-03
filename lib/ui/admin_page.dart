@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app.dart';
 import '../core/version.dart';
+import 'pixel/pixel_icons.dart';
 
 /// Скрытые admin/dev настройки (разблокируются тапами по версии).
 class AdminPage extends StatelessWidget {
@@ -33,7 +34,7 @@ class AdminPage extends StatelessWidget {
               _kv(context, 'Needs re-auth', '${app.cloud.needsReauth}'),
               _kv(context, 'Last error', app.cloud.lastError ?? '—'),
               ListTile(
-                leading: const Icon(Icons.sync_rounded),
+                leading: PixelIcon('sync'),
                 title: const Text('Force cloud sync now'),
                 onTap: () {
                   app.cloud.pull();
@@ -48,7 +49,7 @@ class AdminPage extends StatelessWidget {
               const Divider(height: 1),
               _section('Actions'),
               ListTile(
-                leading: const Icon(Icons.slideshow_rounded),
+                leading: PixelIcon('picture'),
                 title: const Text('Reset onboarding (show again)'),
                 onTap: () {
                   s.onboardingSeen = false;
@@ -56,7 +57,7 @@ class AdminPage extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.wallpaper_rounded),
+                leading: PixelIcon('picture'),
                 title: const Text('Clear custom background'),
                 onTap: () {
                   s.chatBgImage = null;
@@ -64,16 +65,7 @@ class AdminPage extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.format_color_reset_rounded),
-                title: const Text('Reset message colors'),
-                onTap: () {
-                  s.msgOutColor = -1;
-                  s.msgInColor = -1;
-                  _toast(context, 'Colors reset');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
+                leading: PixelIcon('copy'),
                 title: const Text('Copy device ID'),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: s.deviceId));
@@ -82,7 +74,7 @@ class AdminPage extends StatelessWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: Icon(Icons.lock_outline_rounded,
+                leading: PixelIcon('lock',
                     color: Theme.of(context).colorScheme.error),
                 title: const Text('Lock admin settings'),
                 onTap: () {
