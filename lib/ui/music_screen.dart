@@ -10,6 +10,7 @@ import 'format.dart';
 import 'terminal.dart';
 import '../l10n/app_strings.dart';
 import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_route.dart';
 
 /// Экран «Музыка»: вся аудио-музыка из ленты, с плейлистами по группам.
 /// (Голосовые сообщения сюда не попадают — отдельный тип элемента.)
@@ -220,7 +221,7 @@ class _MusicScreenState extends State<MusicScreen> {
           onTap: () {
             app.player.playQueue(tracks, i, volume: app.settings.playerVolume);
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
+              PixelPageRoute(builder: (_) => const AudioPlayerScreen()),
             );
           },
         ),

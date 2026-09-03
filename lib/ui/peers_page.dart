@@ -9,6 +9,8 @@ import '../app_state.dart';
 import '../core/models.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_scanner.dart';
+import 'pixel/pixel_route.dart';
 
 const _qrScheme = 'texfi';
 
@@ -121,8 +123,7 @@ class _PeersPageState extends State<PeersPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-                width: 28, height: 28, child: CircularProgressIndicator()),
+            const PixelScanner(size: 76),
             const SizedBox(height: 16),
             Text(t.searchingAccount,
                 style: TextStyle(color: cs.onSurfaceVariant)),
@@ -293,7 +294,7 @@ class _PeersPageState extends State<PeersPage> {
       }
     }
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const _QrScannerPage()),
+      PixelPageRoute(builder: (_) => const _QrScannerPage()),
     );
     if (result == null || !result.startsWith('$_qrScheme:')) return;
     final parts = result.split(':');

@@ -26,6 +26,7 @@ import 'settings_page.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_theme.dart';
+import 'pixel/pixel_route.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -149,10 +150,24 @@ class _HomePageState extends State<HomePage> {
   static bool get _dragDropSupported =>
       Platform.isLinux || Platform.isWindows || Platform.isMacOS;
 
+  // Короткая вспышка акцентной рамки поля ввода после отправки — момент
+  // подтверждения, чтобы действие не происходило совсем безмолвно.
+  bool _sentFlash = false;
+
+  void _flashSent() {
+    HapticFeedback.selectionClick();
+    if (!mounted) return;
+    setState(() => _sentFlash = true);
+    Future.delayed(const Duration(milliseconds: 260), () {
+      if (mounted) setState(() => _sentFlash = false);
+    });
+  }
+
   Future<void> _sendText() async {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     _input.clear();
+    _flashSent();
     final ttl = _ttlSeconds;
     if (_target != null) {
       final peer = _target!;
@@ -177,6 +192,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _dispatchFile(File file) async {
+    _flashSent();
     if (_target != null) {
       _showFileProgress(file);
     } else {
@@ -459,14 +475,37 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Единая компактная капсула: один ряд (лого + статус двухстрочным
-  // заголовком слева, кнопки справа), без отдельной нижней подстроки —
-  // именно она раньше раздувала шапку. Значение используется и здесь, и в
-  // SizedBox-спейсере тела, чтобы они не расходились.
-  static const double _kBarH = 46;
+  // Единая компактная капсула: один ряд (название + статус слева, кнопки
+  // справа). Высота НЕ фиксированная: раньше здесь стояла константа 46, а
+  // содержимое (заголовок + строка статуса) масштабировалось вместе с
+  // uiScale — при увеличенном масштабе текст переставал помещаться и
+  // название наезжало на строку статуса. Теперь высота считается из тех же
+  // размеров шрифта, что реально рисуются, с тем же ограничением масштаба.
+  static const double _kTitleSize = 11;   // пиксельный шрифт заголовка
+  static const double _kStatusSize = 9.5; // строка статуса
+  static const double _kTitleGap = 3;
+  static const double _kBarVPad = 8;
   static const double _kAppBarTopGap = 4;
+
+  /// Масштаб текста внутри шапки ограничен: капсула — плотный элемент
+  /// фиксированной вёрстки, и на 1.4x любой заголовок в ней разъезжается.
+  static TextScaler _barScaler(BuildContext context) {
+    final s = MediaQuery.textScalerOf(context).scale(100) / 100;
+    return TextScaler.linear(s.clamp(1.0, 1.15));
+  }
+
+  static double _barHeight(BuildContext context) {
+    final scaler = _barScaler(context);
+    // 1.25 — межстрочный коэффициент, с которым ниже рисуются обе строки.
+    final title = scaler.scale(_kTitleSize) * 1.25;
+    final status = scaler.scale(_kStatusSize) * 1.25;
+    final content = title + _kTitleGap + status + _kBarVPad * 2;
+    // Кнопки-иконки 36px + их отступы задают нижнюю границу высоты.
+    return content < 46 ? 46 : content;
+  }
+
   static double appBarTotalHeight(BuildContext context) =>
-      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _kBarH;
+      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _barHeight(context);
 
   PreferredSizeWidget _appBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -489,6 +528,7 @@ class _HomePageState extends State<HomePage> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
           child: Container(
+            height: _barHeight(context),
             decoration: BoxDecoration(
               border: Border.all(
                 color: cs.outlineVariant.withValues(
@@ -500,7 +540,7 @@ class _HomePageState extends State<HomePage> {
             clipBehavior: Clip.antiAlias,
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: _rawAppBar(context, cs, online, dark),
+              child: _barContent(context, cs, online),
             ),
           ),
         ),
@@ -508,71 +548,68 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  AppBar _rawAppBar(
-    BuildContext context,
-    ColorScheme cs,
-    int online,
-    bool dark,
-  ) {
+  /// Содержимое капсулы-шапки. Собрано явным Row/Column вместо AppBar:
+  /// у AppBar заголовок живёт в жёстко заданной toolbarHeight, и когда
+  /// масштаб текста подрастал, две строки заголовка переставали в неё
+  /// влезать и наезжали друг на друга. Здесь высота считается заранее
+  /// (`_barHeight`), обе строки ограничены одной строкой с многоточием, а
+  /// текстовый блок обёрнут в Expanded — по ширине он тоже не может
+  /// вытеснить кнопки.
+  Widget _barContent(BuildContext context, ColorScheme cs, int online) {
     final status = !_app.auth.isLoggedIn
         ? t.signInPrompt
         : online > 0
         ? t.devicesInAccount(online)
         : t.searchingDevices;
-    return AppBar(
-      elevation: 0,
-      // primary: false — вертикальный отступ под статус-бар уже даёт капсула.
-      primary: false,
-      backgroundColor: cs.surface.withValues(alpha: 0.74),
-      titleSpacing: 12,
-      toolbarHeight: _kBarH,
-      // Лого + мелкая строка статуса в две строки внутри одного ряда —
-      // компактнее, чем отдельный bottom-сабтайтл.
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: _barScaler(context)),
+      child: ColoredBox(
+        color: cs.surface.withValues(alpha: 0.74),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, _kBarVPad, 4, _kBarVPad),
+          child: Row(
             children: [
-              Image.asset(
-                dark
-                    ? 'assets/brand/logo-horizontal-white.png'
-                    : 'assets/brand/logo-horizontal.png',
-                height: 17,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/brand/logo-horizontal-white.png',
-                  height: 17,
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TexFi files',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: PixelTheme.heading(
+                        size: _kTitleSize,
+                        color: cs.onSurface,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: _kTitleGap),
+                    Text(
+                      status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: _kStatusSize,
+                        height: 1.25,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                'files',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
+              ..._barActions(context, cs, online),
             ],
           ),
-          Text(
-            status,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 9.5,
-              height: 1.1,
-              fontWeight: FontWeight.w500,
-              color: cs.onSurfaceVariant.withValues(alpha: 0.85),
-            ),
-          ),
-        ],
+        ),
       ),
-      actions: [
+    );
+  }
+
+  List<Widget> _barActions(BuildContext context, ColorScheme cs, int online) {
+    return [
         _tonalIcon(
           cs: cs,
           tooltip: t.searchHint,
@@ -591,7 +628,7 @@ class _HomePageState extends State<HomePage> {
             FocusScope.of(context).unfocus();
             Navigator.of(
               context,
-            ).push(MaterialPageRoute(builder: (_) => const PeersPage()));
+            ).push(PixelPageRoute(builder: (_) => const PeersPage()));
           },
         ),
         PopupMenuButton<int>(
@@ -607,7 +644,7 @@ class _HomePageState extends State<HomePage> {
             // пуше нового роута — без этого она «протекала» на следующий
             // экран (например, в настройки).
             FocusScope.of(context).unfocus();
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+            Navigator.of(context).push(PixelPageRoute(builder: (_) => page));
           },
           itemBuilder: (context) => [
             PopupMenuItem(
@@ -642,13 +679,11 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        const SizedBox(width: 4),
-      ],
-    );
+    ];
   }
 
-  /// Круглая тонированная кнопка-иконка — премиальный «пилюльный» стиль
-  /// вместо голого IconButton на прозрачном фоне.
+  /// Квадратная тонированная кнопка-иконка в пиксель-арт языке
+  /// (скруглений нет, 2px обводка) вместо голого IconButton.
   Widget _tonalIcon({
     required ColorScheme cs,
     required String tooltip,
@@ -661,14 +696,13 @@ class _HomePageState extends State<HomePage> {
         message: tooltip,
         child: InkWell(
           onTap: onPressed,
-          customBorder: const CircleBorder(),
           child: Container(
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-              shape: BoxShape.circle,
+              borderRadius: PixelTheme.controlRadiusAll,
             ),
             child: IconTheme(
               data: IconThemeData(color: cs.onSurfaceVariant),
@@ -865,7 +899,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelIcon('bookmark_filled', size: 72, color: cs.primary),
+          PixelIcon('star', size: 72, color: cs.primary),
           const SizedBox(height: 16),
           Text(
             t.emptyTitle,
@@ -981,12 +1015,17 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   // Единая пилюля: вложения, текст и микрофон — всё внутри.
                   Expanded(
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 130),
                       decoration: BoxDecoration(
                         color: Colors.black,
                         border: Border.all(
-                          color: _ttlSeconds != null ? cs.primary : border,
-                          width: PixelTheme.borderWidth,
+                          color: _sentFlash
+                              ? cs.primary
+                              : (_ttlSeconds != null ? cs.primary : border),
+                          width: _sentFlash
+                              ? PixelTheme.borderWidth + 1
+                              : PixelTheme.borderWidth,
                         ),
                       ),
                       child: Row(

@@ -21,6 +21,7 @@ import 'onboarding_screen.dart';
 import 'terminal.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_route.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -44,7 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _onVersionTap(BuildContext context, Settings s) {
     if (s.adminUnlocked) {
       Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AdminPage()));
+          PixelPageRoute(builder: (_) => const AdminPage()));
       return;
     }
     _versionTaps++;
@@ -54,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SnackBar(content: Text('Admin settings unlocked')),
       );
       Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AdminPage()));
+          PixelPageRoute(builder: (_) => const AdminPage()));
     } else if (_versionTaps >= 4) {
       final left = 7 - _versionTaps;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -195,7 +196,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Открыть под-экран категории.
   void _open(String title, List<Widget> Function(BuildContext) body) {
     final app = AppScope.of(context);
-    Navigator.of(context).push(MaterialPageRoute(
+    Navigator.of(context).push(PixelPageRoute(
       builder: (ctx) => Scaffold(
         appBar: AppBar(title: Text(title)),
         body: ListenableBuilder(
@@ -504,14 +505,14 @@ class _SettingsPageState extends State<SettingsPage> {
           builder: (_, __) => Text('${app.queue.items.length}'),
         ),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const _OfflineQueuePage()),
+          PixelPageRoute(builder: (_) => const _OfflineQueuePage()),
         ),
       ),
       ListTile(
         leading: PixelIcon('devices'),
         title: Text(t.deviceHistory),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const _DeviceHistoryPage()),
+          PixelPageRoute(builder: (_) => const _DeviceHistoryPage()),
         ),
       ),
     ];
@@ -560,11 +561,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<bool> _setupPin(BuildContext context, Settings s) async {
     final first = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep1)),
+      PixelPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep1)),
     );
     if (first == null || !context.mounted) return false;
     final second = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep2)),
+      PixelPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep2)),
     );
     if (second == null) return false;
     if (first != second) {
@@ -647,7 +648,7 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: PixelIcon('picture'),
         title: Text(t.showOnboarding),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          PixelPageRoute(builder: (_) => const OnboardingScreen()),
         ),
       ),
       ListTile(

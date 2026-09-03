@@ -15,7 +15,7 @@ class _Slide {
 }
 
 List<_Slide> _buildSlides(AppStrings t) => [
-      _Slide('bookmark_filled', t.obTitle1, t.obText1,
+      _Slide('star', t.obTitle1, t.obText1,
           image: 'assets/logo.png'),
       _Slide('send', t.obTitle2, t.obText2),
       _Slide('cloud', t.obTitle3, t.obText3),

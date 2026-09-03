@@ -1,5 +1,31 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.3.0
+
+Follow-up pass on the 1.2.0 redesign — fixing what didn't hold up in practice.
+
+- 🐛 **Fixed the overlapping header.** The app name and the "searching for
+  devices…" status line were drawn inside a hard-coded 46px bar while both
+  scaled with the UI-scale setting, so at larger scales they ran into each
+  other. The header is rebuilt: its height is now derived from the text it
+  actually draws, both lines are single-line with ellipsis, and the text block
+  can't push the buttons off-screen.
+- ⭐ **Readable "Favourites" symbol** — the placeholder there was an
+  indecipherable blob; it's now a solid star.
+- 🎨 **Redrawn icons.** Appearance, Network and Files-&-sync in particular were
+  abstract shapes rather than recognisable symbols — they're now a contrast
+  disc, Wi-Fi arcs and a pair of exchange arrows. Folder, gear, pin and warning
+  were also silently clipped by malformed grid rows; all fixed.
+- 🖼️ **Reworked app icon** — same two-arrow concept, rebuilt on a finer grid
+  with even stroke weights, true 45° tapers and exact rotational symmetry.
+- ✨ **Motion pass.** Screen transitions are now a short 170ms fade+scale
+  instead of the Material slide (long slides blur the 2px pixel borders);
+  buttons physically sink into their offset shadow when pressed; device
+  discovery shows a pixel radar instead of a Material spinner; and sending a
+  message or file gives a brief accent pulse plus haptic tick.
+- ✅ Added tests covering the icon registry — they caught four genuinely broken
+  glyphs that had been shipping clipped.
+
 ## What's new in 1.2.0
 
 - 🎨 **Full pixel-art redesign**, bringing the app in line with the rest of the

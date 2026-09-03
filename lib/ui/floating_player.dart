@@ -5,6 +5,7 @@ import 'album_art.dart';
 import 'audio_player_screen.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_theme.dart';
+import 'pixel/pixel_route.dart';
 
 /// Плеер поверх ленты — маленький квадратик с обложкой трека, который можно
 /// перетащить в любое место экрана (а не панель на всю ширину внизу).
@@ -63,7 +64,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
           top: pos.dy,
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
+              PixelPageRoute(builder: (_) => const AudioPlayerScreen()),
             ),
             onLongPress: () {
               HapticFeedback.mediumImpact();

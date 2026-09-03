@@ -232,8 +232,10 @@ class PixelCard extends StatelessWidget {
 }
 
 /// Кнопка пиксель-арт языка: почти квадратная (2px радиус), с офсетной
-/// тенью.
-class PixelButton extends StatelessWidget {
+/// тенью и тактильным откликом — при нажатии кнопка «утапливается» ровно
+/// на высоту собственной тени, а тень на столько же укорачивается. Общий
+/// размер при этом не меняется, поэтому соседние элементы не дёргаются.
+class PixelButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onPressed;
   final Color? color;
@@ -248,25 +250,53 @@ class PixelButton extends StatelessWidget {
   });
 
   @override
+  State<PixelButton> createState() => _PixelButtonState();
+}
+
+class _PixelButtonState extends State<PixelButton> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (_down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = color ?? cs.primary;
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: PixelTheme.controlRadiusAll,
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: onPressed == null ? bg.withValues(alpha: 0.4) : bg,
-          borderRadius: PixelTheme.controlRadiusAll,
-          border: Border.all(color: Colors.black, width: PixelTheme.borderWidth),
-          boxShadow: PixelTheme.hardShadow(
-            offset: const Offset(PixelTheme.shadowOffset, PixelTheme.shadowOffset),
+    final bg = widget.color ?? cs.primary;
+    final enabled = widget.onPressed != null;
+    final pressed = _down && enabled;
+    const off = PixelTheme.shadowOffset;
+    final shift = pressed ? off : 0.0;
+
+    return GestureDetector(
+      onTapDown: (_) => _set(true),
+      onTapUp: (_) => _set(false),
+      onTapCancel: () => _set(false),
+      onTap: widget.onPressed,
+      // Резервируем место под тень, чтобы утапливание не меняло габарит.
+      child: Padding(
+        padding: const EdgeInsets.only(right: off, bottom: off),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(shift, shift, 0),
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: enabled ? bg : bg.withValues(alpha: 0.4),
+            borderRadius: PixelTheme.controlRadiusAll,
+            border: Border.all(
+              color: Colors.black,
+              width: PixelTheme.borderWidth,
+            ),
+            boxShadow: pressed
+                ? null
+                : PixelTheme.hardShadow(offset: const Offset(off, off)),
           ),
-        ),
-        child: DefaultTextStyle.merge(
-          style: const TextStyle(fontWeight: FontWeight.w700),
-          child: child,
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(fontWeight: FontWeight.w700),
+            child: widget.child,
+          ),
         ),
       ),
     );

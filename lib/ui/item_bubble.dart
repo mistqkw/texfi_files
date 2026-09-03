@@ -16,6 +16,7 @@ import 'pixel/pixel_icons.dart';
 import 'player_page.dart';
 import 'terminal.dart';
 import 'video_thumb.dart';
+import 'pixel/pixel_route.dart';
 
 class ItemBubble extends StatelessWidget {
   final SavedItem item;
@@ -135,7 +136,7 @@ class ItemBubble extends StatelessWidget {
         ],
         if (item.pinned) ...[
           const SizedBox(width: 6),
-          PixelIcon('drop', size: 11, color: cs.primary),
+          PixelIcon('thumbtack', size: 11, color: cs.primary),
         ],
         if (item.archived) ...[
           const SizedBox(width: 6),
@@ -339,13 +340,13 @@ class ItemBubble extends StatelessWidget {
     if (isVideo) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (_) => PlayerPage(item: item)));
+      ).push(PixelPageRoute(builder: (_) => PlayerPage(item: item)));
     } else {
       final app = AppScope.of(context);
       app.player.playItem(item, volume: app.settings.playerVolume);
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
+      ).push(PixelPageRoute(builder: (_) => const AudioPlayerScreen()));
     }
   }
 
@@ -419,7 +420,7 @@ class ItemBubble extends StatelessWidget {
         app.player.playItem(item, volume: app.settings.playerVolume);
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
+        ).push(PixelPageRoute(builder: (_) => const AudioPlayerScreen()));
       },
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -574,7 +575,7 @@ class ItemBubble extends StatelessWidget {
         .toList();
     final idx = all.indexWhere((e) => e.id == item.id);
     Navigator.of(context).push(
-      MaterialPageRoute(
+      PixelPageRoute(
         builder: (_) => ImageGallery(
           images: all.isEmpty ? [item] : all,
           initialIndex: idx < 0 ? 0 : idx,
