@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_radius.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import '../app.dart';
 import 'album_art.dart';
@@ -51,7 +53,6 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
         final pos = _clamped(_pos!, screen, safe);
 
         final cs = Theme.of(context).colorScheme;
-        final terminal = app.settings.terminalBubbles;
         final maxMs = player.dur.inMilliseconds;
         final progress = maxMs <= 0
             ? 0.0
@@ -76,13 +77,10 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
               height: _size,
               decoration: BoxDecoration(
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(terminal ? 10 : 18),
+                borderRadius: AppRadius.cardMediumAll,
                 border: Border.all(
-                  color: terminal
-                      ? Colors.white.withValues(
-                          alpha: app.settings.borderOpacity,
-                        )
-                      : Colors.white24,
+                  color: context.colors.divider,
+                  width: AppRadius.pixelBorder,
                 ),
                 boxShadow: const [
                   BoxShadow(

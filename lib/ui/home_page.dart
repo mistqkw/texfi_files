@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../l10n/app_strings.dart';
-import 'effects.dart';
 import 'floating_player.dart';
 import '../app.dart';
 import '../app_state.dart';
@@ -31,7 +29,6 @@ import 'pixel/pixel_route.dart';
 import 'pixel/pixel_shadow.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
-import 'terminal.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
 

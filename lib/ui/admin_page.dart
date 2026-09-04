@@ -64,15 +64,6 @@ class AdminPage extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.format_color_reset_rounded),
-                title: const Text('Reset message colors'),
-                onTap: () {
-                  s.msgOutColor = -1;
-                  s.msgInColor = -1;
-                  _toast(context, 'Colors reset');
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: const Text('Copy device ID'),
                 onTap: () {

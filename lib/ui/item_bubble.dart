@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_spacing.dart';
+import 'pixel/pixel_card.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
@@ -24,105 +28,50 @@ class ItemBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final s = AppScope.of(context).settings;
-    final align = item.outgoing ? Alignment.centerRight : Alignment.centerLeft;
-    final override = item.outgoing ? s.msgOutColor : s.msgInColor;
-    final bubbleColor = override != -1
-        ? Color(override)
-        : (item.outgoing ? cs.primaryContainer : cs.surfaceContainerHighest);
-    final r = s.bubbleRadius;
-    final tail = r * 0.28;
-    final vMargin = s.compact ? 2.0 : 4.0;
-    // Едва заметный диагональный глянец вместо плоской заливки — то, что
-    // отличает «премиальный» пузырь от плоского цвета из коробки.
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [_shade(bubbleColor, 0.035), _shade(bubbleColor, -0.035)],
-    );
-
-    // Терминальный вид: чёрный блок с белой рамкой и врезанной подписью.
-    if (s.terminalBubbles) {
-      return Container(
-        // Тянемся на всю ширину: внешний Column ленты центрирует детей, и без
-        // этого блоки вставали бы по центру вместо краёв.
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          vertical: s.compact ? 4 : 7,
-          horizontal: 12,
-        ),
-        child: Column(
-          crossAxisAlignment: item.outgoing
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstraintsBox(
-              child: IntrinsicWidth(
-                child: GestureDetector(
-                  onLongPressStart: (d) => _menu(context, d.globalPosition),
-                  onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-                  child: TerminalBox(
-                    label: _prefixLabel(s),
-                    // Белая обводка на чёрном блоке — основа стиля.
-                    borderColor: Colors.white.withValues(
-                      alpha: s.borderOpacity,
-                    ),
-                    labelColor: item.outgoing
-                        ? cs.primary
-                        : cs.onSurfaceVariant,
-                    padding: _framePadding,
-                    child: _content(context, cs),
-                  ),
+    final colors = context.colors;
+    // Один вид карточки вместо двух. Раньше сосуществовали «классический»
+    // пузырь с градиентом, хвостом и мягкой тенью и «терминальный» блок с
+    // рамкой — переключаемые настройкой. Пиксельная карточка со сплошной
+    // тенью годится и там, и там, а два оформления одного и того же
+    // элемента расходились при каждой правке.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: item.outgoing
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstraintsBox(
+            // IntrinsicWidth — чтобы короткое сообщение обёртывалось по
+            // содержимому, а не растягивалось во всю ширину.
+            child: IntrinsicWidth(
+              child: GestureDetector(
+                onLongPressStart: (d) => _menu(context, d.globalPosition),
+                onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
+                child: PixelCard(
+                  // Своё сообщение выделяется акцентной рамкой, чужое —
+                  // обычной. Направление читается по рамке, а не по цвету
+                  // заливки: заливка мешала бы вложенным превью.
+                  accent: item.outgoing,
+                  background: item.outgoing
+                      ? colors.surfaceVariant
+                      : colors.surface,
+                  padding: _framePadding,
+                  child: _content(context, cs),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
-              child: _meta(context, cs),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Align(
-      alignment: align,
-      // IntrinsicWidth — чтобы короткие сообщения не растягивались во всю
-      // ширину, а обёртывались по содержимому (как в обычных мессенджерах).
-      child: ConstraintsBox(
-        child: IntrinsicWidth(
-          child: GestureDetector(
-            onLongPressStart: (d) => _menu(context, d.globalPosition),
-            onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-            child: Container(
-              margin: EdgeInsets.symmetric(vertical: vMargin, horizontal: 12),
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(r),
-                  topRight: Radius.circular(r),
-                  bottomLeft: Radius.circular(item.outgoing ? r : tail),
-                  bottomRight: Radius.circular(item.outgoing ? tail : r),
-                ),
-                border: !item.outgoing
-                    ? Border.all(
-                        color: cs.outlineVariant.withValues(alpha: 0.18),
-                      )
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _content(context, cs),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 3, right: 3),
+            child: _meta(context, cs),
+          ),
+        ],
       ),
     );
   }
@@ -130,32 +79,25 @@ class ItemBubble extends StatelessWidget {
   /// Превью аудио: настоящая обложка из тегов, если она есть.
   /// В терминальном режиме заглушка — тонкая рамка с иконкой, без плашки.
   Widget _mediaThumb(BuildContext context, ColorScheme cs, bool isVideo) {
-    final terminal = AppScope.of(context).settings.terminalBubbles;
     final icon = isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded;
-    final fallback = terminal
-        ? Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Icon(icon, color: cs.primary, size: 26),
-          )
-        : Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: cs.onPrimary, size: 30),
-          );
+    final fallback = Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: context.colors.surfaceVariant,
+        border: Border.all(
+          color: context.colors.accent,
+          width: AppRadius.pixelBorder,
+        ),
+        borderRadius: AppRadius.controlSmallAll,
+      ),
+      child: Icon(icon, color: context.colors.accent, size: 26),
+    );
     if (isVideo) return fallback;
     return AlbumArtThumb(
       filePath: item.filePath,
       size: 52,
-      radius: terminal ? 3 : 14,
+      radius: AppRadius.controlSmall,
       fallback: fallback,
     );
   }
@@ -167,18 +109,18 @@ class ItemBubble extends StatelessWidget {
       // Отступы даёт само содержимое — иначе у текста был бы двойной.
       : EdgeInsets.zero;
 
-  /// Содержимое врезки в верхней линии рамки: устройство · тип · размер · время.
+  /// Подпись элемента: устройство · тип.
+  ///
+  /// Состав был четырьмя отдельными переключателями (устройство, тип,
+  /// размер, время) — шестнадцать сочетаний одной строки, причём размер и
+  /// время и так показаны в мета-строке под карточкой.
   String _prefixLabel(Settings s) {
     final parts = <String>[];
-    if (s.prefixDevice) {
-      final name = item.fromName ?? (item.outgoing ? s.deviceName : null);
-      if (name != null && name.trim().isNotEmpty) {
-        parts.add(name.trim().toLowerCase());
-      }
+    final name = item.fromName ?? (item.outgoing ? s.deviceName : null);
+    if (name != null && name.trim().isNotEmpty) {
+      parts.add(name.trim().toLowerCase());
     }
-    if (s.prefixType) parts.add(_typeTag);
-    if (s.prefixSize && item.fileSize > 0) parts.add(humanSize(item.fileSize));
-    if (s.prefixTime) parts.add(clockTime(item.createdAt));
+    parts.add(_typeTag);
     return parts.join(' · ');
   }
 
@@ -197,6 +139,17 @@ class ItemBubble extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Устройство и тип: раньше жили во врезке рамки карточки.
+        Builder(
+          builder: (context) {
+            final label = _prefixLabel(AppScope.of(context).settings);
+            if (label.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(label, style: monoStyle(color: dim, size: 10)),
+            );
+          },
+        ),
         Text(clockTime(item.createdAt), style: monoStyle(color: dim, size: 10)),
         if (item.group != null) ...[
           const SizedBox(width: 6),
@@ -209,6 +162,13 @@ class ItemBubble extends StatelessWidget {
         if (item.archived) ...[
           const SizedBox(width: 6),
           Icon(Icons.archive_rounded, size: 11, color: dim),
+        ],
+        if (item.expiresAt != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            _ttlLeft(item.expiresAt!),
+            style: monoStyle(color: cs.primary, size: 10),
+          ),
         ],
         const SizedBox(width: 6),
         Icon(
@@ -235,13 +195,6 @@ class ItemBubble extends StatelessWidget {
         child: Icon(Icons.more_horiz_rounded, size: 14, color: color),
       ),
     );
-  }
-
-  /// Слегка осветляет/затемняет цвет по HSL-светлоте — используется для
-  /// диагонального глянца пузыря без потери контраста с текстом поверх.
-  static Color _shade(Color c, double delta) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
   }
 
   Widget _content(BuildContext context, ColorScheme cs) {
@@ -318,70 +271,6 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  /// В терминальном режиме мета вынесена под блок (`_meta`), поэтому
-  /// внутренний футер не рисуем — иначе время задвоится.
-  Widget _footer(BuildContext context, ColorScheme cs) {
-    if (AppScope.of(context).settings.terminalBubbles) {
-      return const SizedBox.shrink();
-    }
-    return _classicFooter(context, cs);
-  }
-
-  Widget _classicFooter(BuildContext context, ColorScheme cs) => Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!item.outgoing && item.fromName != null) ...[
-          Icon(Icons.smartphone_rounded, size: 12, color: cs.onSurfaceVariant),
-          const SizedBox(width: 3),
-          Text(
-            item.fromName!,
-            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          clockTime(item.createdAt),
-          style: TextStyle(
-            fontSize: 11,
-            color: cs.onSurfaceVariant.withValues(alpha: 0.8),
-          ),
-        ),
-        if (item.group != null) ...[
-          const SizedBox(width: 6),
-          Icon(Icons.folder_rounded, size: 11, color: cs.onSurfaceVariant),
-        ],
-        if (item.pinned) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.push_pin, size: 11, color: cs.primary),
-        ],
-        if (item.archived) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.archive_rounded, size: 11, color: cs.onSurfaceVariant),
-        ],
-        const SizedBox(width: 4),
-        Icon(
-          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
-          size: 11,
-          color: item.cloud
-              ? cs.primary
-              : cs.onSurfaceVariant.withValues(alpha: 0.6),
-        ),
-        if (item.expiresAt != null) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.timer_outlined, size: 11, color: cs.error),
-          const SizedBox(width: 2),
-          Text(
-            _ttlLeft(item.expiresAt!),
-            style: TextStyle(fontSize: 10, color: cs.error),
-          ),
-        ],
-        _moreButton(context, cs.onSurfaceVariant.withValues(alpha: 0.7)),
-      ],
-    ),
-  );
-
   String _ttlLeft(DateTime at) {
     final left = at.difference(DateTime.now());
     if (left.isNegative) return '0s';
@@ -442,15 +331,11 @@ class ItemBubble extends StatelessWidget {
         ),
       ],
     );
-    if (AppScope.of(context).settings.terminalBubbles) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: _HoverReveal(child: row),
-      );
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [row, const Spacer(), _footer(context, cs)],
+    // Мета-строка живёт под карточкой (`_meta`), поэтому здесь только
+    // действия — иначе время печаталось бы дважды.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: _HoverReveal(child: row),
     );
   }
 
@@ -482,7 +367,7 @@ class ItemBubble extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              _footer(context, cs),
+              const SizedBox.shrink(),
             ],
           ),
         ),
@@ -524,7 +409,7 @@ class ItemBubble extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                _footer(context, cs),
+                const SizedBox.shrink(),
               ],
             ),
           ),
@@ -559,7 +444,7 @@ class ItemBubble extends StatelessWidget {
                     '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(context, cs),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -606,7 +491,7 @@ class ItemBubble extends StatelessWidget {
                   humanSize(item.fileSize),
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
-                _footer(context, cs),
+                const SizedBox.shrink(),
               ],
             ),
           ],
@@ -654,7 +539,7 @@ class ItemBubble extends StatelessWidget {
                     humanSize(item.fileSize),
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
-                  _footer(context, cs),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -803,7 +688,6 @@ class ItemBubble extends StatelessWidget {
   Future<void> _menu(BuildContext context, Offset globalPos) async {
     final t = tr(context);
     final store = AppScope.of(context).store;
-    final terminal = AppScope.of(context).settings.terminalBubbles;
     final cs = Theme.of(context).colorScheme;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
@@ -818,7 +702,7 @@ class ItemBubble extends StatelessWidget {
       String label, {
       bool danger = false,
     }) {
-      final color = danger ? cs.error : (terminal ? cs.onSurface : null);
+      final color = danger ? cs.error : cs.onSurface;
       return PopupMenuItem<_MenuAction>(
         value: value,
         height: 44,
@@ -835,13 +719,14 @@ class ItemBubble extends StatelessWidget {
     final action = await showMenu<_MenuAction>(
       context: context,
       position: position,
-      elevation: terminal ? 0 : 8,
-      color: terminal ? Colors.black : null,
+      elevation: 0,
+      color: context.colors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(terminal ? 6 : 16),
-        side: terminal
-            ? BorderSide(color: Colors.white.withValues(alpha: 0.4))
-            : BorderSide.none,
+        borderRadius: AppRadius.cardSmallAll,
+        side: BorderSide(
+          color: context.colors.divider,
+          width: AppRadius.pixelBorder,
+        ),
       ),
       items: [
         if (item.kind == ItemKind.text)

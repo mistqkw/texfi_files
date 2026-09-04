@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
 import 'terminal.dart';
@@ -55,14 +56,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final s = AppScope.of(context).settings;
-    final terminal = s.terminalBubbles;
+    // Терминальный вид стал единственным оформлением приложения, но
+    // ветвления по нему в этом экране ещё остались — держим константу,
+    // чтобы не переписывать раскладку целиком в рамках редизайна шапки.
+    const terminal = true;
     final t = tr(context);
     final slides = _buildSlides(t);
     _count = slides.length;
     final last = _index == slides.length - 1;
     return Scaffold(
-      backgroundColor: terminal ? Colors.black : null,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [

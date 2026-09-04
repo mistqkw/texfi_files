@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -27,12 +28,15 @@ class _MusicScreenState extends State<MusicScreen> {
     final app = AppScope.of(context);
     final t = tr(context);
     final s = app.settings;
-    final terminal = s.terminalBubbles;
+    // Терминальный вид стал единственным оформлением приложения, но
+    // ветвления по нему в этом экране ещё остались — держим константу,
+    // чтобы не переписывать раскладку целиком в рамках редизайна шапки.
+    const terminal = true;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: terminal ? Colors.black : null,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: terminal ? Colors.black : null,
+        backgroundColor: context.colors.background,
         title: terminal
             ? Text(
                 t.music,
@@ -183,7 +187,7 @@ class _MusicScreenState extends State<MusicScreen> {
     AppStrings t,
   ) {
     final accent = isCur ? cs.primary : Colors.white;
-    final alpha = isCur ? 0.85 : s.borderOpacity;
+    final alpha = isCur ? 0.85 : 0.55;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: TerminalBox(
