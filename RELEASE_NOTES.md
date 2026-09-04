@@ -1,5 +1,20 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.1
+
+- ☑️ **Selection no longer misses rows.** Dragging quickly across the feed marked
+  only the rows the finger happened to land on between frames — which is why moving
+  a selection into a folder filed just part of it. The whole span is painted now.
+- ↕️ **Hold near the top or bottom edge while selecting** and the feed scrolls, so
+  you can reach rows past the screen without letting go. It speeds up toward the
+  edge but is capped at about a page per second.
+- 🐛 **The folders/archive bar no longer disappears.** The filter was being reset
+  mid-build without scheduling a repaint, so the frame rendered with an empty feed
+  and a collapsed bar and stayed that way until something else redrew.
+- ⚡ **Smoother during transfers.** Incoming file progress was rebuilding the whole
+  screen — background, header, bar, composer and feed — dozens of times a second.
+  Only the feed listens to it now.
+
 ## What's new in 1.5.0
 
 - 🔷 **Smaller app icon.** The mark filled three quarters of the canvas and the
