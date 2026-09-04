@@ -19,6 +19,16 @@ import '../core/offline_queue.dart';
 import 'format.dart';
 import 'item_bubble.dart';
 import 'music_screen.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_motion.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_text_styles_ext.dart';
+import 'pixel/pixel_card.dart';
+import 'pixel/pixel_controls.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_route.dart';
+import 'pixel/pixel_shadow.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
 import 'terminal.dart';
@@ -43,6 +53,7 @@ class _HomePageState extends State<HomePage> {
   String?
   _filter; // null=все, '__pinned__'=закреплённые, '__archive__'=архив, иначе имя группы
   bool _searching = false;
+  final _sendKey = GlobalKey<_SendButtonState>();
   final _search = TextEditingController();
   String _query = '';
 
@@ -171,6 +182,7 @@ class _HomePageState extends State<HomePage> {
     } else {
       await _app.saveTextLocal(text, ttlSeconds: ttl);
     }
+    _sendKey.currentState?.pulse();
     _scrollToBottom();
   }
 
@@ -180,6 +192,9 @@ class _HomePageState extends State<HomePage> {
     } else {
       await _saveFileLocal(file);
     }
+    // Тот же момент подтверждения, что и у текста: файл уходит в фоне, и
+    // без отклика непонятно, приняло ли приложение действие вообще.
+    _sendKey.currentState?.pulse();
   }
 
   // Меню вложений: Файлы / Галерея / Камера.
@@ -393,16 +408,6 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: Stack(
                       children: [
-                        // Снег/дождь — ЗА сообщениями (между фоном и лентой).
-                        if (_app.settings.weather != 0)
-                          Positioned.fill(
-                            child: WeatherOverlay(
-                              type: _app.settings.weather,
-                              sizeScale: _app.settings.weatherSize,
-                              density: _app.settings.weatherDensity,
-                              speedScale: _app.settings.weatherSpeed,
-                            ),
-                          ),
                         Positioned.fill(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -479,22 +484,52 @@ class _HomePageState extends State<HomePage> {
   // заголовком слева, кнопки справа), без отдельной нижней подстроки —
   // именно она раньше раздувала шапку. Значение используется и здесь, и в
   // SizedBox-спейсере тела, чтобы они не расходились.
-  static const double _kBarH = 46;
+  // Метрики шапки. Размеры именно те, которыми набирается текст, — высота
+  // капсулы считается из них, а не задаётся отдельной константой.
+  static const double _kTitleSize = 12;   // пиксельный шрифт
+  static const double _kStatusSize = 10;  // гротеск
+  static const double _kTitleLeading = 1.25;
+  static const double _kTitleGap = 3;
+  static const double _kBarVPad = 9;
   static const double _kAppBarTopGap = 4;
+
+  /// Масштаб текста внутри шапки.
+  ///
+  /// Общий масштаб интерфейса (uiScale) применяется ко всему дереву, но
+  /// шапка — фиксированная по высоте полоса поверх ленты, и растить её
+  /// вместе с текстом бесконечно нельзя. Ограничиваем: до 1.15 шапка
+  /// растёт, дальше текст остаётся читаемым, но перестаёт распирать
+  /// капсулу.
+  static TextScaler _barScaler(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(100) / 100;
+    return TextScaler.linear(scale.clamp(1.0, 1.15));
+  }
+
+  /// Высота капсулы шапки, посчитанная по тексту, который в ней рисуется.
+  ///
+  /// Раньше здесь стояла константа 46, а заголовок с подписью жили внутри
+  /// AppBar с жёстким toolbarHeight. Обе строки масштабировались вместе с
+  /// uiScale, в 46px переставали помещаться — и наезжали друг на друга.
+  /// Теперь высота выводится из тех же размеров, которыми набирается
+  /// текст, поэтому разъехаться они не могут в принципе.
+  static double _barHeight(BuildContext context) {
+    final scaler = _barScaler(context);
+    final title = scaler.scale(_kTitleSize) * _kTitleLeading;
+    final status = scaler.scale(_kStatusSize) * _kTitleLeading;
+    return _kBarVPad * 2 + title + _kTitleGap + status;
+  }
+
   static double appBarTotalHeight(BuildContext context) =>
-      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _kBarH;
+      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _barHeight(context);
 
   PreferredSizeWidget _appBar(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final online = _app.peers.where((p) => p.online).length;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // Плавающая капсула: отступы от краёв, скруглённая, с тонкой обводкой.
     final top = MediaQuery.paddingOf(context).top;
     return PreferredSize(
       preferredSize: Size.fromHeight(appBarTotalHeight(context)),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         // Статус-бар прозрачный (см. edgeToEdge в main.dart) — здесь только
-        // яркость его иконок, синхронизированная с текущей темой.
+        // яркость его иконок, синхронизированная с темой.
         value: dark
             ? SystemUiOverlayStyle.light.copyWith(
                 statusBarColor: Colors.transparent,
@@ -503,246 +538,195 @@ class _HomePageState extends State<HomePage> {
                 statusBarColor: Colors.transparent,
               ),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(
-                  alpha: _app.settings.borderOpacity,
-                ),
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: _rawAppBar(context, cs, online, dark),
-            ),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            top + _kAppBarTopGap,
+            AppSpacing.md,
+            0,
           ),
+          child: _barContent(context),
         ),
       ),
     );
   }
 
-  AppBar _rawAppBar(
-    BuildContext context,
-    ColorScheme cs,
-    int online,
-    bool dark,
-  ) {
+  /// Содержимое капсулы. Собрано явным Row/Column, а не AppBar: у AppBar
+  /// заголовок живёт в жёстко заданном toolbarHeight — ровно та причина,
+  /// по которой строки налезали друг на друга.
+  Widget _barContent(BuildContext context) {
+    final colors = context.colors;
+    final online = _app.peers.where((p) => p.online).length;
     final status = !_app.auth.isLoggedIn
         ? t.signInPrompt
         : online > 0
         ? t.devicesInAccount(online)
         : t.searchingDevices;
-    return AppBar(
-      elevation: 0,
-      // primary: false — вертикальный отступ под статус-бар уже даёт капсула.
-      primary: false,
-      backgroundColor: cs.surface.withValues(alpha: 0.74),
-      titleSpacing: 12,
-      toolbarHeight: _kBarH,
-      // Лого + мелкая строка статуса в две строки внутри одного ряда —
-      // компактнее, чем отдельный bottom-сабтайтл.
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                dark
-                    ? 'assets/brand/logo-horizontal-white.png'
-                    : 'assets/brand/logo-horizontal.png',
-                height: 17,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/brand/logo-horizontal-white.png',
-                  height: 17,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'files',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ],
+
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: _barScaler(context)),
+      child: Container(
+        height: _barHeight(context),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.xs, 0),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: AppRadius.cardMediumAll,
+          border: Border.all(
+            color: colors.divider,
+            width: AppRadius.pixelBorder,
           ),
-          Text(
-            status,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 9.5,
-              height: 1.1,
-              fontWeight: FontWeight.w500,
-              color: cs.onSurfaceVariant.withValues(alpha: 0.85),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        _tonalIcon(
-          cs: cs,
-          tooltip: t.searchHint,
-          icon: const Icon(Icons.search_rounded, size: 19),
-          onPressed: () => setState(() => _searching = !_searching),
         ),
-        _tonalIcon(
-          cs: cs,
-          tooltip: t.ttDevices,
-          icon: Badge(
-            isLabelVisible: online > 0,
-            label: Text('$online'),
-            child: const Icon(Icons.devices_rounded, size: 20),
-          ),
-          onPressed: () {
-            FocusScope.of(context).unfocus();
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const PeersPage()));
-          },
-        ),
-        PopupMenuButton<int>(
-          tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 22),
-          onSelected: (v) {
-            final page = switch (v) {
-              0 => const MusicScreen(),
-              1 => const RemoteKeyboardPage(),
-              _ => const SettingsPage(),
-            };
-            // Клавиатура от поля ввода сообщения не закрывается сама при
-            // пуше нового роута — без этого она «протекала» на следующий
-            // экран (например, в настройки).
-            FocusScope.of(context).unfocus();
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 0,
-              child: Row(
+        child: Row(
+          children: [
+            // Текстовый блок в Expanded: по ширине он тоже не может
+            // вытеснить кнопки — при длинном статусе строка обрежется
+            // многоточием, а не уедет под иконки.
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.library_music_outlined, size: 20),
-                  const SizedBox(width: 12),
-                  Text(t.music),
+                  Text(
+                    'TexFi files',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.screenTitle.copyWith(
+                      fontSize: _kTitleSize,
+                      height: _kTitleLeading,
+                    ),
+                  ),
+                  const SizedBox(height: _kTitleGap),
+                  Text(
+                    status,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.captionSmall.copyWith(
+                      fontSize: _kStatusSize,
+                      height: _kTitleLeading,
+                    ),
+                  ),
                 ],
               ),
             ),
-            PopupMenuItem(
-              value: 1,
-              child: Row(
-                children: [
-                  const Icon(Icons.keyboard_alt_outlined, size: 20),
-                  const SizedBox(width: 12),
-                  Text(t.ttKeyboard),
-                ],
-              ),
+            PixelIconButton(
+              icon: 'search',
+              tooltip: t.searchHint,
+              onPressed: () => setState(() => _searching = !_searching),
             ),
-            PopupMenuItem(
-              value: 2,
-              child: Row(
-                children: [
-                  const Icon(Icons.settings_outlined, size: 20),
-                  const SizedBox(width: 12),
-                  Text(t.ttSettings),
-                ],
-              ),
+            _devicesButton(context, online),
+            PixelIconButton(
+              icon: 'gear',
+              tooltip: t.ttSettings,
+              onPressed: () => _openMenu(context),
             ),
           ],
         ),
-        const SizedBox(width: 4),
+      ),
+    );
+  }
+
+  /// Кнопка перехода к устройствам со счётчиком найденных.
+  Widget _devicesButton(BuildContext context, int online) {
+    final colors = context.colors;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PixelIconButton(
+          icon: 'device',
+          tooltip: t.ttDevices,
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            pixelPush(context, (_) => const PeersPage());
+          },
+        ),
+        if (online > 0)
+          Positioned(
+            right: 4,
+            top: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: colors.accent,
+                borderRadius: AppRadius.controlTinyAll,
+              ),
+              child: Text(
+                '$online',
+                style: context.text.pixelLabel.copyWith(
+                  fontSize: 7,
+                  color: colors.onAccent,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  /// Круглая тонированная кнопка-иконка — премиальный «пилюльный» стиль
-  /// вместо голого IconButton на прозрачном фоне.
-  Widget _tonalIcon({
-    required ColorScheme cs,
-    required String tooltip,
-    required Widget icon,
-    required VoidCallback onPressed,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: onPressed,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-              shape: BoxShape.circle,
-            ),
-            child: IconTheme(
-              data: IconThemeData(color: cs.onSurfaceVariant),
-              child: icon,
-            ),
+  void _openMenu(BuildContext context) {
+    // Клавиатура от поля ввода не закрывается сама при пуше нового роута —
+    // без этого она «протекала» на следующий экран.
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.page),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final e in [
+                ('note', t.music, const MusicScreen()),
+                ('text', t.ttKeyboard, const RemoteKeyboardPage()),
+                ('gear', t.ttSettings, const SettingsPage()),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: PixelTile(
+                    icon: e.$1,
+                    title: e.$2,
+                    onTap: () {
+                      Navigator.pop(sheet);
+                      pixelPush(context, (_) => e.$3);
+                    },
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  /// Подложка ленты.
+  ///
+  /// От разросшейся подсистемы (градиент, эффект «блюр/пиксели», ползунок
+  /// затемнения, погода) осталось одно: своё фото, если пользователь его
+  /// выбрал. Затемнение фиксированное — подобрано так, чтобы текст
+  /// сообщений читался поверх любой картинки, включая светлую.
+  ///
+  /// Существование файла проверяется на каждом кадре сознательно: картинку
+  /// могли удалить из галереи уже после выбора, и без проверки Image.file
+  /// сыпал бы исключением декодирования непрерывно.
   Widget _bgLayer(ColorScheme cs) {
-    final s = _app.settings;
-    final path = s.chatBgImage;
-    if (path != null && File(path).existsSync()) {
-      Widget img;
-      if (s.bgEffect == 2) {
-        // Пиксели: маленький кэш + без сглаживания.
-        img = Image.file(
-          File(path),
-          fit: BoxFit.cover,
-          cacheWidth: 48,
-          filterQuality: FilterQuality.none,
-        );
-      } else {
-        img = Image.file(File(path), fit: BoxFit.cover);
-        if (s.bgEffect == 1) {
-          img = ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: img,
-          );
-        }
-      }
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          img,
-          Container(color: Colors.black.withValues(alpha: s.bgDim)),
-        ],
-      );
+    final path = _app.settings.chatBgImage;
+    if (path == null || !File(path).existsSync()) {
+      return const SizedBox.shrink();
     }
-    if (s.chatBackground == 1) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              cs.primary.withValues(alpha: 0.06),
-              cs.surface,
-              cs.tertiary.withValues(alpha: 0.05),
-            ],
-          ),
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.file(File(path), fit: BoxFit.cover),
+        ColoredBox(color: Colors.black.withValues(alpha: _kBgDim)),
+      ],
+    );
   }
+
+  /// Затемнение фото-фона. Было настройкой 0..0.8 со значением по
+  /// умолчанию 0.35 — при светлой картинке этого не хватало, и белый текст
+  /// пропадал. 0.45 держит контраст в худшем случае.
+  static const double _kBgDim = 0.45;
+
 
   List<SavedItem> _applyFilter(List<SavedItem> items) {
     List<SavedItem> base;
@@ -767,52 +751,50 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _searchBar(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final terminal = _app.settings.terminalBubbles;
-    final field = TextField(
-      controller: _search,
-      autofocus: true,
-      onChanged: (v) => setState(() => _query = v),
-      style: terminal ? TextStyle(color: cs.onSurface) : null,
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: t.searchHint,
-        filled: terminal,
-        fillColor: terminal ? Colors.black : null,
-        border: terminal ? InputBorder.none : null,
-        prefixIcon: Icon(
-          Icons.search_rounded,
-          color: terminal ? cs.primary : null,
-        ),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => setState(() {
-            _searching = false;
-            _query = '';
-            _search.clear();
-          }),
-        ),
-      ),
-    );
-    if (!terminal) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-        child: field,
-      );
-    }
-    // Терминальный вид: та же чёрная пилюля с белой обводкой, что у поля
-    // ввода сообщения — иначе стандартный TextField терялся на чёрном фоне.
+    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: _app.settings.borderOpacity),
-          ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        0,
+      ),
+      child: PixelCard(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: Row(
+          children: [
+            PixelIcon('search', size: 16, color: colors.accent),
+            AppSpacing.wGapMd,
+            Expanded(
+              child: TextField(
+                controller: _search,
+                autofocus: true,
+                onChanged: (v) => setState(() => _query = v),
+                style: context.text.body,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: t.searchHint,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                  ),
+                ),
+              ),
+            ),
+            PixelIconButton(
+              icon: 'close',
+              size: 14,
+              onPressed: () => setState(() {
+                _searching = false;
+                _query = '';
+                _search.clear();
+              }),
+            ),
+          ],
         ),
-        child: field,
       ),
     );
   }
@@ -901,35 +883,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _empty(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bookmark_rounded, size: 72, color: cs.primary),
-          const SizedBox(height: 16),
-          Text(
-            t.emptyTitle,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.huge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Крупный простой силуэт: на пустом экране он единственный
+            // объект, и мелкая иконка тут читается как случайный мусор.
+            PixelIcon('star', size: 76, color: colors.accent),
+            AppSpacing.gapXl,
+            Text(t.emptyTitle, style: context.text.screenTitle),
+            AppSpacing.gapMd,
+            Text(
               t.emptyText,
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurfaceVariant),
+              // Обычный шрифт: это связный текст, а не метка.
+              style: context.text.bodySmall,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// Свайп-удаление и удаление из меню не стирают элемент сразу — прячут его
-  /// и на несколько секунд дают отменить через снекбар с Undo. Это защита от
-  /// случайного свайпа: физическое удаление происходит только когда снекбар
-  /// закрылся, а Undo не был нажат.
   void _requestDelete(SavedItem item) {
     setState(() => _pendingDelete.add(item.id));
     final messenger = ScaffoldMessenger.of(context);
@@ -988,13 +966,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           );
-          return animate
-              ? _Entrance(
-                  style: _app.settings.animStyle,
-                  durationMs: _app.settings.animDurationMs,
-                  child: row,
-                )
-              : row;
+          return animate ? _Entrance(child: row) : row;
         },
       ),
     );
@@ -1004,65 +976,71 @@ class _HomePageState extends State<HomePage> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _dayChip(BuildContext context, DateTime dt) {
-    // Терминальный вид: линия через всю ширину с датой посередине.
-    if (_app.settings.terminalBubbles) {
-      return TerminalDivider(text: daySeparator(dt, t));
-    }
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          daySeparator(dt, t),
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          Expanded(child: Container(height: 2, color: colors.divider)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(
+              daySeparator(dt, t),
+              // Дата — короткая акцентная метка, здесь пиксельный шрифт
+              // уместен.
+              style: context.text.sectionTitle.copyWith(
+                fontSize: 7,
+                color: colors.textTertiary,
+              ),
+            ),
+          ),
+          Expanded(child: Container(height: 2, color: colors.divider)),
+        ],
       ),
     );
   }
 
   Widget _inputBar(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final border = Colors.white.withValues(alpha: _app.settings.borderOpacity);
+    final colors = context.colors;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _targetSelector(context),
             if (_recording)
-              _recordingRow(cs)
+              _recordingRow(Theme.of(context).colorScheme)
             else
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Единая пилюля: вложения, текст и микрофон — всё внутри.
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(
-                          color: _ttlSeconds != null ? cs.primary : border,
-                          width: _ttlSeconds != null ? 1.2 : 1,
-                        ),
+                    child: PixelCard(
+                      // Активный самоуничтожающийся режим подсвечивает саму
+                      // карточку: иконка-таймер внутри слишком мелкая,
+                      // чтобы заметить её до отправки.
+                      accent: _ttlSeconds != null,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
                       ),
                       child: Row(
-                        // .center, а не .end — иначе IconButton (48px тап-таргет)
-                        // выравнивался по нижнему краю текстового поля и
-                        // визуально «сползал» ниже плейсхолдера.
+                        // .center, а не .end — иначе кнопка с её тап-таргетом
+                        // выравнивается по нижнему краю поля и визуально
+                        // сползает ниже плейсхолдера.
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.add_circle_outline_rounded),
+                          PixelIconButton(
+                            icon: 'attach',
+                            size: 18,
+                            tooltip: t.messageHint,
                             onPressed: _attachMenu,
                           ),
                           Expanded(
@@ -1070,50 +1048,48 @@ class _HomePageState extends State<HomePage> {
                               controller: _input,
                               minLines: 1,
                               maxLines: 5,
+                              style: context.text.body,
                               textInputAction: TextInputAction.newline,
                               decoration: InputDecoration(
                                 hintText: t.messageHint,
                                 filled: false,
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.fromLTRB(
-                                  4,
-                                  12,
-                                  4,
-                                  12,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                  vertical: AppSpacing.md,
                                 ),
                               ),
                             ),
                           ),
                           if (_ttlSeconds != null)
                             Padding(
-                              padding: const EdgeInsets.only(
-                                right: 4,
-                                bottom: 6,
-                              ),
-                              child: Icon(
-                                Icons.timer_rounded,
-                                size: 16,
-                                color: cs.primary,
+                              padding: const EdgeInsets.only(right: AppSpacing.xs),
+                              child: PixelIcon(
+                                'clock',
+                                size: 14,
+                                color: colors.accent,
                               ),
                             ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.mic_rounded),
+                          PixelIconButton(
+                            icon: 'mic',
+                            size: 18,
                             onPressed: _startRecord,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  AppSpacing.wGapSm,
+                  // Долгое нажатие — самоуничтожение: второстепенное
+                  // действие, которому не место в постоянно видимой кнопке.
                   GestureDetector(
                     onLongPress: _pickTtl,
-                    child: FloatingActionButton.small(
-                      elevation: 0,
-                      tooltip: t.selfDestruct,
-                      backgroundColor: _ttlSeconds != null ? cs.primary : null,
+                    child: _SendButton(
+                      key: _sendKey,
                       onPressed: _sendText,
-                      child: const Icon(Icons.send_rounded),
+                      tooltip: t.selfDestruct,
                     ),
                   ),
                 ],
@@ -1280,15 +1256,15 @@ class _PulsingMicState extends State<_PulsingMic>
 }
 
 /// Плавное появление нового элемента ленты. Стиль и скорость — из настроек.
+/// Появление нового элемента ленты: короткий подъём с проявлением.
+///
+/// Стиль и скорость были настройками (четыре варианта × три скорости) —
+/// двенадцать сочетаний одного и того же движения. Осталось одно,
+/// согласованное с длительностями остальной экосистемы.
 class _Entrance extends StatefulWidget {
+  const _Entrance({required this.child});
+
   final Widget child;
-  final int style; // 0=fade,1=подъём,2=масштаб,3=подъём+fade
-  final int durationMs;
-  const _Entrance({
-    required this.child,
-    required this.style,
-    required this.durationMs,
-  });
 
   @override
   State<_Entrance> createState() => _EntranceState();
@@ -1298,11 +1274,11 @@ class _EntranceState extends State<_Entrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: Duration(milliseconds: widget.durationMs),
+    duration: AppMotion.normal,
   )..forward();
   late final Animation<double> _curve = CurvedAnimation(
     parent: _c,
-    curve: Curves.easeOutCubic,
+    curve: AppMotion.standard,
   );
 
   @override
@@ -1313,37 +1289,16 @@ class _EntranceState extends State<_Entrance>
 
   @override
   Widget build(BuildContext context) {
-    final fade = FadeTransition(opacity: _curve, child: widget.child);
-    switch (widget.style) {
-      case 0: // только fade
-        return fade;
-      case 1: // подъём
-        return SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 0.14),
-            end: Offset.zero,
-          ).animate(_curve),
-          child: widget.child,
-        );
-      case 2: // масштаб
-        return ScaleTransition(
-          scale: Tween(begin: 0.85, end: 1.0).animate(_curve),
-          child: fade,
-        );
-      default: // подъём + fade
-        return SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 0.12),
-            end: Offset.zero,
-          ).animate(_curve),
-          child: fade,
-        );
-    }
+    return SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 0.12),
+        end: Offset.zero,
+      ).animate(_curve),
+      child: FadeTransition(opacity: _curve, child: widget.child),
+    );
   }
 }
 
-/// Пузырь со свайпом: плавно нарастающая иконка/фон по мере перетаскивания
-/// (вправо — переслать, влево — удалить), лёгкая вибро-отдача на пороге.
 class _SwipeRow extends StatefulWidget {
   final String itemId;
   final Widget child;
@@ -1443,6 +1398,87 @@ class _SwipeRowState extends State<_SwipeRow> {
             const SizedBox(height: 2),
             Text(label, style: TextStyle(color: color, fontSize: 10.5)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Кнопка отправки с моментом подтверждения.
+///
+/// Раньше отправка проходила беззвучно: текст исчезал из поля, и всё —
+/// понять, ушло ли что-то, можно было только по появлению элемента внизу
+/// ленты, который в этот момент ещё уезжал за край экрана. Теперь кнопка
+/// коротко вспыхивает и отдаёт тактильный щелчок.
+class _SendButton extends StatefulWidget {
+  const _SendButton({super.key, required this.onPressed, this.tooltip});
+
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  @override
+  State<_SendButton> createState() => _SendButtonState();
+}
+
+class _SendButtonState extends State<_SendButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: AppMotion.pop,
+  );
+  bool _pressed = false;
+
+  /// Вызывается снаружи, когда отправка действительно состоялась, — а не
+  /// по самому нажатию: подтверждать нужно факт, а не намерение.
+  void pulse() {
+    if (!mounted) return;
+    _flash.forward(from: 0);
+    HapticFeedback.mediumImpact();
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onPressed,
+      child: Tooltip(
+        message: widget.tooltip ?? '',
+        child: PixelShadowBox(
+          shadowColor: colors.accentShadow,
+          pressed: _pressed,
+          child: AnimatedBuilder(
+            animation: _flash,
+            builder: (context, _) {
+              // Треугольная вспышка: быстро вверх, чуть медленнее вниз.
+              final t = _flash.value;
+              final lit = t == 0 ? 0.0 : (t < 0.35 ? t / 0.35 : (1 - t) / 0.65);
+              return Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Color.lerp(colors.accent, Colors.white, lit * 0.85),
+                  borderRadius: AppRadius.controlSmallAll,
+                  border: Border.all(
+                    color: colors.accent,
+                    width: AppRadius.pixelBorder,
+                  ),
+                ),
+                child: PixelIcon('send', size: 20, color: colors.onAccent),
+              );
+            },
+          ),
         ),
       ),
     );
