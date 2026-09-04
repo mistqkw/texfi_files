@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../l10n/app_strings.dart';
+import 'effects.dart';
 import 'floating_player.dart';
 import '../app.dart';
 import '../app_state.dart';
@@ -23,10 +24,6 @@ import 'smooth_scroll.dart';
 import 'terminal.dart';
 import 'remote_keyboard_page.dart';
 import 'settings_page.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_theme.dart';
-import 'pixel/pixel_route.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -150,24 +147,10 @@ class _HomePageState extends State<HomePage> {
   static bool get _dragDropSupported =>
       Platform.isLinux || Platform.isWindows || Platform.isMacOS;
 
-  // Короткая вспышка акцентной рамки поля ввода после отправки — момент
-  // подтверждения, чтобы действие не происходило совсем безмолвно.
-  bool _sentFlash = false;
-
-  void _flashSent() {
-    HapticFeedback.selectionClick();
-    if (!mounted) return;
-    setState(() => _sentFlash = true);
-    Future.delayed(const Duration(milliseconds: 260), () {
-      if (mounted) setState(() => _sentFlash = false);
-    });
-  }
-
   Future<void> _sendText() async {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     _input.clear();
-    _flashSent();
     final ttl = _ttlSeconds;
     if (_target != null) {
       final peer = _target!;
@@ -192,7 +175,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _dispatchFile(File file) async {
-    _flashSent();
     if (_target != null) {
       _showFileProgress(file);
     } else {
@@ -210,7 +192,7 @@ class _HomePageState extends State<HomePage> {
         child: Wrap(
           children: [
             ListTile(
-              leading: PixelIcon('file'),
+              leading: const Icon(Icons.insert_drive_file_outlined),
               title: Text(t.files),
               onTap: () {
                 Navigator.pop(context);
@@ -219,7 +201,7 @@ class _HomePageState extends State<HomePage> {
             ),
             if (mobile)
               ListTile(
-                leading: PixelIcon('picture'),
+                leading: const Icon(Icons.photo_library_outlined),
                 title: Text(t.gallery),
                 onTap: () {
                   Navigator.pop(context);
@@ -228,7 +210,7 @@ class _HomePageState extends State<HomePage> {
               ),
             if (mobile)
               ListTile(
-                leading: PixelIcon('camera'),
+                leading: const Icon(Icons.photo_camera_outlined),
                 title: Text(t.camera),
                 onTap: () {
                   Navigator.pop(context);
@@ -411,6 +393,16 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: Stack(
                       children: [
+                        // Снег/дождь — ЗА сообщениями (между фоном и лентой).
+                        if (_app.settings.weather != 0)
+                          Positioned.fill(
+                            child: WeatherOverlay(
+                              type: _app.settings.weather,
+                              sizeScale: _app.settings.weatherSize,
+                              density: _app.settings.weatherDensity,
+                              speedScale: _app.settings.weatherSpeed,
+                            ),
+                          ),
                         Positioned.fill(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -427,16 +419,24 @@ class _HomePageState extends State<HomePage> {
                             child: Container(
                               color: cs.primary.withValues(alpha: 0.12),
                               child: Center(
-                                child: PixelCard(
+                                child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 24,
                                     vertical: 16,
                                   ),
-                                  borderColor: cs.primary,
+                                  decoration: BoxDecoration(
+                                    color: cs.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: cs.primary,
+                                      width: 2,
+                                    ),
+                                  ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      PixelIcon('file',
+                                      Icon(
+                                        Icons.file_download_outlined,
                                         color: cs.primary,
                                       ),
                                       const SizedBox(width: 8),
@@ -475,37 +475,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Единая компактная капсула: один ряд (название + статус слева, кнопки
-  // справа). Высота НЕ фиксированная: раньше здесь стояла константа 46, а
-  // содержимое (заголовок + строка статуса) масштабировалось вместе с
-  // uiScale — при увеличенном масштабе текст переставал помещаться и
-  // название наезжало на строку статуса. Теперь высота считается из тех же
-  // размеров шрифта, что реально рисуются, с тем же ограничением масштаба.
-  static const double _kTitleSize = 11;   // пиксельный шрифт заголовка
-  static const double _kStatusSize = 9.5; // строка статуса
-  static const double _kTitleGap = 3;
-  static const double _kBarVPad = 8;
+  // Единая компактная капсула: один ряд (лого + статус двухстрочным
+  // заголовком слева, кнопки справа), без отдельной нижней подстроки —
+  // именно она раньше раздувала шапку. Значение используется и здесь, и в
+  // SizedBox-спейсере тела, чтобы они не расходились.
+  static const double _kBarH = 46;
   static const double _kAppBarTopGap = 4;
-
-  /// Масштаб текста внутри шапки ограничен: капсула — плотный элемент
-  /// фиксированной вёрстки, и на 1.4x любой заголовок в ней разъезжается.
-  static TextScaler _barScaler(BuildContext context) {
-    final s = MediaQuery.textScalerOf(context).scale(100) / 100;
-    return TextScaler.linear(s.clamp(1.0, 1.15));
-  }
-
-  static double _barHeight(BuildContext context) {
-    final scaler = _barScaler(context);
-    // 1.25 — межстрочный коэффициент, с которым ниже рисуются обе строки.
-    final title = scaler.scale(_kTitleSize) * 1.25;
-    final status = scaler.scale(_kStatusSize) * 1.25;
-    final content = title + _kTitleGap + status + _kBarVPad * 2;
-    // Кнопки-иконки 36px + их отступы задают нижнюю границу высоты.
-    return content < 46 ? 46 : content;
-  }
-
   static double appBarTotalHeight(BuildContext context) =>
-      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _barHeight(context);
+      MediaQuery.paddingOf(context).top + _kAppBarTopGap + _kBarH;
 
   PreferredSizeWidget _appBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -528,19 +505,18 @@ class _HomePageState extends State<HomePage> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(10, top + _kAppBarTopGap, 10, 0),
           child: Container(
-            height: _barHeight(context),
             decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: cs.outlineVariant.withValues(
                   alpha: _app.settings.borderOpacity,
                 ),
-                width: PixelTheme.borderWidth,
               ),
             ),
             clipBehavior: Clip.antiAlias,
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: _barContent(context, cs, online),
+              child: _rawAppBar(context, cs, online, dark),
             ),
           ),
         ),
@@ -548,72 +524,75 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Содержимое капсулы-шапки. Собрано явным Row/Column вместо AppBar:
-  /// у AppBar заголовок живёт в жёстко заданной toolbarHeight, и когда
-  /// масштаб текста подрастал, две строки заголовка переставали в неё
-  /// влезать и наезжали друг на друга. Здесь высота считается заранее
-  /// (`_barHeight`), обе строки ограничены одной строкой с многоточием, а
-  /// текстовый блок обёрнут в Expanded — по ширине он тоже не может
-  /// вытеснить кнопки.
-  Widget _barContent(BuildContext context, ColorScheme cs, int online) {
+  AppBar _rawAppBar(
+    BuildContext context,
+    ColorScheme cs,
+    int online,
+    bool dark,
+  ) {
     final status = !_app.auth.isLoggedIn
         ? t.signInPrompt
         : online > 0
         ? t.devicesInAccount(online)
         : t.searchingDevices;
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: _barScaler(context)),
-      child: ColoredBox(
-        color: cs.surface.withValues(alpha: 0.74),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, _kBarVPad, 4, _kBarVPad),
-          child: Row(
+    return AppBar(
+      elevation: 0,
+      // primary: false — вертикальный отступ под статус-бар уже даёт капсула.
+      primary: false,
+      backgroundColor: cs.surface.withValues(alpha: 0.74),
+      titleSpacing: 12,
+      toolbarHeight: _kBarH,
+      // Лого + мелкая строка статуса в две строки внутри одного ряда —
+      // компактнее, чем отдельный bottom-сабтайтл.
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'TexFi files',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: PixelTheme.heading(
-                        size: _kTitleSize,
-                        color: cs.onSurface,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: _kTitleGap),
-                    Text(
-                      status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: _kStatusSize,
-                        height: 1.25,
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurfaceVariant.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
+              Image.asset(
+                dark
+                    ? 'assets/brand/logo-horizontal-white.png'
+                    : 'assets/brand/logo-horizontal.png',
+                height: 17,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/brand/logo-horizontal-white.png',
+                  height: 17,
                 ),
               ),
-              ..._barActions(context, cs, online),
+              const SizedBox(width: 6),
+              Text(
+                'files',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
-        ),
+          Text(
+            status,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 9.5,
+              height: 1.1,
+              fontWeight: FontWeight.w500,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+            ),
+          ),
+        ],
       ),
-    );
-  }
-
-  List<Widget> _barActions(BuildContext context, ColorScheme cs, int online) {
-    return [
+      actions: [
         _tonalIcon(
           cs: cs,
           tooltip: t.searchHint,
-          icon: PixelIcon('search', size: 19),
+          icon: const Icon(Icons.search_rounded, size: 19),
           onPressed: () => setState(() => _searching = !_searching),
         ),
         _tonalIcon(
@@ -622,18 +601,18 @@ class _HomePageState extends State<HomePage> {
           icon: Badge(
             isLabelVisible: online > 0,
             label: Text('$online'),
-            child: PixelIcon('devices', size: 20),
+            child: const Icon(Icons.devices_rounded, size: 20),
           ),
           onPressed: () {
             FocusScope.of(context).unfocus();
             Navigator.of(
               context,
-            ).push(PixelPageRoute(builder: (_) => const PeersPage()));
+            ).push(MaterialPageRoute(builder: (_) => const PeersPage()));
           },
         ),
         PopupMenuButton<int>(
           tooltip: '',
-          icon: PixelIcon('menu', size: 22),
+          icon: const Icon(Icons.more_vert_rounded, size: 22),
           onSelected: (v) {
             final page = switch (v) {
               0 => const MusicScreen(),
@@ -644,14 +623,14 @@ class _HomePageState extends State<HomePage> {
             // пуше нового роута — без этого она «протекала» на следующий
             // экран (например, в настройки).
             FocusScope.of(context).unfocus();
-            Navigator.of(context).push(PixelPageRoute(builder: (_) => page));
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
           },
           itemBuilder: (context) => [
             PopupMenuItem(
               value: 0,
               child: Row(
                 children: [
-                  PixelIcon('note', size: 20),
+                  const Icon(Icons.library_music_outlined, size: 20),
                   const SizedBox(width: 12),
                   Text(t.music),
                 ],
@@ -661,7 +640,7 @@ class _HomePageState extends State<HomePage> {
               value: 1,
               child: Row(
                 children: [
-                  PixelIcon('keyboard', size: 20),
+                  const Icon(Icons.keyboard_alt_outlined, size: 20),
                   const SizedBox(width: 12),
                   Text(t.ttKeyboard),
                 ],
@@ -671,7 +650,7 @@ class _HomePageState extends State<HomePage> {
               value: 2,
               child: Row(
                 children: [
-                  PixelIcon('gear', size: 20),
+                  const Icon(Icons.settings_outlined, size: 20),
                   const SizedBox(width: 12),
                   Text(t.ttSettings),
                 ],
@@ -679,11 +658,13 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-    ];
+        const SizedBox(width: 4),
+      ],
+    );
   }
 
-  /// Квадратная тонированная кнопка-иконка в пиксель-арт языке
-  /// (скруглений нет, 2px обводка) вместо голого IconButton.
+  /// Круглая тонированная кнопка-иконка — премиальный «пилюльный» стиль
+  /// вместо голого IconButton на прозрачном фоне.
   Widget _tonalIcon({
     required ColorScheme cs,
     required String tooltip,
@@ -696,13 +677,14 @@ class _HomePageState extends State<HomePage> {
         message: tooltip,
         child: InkWell(
           onTap: onPressed,
+          customBorder: const CircleBorder(),
           child: Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-              borderRadius: PixelTheme.controlRadiusAll,
+              shape: BoxShape.circle,
             ),
             child: IconTheme(
               data: IconThemeData(color: cs.onSurfaceVariant),
@@ -744,7 +726,21 @@ class _HomePageState extends State<HomePage> {
         ],
       );
     }
-    // Плоский тёмный фон по умолчанию — обои остаются опцией (выше).
+    if (s.chatBackground == 1) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              cs.primary.withValues(alpha: 0.06),
+              cs.surface,
+              cs.tertiary.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+      );
+    }
     return const SizedBox.shrink();
   }
 
@@ -772,20 +768,24 @@ class _HomePageState extends State<HomePage> {
 
   Widget _searchBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final terminal = _app.settings.terminalBubbles;
     final field = TextField(
       controller: _search,
       autofocus: true,
       onChanged: (v) => setState(() => _query = v),
-      style: TextStyle(color: cs.onSurface),
+      style: terminal ? TextStyle(color: cs.onSurface) : null,
       decoration: InputDecoration(
         isDense: true,
         hintText: t.searchHint,
-        filled: true,
-        fillColor: Colors.black,
-        border: InputBorder.none,
-        prefixIcon: PixelIcon('search', color: cs.primary),
+        filled: terminal,
+        fillColor: terminal ? Colors.black : null,
+        border: terminal ? InputBorder.none : null,
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: terminal ? cs.primary : null,
+        ),
         suffixIcon: IconButton(
-          icon: PixelIcon('close'),
+          icon: const Icon(Icons.close_rounded),
           onPressed: () => setState(() {
             _searching = false;
             _query = '';
@@ -794,15 +794,22 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-    // Та же чёрная пилюля с белой обводкой, что у поля ввода сообщения.
+    if (!terminal) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+        child: field,
+      );
+    }
+    // Терминальный вид: та же чёрная пилюля с белой обводкой, что у поля
+    // ввода сообщения — иначе стандартный TextField терялся на чёрном фоне.
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Colors.white.withValues(alpha: _app.settings.borderOpacity),
-            width: PixelTheme.borderWidth,
           ),
         ),
         child: field,
@@ -846,28 +853,28 @@ class _HomePageState extends State<HomePage> {
             context,
             label: t.all,
             value: null,
-            icon: 'devices',
+            icon: Icons.apps_rounded,
           ),
           if (hasPinned)
             _filterChip(
               context,
               label: t.pinned,
               value: '__pinned__',
-              icon: 'thumbtack',
+              icon: Icons.push_pin_rounded,
             ),
           if (hasArchived)
             _filterChip(
               context,
               label: t.archived,
               value: '__archive__',
-              icon: 'archive',
+              icon: Icons.archive_rounded,
             ),
           for (final g in groups)
             _filterChip(
               context,
               label: g,
               value: g,
-              icon: 'folder',
+              icon: Icons.folder_rounded,
             ),
         ],
       ),
@@ -878,13 +885,13 @@ class _HomePageState extends State<HomePage> {
     BuildContext context, {
     required String label,
     required String? value,
-    required String icon,
+    required IconData icon,
   }) {
     final selected = _filter == value;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
-        avatar: PixelIcon(icon, size: 16),
+        avatar: Icon(icon, size: 16),
         label: Text(label),
         selected: selected,
         onSelected: (_) => setState(() => _filter = value),
@@ -899,7 +906,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelIcon('star', size: 72, color: cs.primary),
+          Icon(Icons.bookmark_rounded, size: 72, color: cs.primary),
           const SizedBox(height: 16),
           Text(
             t.emptyTitle,
@@ -981,7 +988,13 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           );
-          return animate ? _Entrance(child: row) : row;
+          return animate
+              ? _Entrance(
+                  style: _app.settings.animStyle,
+                  durationMs: _app.settings.animDurationMs,
+                  child: row,
+                )
+              : row;
         },
       ),
     );
@@ -991,8 +1004,25 @@ class _HomePageState extends State<HomePage> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _dayChip(BuildContext context, DateTime dt) {
-    // Линия через всю ширину с датой посередине.
-    return TerminalDivider(text: daySeparator(dt, t));
+    // Терминальный вид: линия через всю ширину с датой посередине.
+    if (_app.settings.terminalBubbles) {
+      return TerminalDivider(text: daySeparator(dt, t));
+    }
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          daySeparator(dt, t),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+      ),
+    );
   }
 
   Widget _inputBar(BuildContext context) {
@@ -1015,17 +1045,13 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   // Единая пилюля: вложения, текст и микрофон — всё внутри.
                   Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 130),
+                    child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black,
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
-                          color: _sentFlash
-                              ? cs.primary
-                              : (_ttlSeconds != null ? cs.primary : border),
-                          width: _sentFlash
-                              ? PixelTheme.borderWidth + 1
-                              : PixelTheme.borderWidth,
+                          color: _ttlSeconds != null ? cs.primary : border,
+                          width: _ttlSeconds != null ? 1.2 : 1,
                         ),
                       ),
                       child: Row(
@@ -1036,7 +1062,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            icon: PixelIcon('add'),
+                            icon: const Icon(Icons.add_circle_outline_rounded),
                             onPressed: _attachMenu,
                           ),
                           Expanded(
@@ -1064,14 +1090,15 @@ class _HomePageState extends State<HomePage> {
                                 right: 4,
                                 bottom: 6,
                               ),
-                              child: PixelIcon('clock',
+                              child: Icon(
+                                Icons.timer_rounded,
                                 size: 16,
                                 color: cs.primary,
                               ),
                             ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            icon: PixelIcon('mic'),
+                            icon: const Icon(Icons.mic_rounded),
                             onPressed: _startRecord,
                           ),
                         ],
@@ -1086,7 +1113,7 @@ class _HomePageState extends State<HomePage> {
                       tooltip: t.selfDestruct,
                       backgroundColor: _ttlSeconds != null ? cs.primary : null,
                       onPressed: _sendText,
-                      child: PixelIcon('send'),
+                      child: const Icon(Icons.send_rounded),
                     ),
                   ),
                 ],
@@ -1107,10 +1134,12 @@ class _HomePageState extends State<HomePage> {
           children: [
             for (final v in options)
               ListTile(
-                leading: PixelIcon('clock'),
+                leading: Icon(
+                  v == null ? Icons.timer_off_outlined : Icons.timer_outlined,
+                ),
                 title: Text(_ttlLabel(v)),
                 trailing: _ttlSeconds == v
-                    ? PixelIcon('check')
+                    ? const Icon(Icons.check_rounded)
                     : null,
                 onTap: () {
                   setState(() => _ttlSeconds = v);
@@ -1146,14 +1175,14 @@ class _HomePageState extends State<HomePage> {
         ),
         IconButton(
           tooltip: t.cancel,
-          icon: PixelIcon('trash'),
+          icon: const Icon(Icons.delete_outline_rounded),
           onPressed: () => _stopRecord(cancel: true),
         ),
         const SizedBox(width: 4),
         FloatingActionButton.small(
           elevation: 0,
           onPressed: () => _stopRecord(),
-          child: PixelIcon('send'),
+          child: const Icon(Icons.send_rounded),
         ),
       ],
     );
@@ -1174,7 +1203,7 @@ class _HomePageState extends State<HomePage> {
             _targetChip(
               context,
               label: t.saveHere,
-              icon: 'bookmark',
+              icon: Icons.bookmark_border_rounded,
               selected: _target == null,
               onTap: () => setState(() => _target = null),
               color: cs,
@@ -1183,7 +1212,9 @@ class _HomePageState extends State<HomePage> {
               _targetChip(
                 context,
                 label: p.name,
-                icon: p.platform == 'android' ? 'phone' : 'devices',
+                icon: p.platform == 'android'
+                    ? Icons.smartphone_rounded
+                    : Icons.laptop_rounded,
                 selected: _target?.id == p.id,
                 onTap: () => setState(() => _target = p),
                 color: cs,
@@ -1197,7 +1228,7 @@ class _HomePageState extends State<HomePage> {
   Widget _targetChip(
     BuildContext context, {
     required String label,
-    required String icon,
+    required IconData icon,
     required bool selected,
     required VoidCallback onTap,
     required ColorScheme color,
@@ -1205,7 +1236,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.only(left: 6),
       child: ChoiceChip(
-        avatar: PixelIcon(
+        avatar: Icon(
           icon,
           size: 16,
           color: selected ? color.onSecondaryContainer : color.onSurface,
@@ -1243,17 +1274,21 @@ class _PulsingMicState extends State<_PulsingMic>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: Tween(begin: 0.4, end: 1.0).animate(_c),
-      child: PixelIcon('mic', color: Colors.red),
+      child: const Icon(Icons.mic_rounded, color: Colors.red),
     );
   }
 }
 
 /// Плавное появление нового элемента ленты. Стиль и скорость — из настроек.
-/// Появление нового сообщения: быстрый, чёткий подъём+fade — в духе
-/// пиксель-арт языка (не плавная iOS-анимация), фиксированная скорость.
 class _Entrance extends StatefulWidget {
   final Widget child;
-  const _Entrance({required this.child});
+  final int style; // 0=fade,1=подъём,2=масштаб,3=подъём+fade
+  final int durationMs;
+  const _Entrance({
+    required this.child,
+    required this.style,
+    required this.durationMs,
+  });
 
   @override
   State<_Entrance> createState() => _EntranceState();
@@ -1263,11 +1298,11 @@ class _EntranceState extends State<_Entrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 160),
+    duration: Duration(milliseconds: widget.durationMs),
   )..forward();
   late final Animation<double> _curve = CurvedAnimation(
     parent: _c,
-    curve: Curves.easeOut,
+    curve: Curves.easeOutCubic,
   );
 
   @override
@@ -1278,13 +1313,32 @@ class _EntranceState extends State<_Entrance>
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: Tween(
-        begin: const Offset(0, 0.1),
-        end: Offset.zero,
-      ).animate(_curve),
-      child: FadeTransition(opacity: _curve, child: widget.child),
-    );
+    final fade = FadeTransition(opacity: _curve, child: widget.child);
+    switch (widget.style) {
+      case 0: // только fade
+        return fade;
+      case 1: // подъём
+        return SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.14),
+            end: Offset.zero,
+          ).animate(_curve),
+          child: widget.child,
+        );
+      case 2: // масштаб
+        return ScaleTransition(
+          scale: Tween(begin: 0.85, end: 1.0).animate(_curve),
+          child: fade,
+        );
+      default: // подъём + fade
+        return SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.12),
+            end: Offset.zero,
+          ).animate(_curve),
+          child: fade,
+        );
+    }
   }
 }
 
@@ -1344,14 +1398,14 @@ class _SwipeRowState extends State<_SwipeRow> {
       onDismissed: (_) => widget.onDelete(),
       background: _swipeReveal(
         align: Alignment.centerLeft,
-        icon: 'send',
+        icon: Icons.reply_rounded,
         label: tr(context).share,
         color: Colors.blue,
         progress: _progress.clamp(0, 1),
       ),
       secondaryBackground: _swipeReveal(
         align: Alignment.centerRight,
-        icon: 'trash',
+        icon: Icons.delete_outline_rounded,
         label: tr(context).delete,
         color: Colors.red,
         progress: (-_progress).clamp(0, 1),
@@ -1362,7 +1416,7 @@ class _SwipeRowState extends State<_SwipeRow> {
 
   Widget _swipeReveal({
     required Alignment align,
-    required String icon,
+    required IconData icon,
     required String label,
     required Color color,
     required double progress,
@@ -1384,7 +1438,7 @@ class _SwipeRowState extends State<_SwipeRow> {
                 color: color.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
-              child: PixelIcon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 2),
             Text(label, style: TextStyle(color: color, fontSize: 10.5)),

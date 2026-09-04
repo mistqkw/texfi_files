@@ -3,9 +3,6 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import '../app.dart';
 import 'album_art.dart';
 import 'audio_player_screen.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_theme.dart';
-import 'pixel/pixel_route.dart';
 
 /// Плеер поверх ленты — маленький квадратик с обложкой трека, который можно
 /// перетащить в любое место экрана (а не панель на всю ширину внизу).
@@ -54,6 +51,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
         final pos = _clamped(_pos!, screen, safe);
 
         final cs = Theme.of(context).colorScheme;
+        final terminal = app.settings.terminalBubbles;
         final maxMs = player.dur.inMilliseconds;
         final progress = maxMs <= 0
             ? 0.0
@@ -64,7 +62,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
           top: pos.dy,
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
-              PixelPageRoute(builder: (_) => const AudioPlayerScreen()),
+              MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
             ),
             onLongPress: () {
               HapticFeedback.mediumImpact();
@@ -78,11 +76,13 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
               height: _size,
               decoration: BoxDecoration(
                 color: Colors.black,
+                borderRadius: BorderRadius.circular(terminal ? 10 : 18),
                 border: Border.all(
-                  color: Colors.white.withValues(
-                    alpha: app.settings.borderOpacity,
-                  ),
-                  width: PixelTheme.borderWidth,
+                  color: terminal
+                      ? Colors.white.withValues(
+                          alpha: app.settings.borderOpacity,
+                        )
+                      : Colors.white24,
                 ),
                 boxShadow: const [
                   BoxShadow(
@@ -107,7 +107,8 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                           colors: [cs.primary, cs.tertiary],
                         ),
                       ),
-                      child: PixelIcon('note',
+                      child: const Icon(
+                        Icons.music_note_rounded,
                         color: Colors.white,
                         size: 26,
                       ),
@@ -118,7 +119,8 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       width: _size,
                       height: _size,
                       color: Colors.black45,
-                      child: PixelIcon('pause',
+                      child: const Icon(
+                        Icons.pause_rounded,
                         color: Colors.white,
                         size: 22,
                       ),

@@ -5,7 +5,6 @@ import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import '../core/models.dart';
 import 'format.dart';
-import 'pixel/pixel_icons.dart';
 
 /// Превью видео: на Android/iOS показывает кадр из видео с кнопкой play,
 /// на десктопе — аккуратную плашку (генерация кадра там недоступна).
@@ -72,7 +71,7 @@ class _VideoThumbState extends State<VideoThumb> {
                 color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
-              child: PixelIcon('play',
+              child: const Icon(Icons.play_arrow_rounded,
                   color: Colors.white, size: 34),
             ),
             Positioned(
@@ -109,7 +108,7 @@ class _VideoThumbState extends State<VideoThumb> {
                 gradient: LinearGradient(colors: [cs.primary, cs.tertiary]),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: PixelIcon('play',
+              child: Icon(Icons.play_arrow_rounded,
                   color: cs.onPrimary, size: 30),
             ),
             const SizedBox(width: 12),

@@ -19,9 +19,6 @@ import 'admin_page.dart';
 import 'format.dart';
 import 'onboarding_screen.dart';
 import 'terminal.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_route.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -45,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _onVersionTap(BuildContext context, Settings s) {
     if (s.adminUnlocked) {
       Navigator.of(context).push(
-          PixelPageRoute(builder: (_) => const AdminPage()));
+          MaterialPageRoute(builder: (_) => const AdminPage()));
       return;
     }
     _versionTaps++;
@@ -55,7 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SnackBar(content: Text('Admin settings unlocked')),
       );
       Navigator.of(context).push(
-          PixelPageRoute(builder: (_) => const AdminPage()));
+          MaterialPageRoute(builder: (_) => const AdminPage()));
     } else if (_versionTaps >= 4) {
       final left = 7 - _versionTaps;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -100,30 +97,30 @@ class _SettingsPageState extends State<SettingsPage> {
             // Аккаунт — крупной карточкой сверху.
             _accountCard(context, app),
             const SizedBox(height: 8),
-            _card(cs, 'globe', t.hLanguage,
+            _card(cs, Icons.language_rounded, t.hLanguage,
                 _langName(s), () => _open(t.hLanguage, _sectionLanguage),
                 'language'),
-            _card(cs, 'palette', t.hAppearance,
+            _card(cs, Icons.palette_outlined, t.hAppearance,
                 t.catAppearanceSub, () => _open(t.hAppearance, _sectionAppearance),
                 'appearance'),
-            _card(cs, 'picture', t.hBackground,
+            _card(cs, Icons.wallpaper_rounded, t.hBackground,
                 t.catBackgroundSub, () => _open(t.hBackground, _sectionBackground),
                 'background'),
-            _card(cs, 'wifi', t.hNetwork, t.catNetworkSub,
+            _card(cs, Icons.wifi_rounded, t.hNetwork, t.catNetworkSub,
                 () => _open(t.hNetwork, _sectionNetwork), 'network'),
-            _card(cs, 'sync', t.hFilesSync, t.catFilesSyncSub,
+            _card(cs, Icons.sync_alt_rounded, t.hFilesSync, t.catFilesSyncSub,
                 () => _open(t.hFilesSync, _sectionFilesSync), 'sync'),
-            _card(cs, 'lock', t.hSecurity, t.catSecuritySub,
+            _card(cs, Icons.lock_outline_rounded, t.hSecurity, t.catSecuritySub,
                 () => _open(t.hSecurity, _sectionSecurity), 'security'),
             if (RemoteInput.supported)
-              _card(cs, 'keyboard', t.hRemoteInput,
+              _card(cs, Icons.keyboard_rounded, t.hRemoteInput,
                   t.catRemoteSub, () => _open(t.hRemoteInput, _sectionRemote),
                   'remote'),
-            _card(cs, 'play', t.hPlayer,
+            _card(cs, Icons.play_circle_outline_rounded, t.hPlayer,
                 t.catPlayerSub, () => _open(t.hPlayer, _sectionPlayer), 'player'),
-            _card(cs, 'badge', t.hDevice, t.catDeviceSub,
+            _card(cs, Icons.badge_outlined, t.hDevice, t.catDeviceSub,
                 () => _open(t.hDevice, _sectionDevice), 'device'),
-            _card(cs, 'info', t.hAbout, t.catAboutSub,
+            _card(cs, Icons.info_outline_rounded, t.hAbout, t.catAboutSub,
                 () => _open(t.hAbout, _sectionAbout), 'about'),
             const SizedBox(height: 16),
             Center(
@@ -148,27 +145,47 @@ class _SettingsPageState extends State<SettingsPage> {
         _ => t.systemLang,
       };
 
-  // Карточка-категория: пиксель-карточка с врезанной подписью.
-  // slug — латинская метка во врезке рамки.
-  Widget _card(ColorScheme cs, String icon, String title, String subtitle,
+  // Карточка-категория в стиле TexFi.
+  // slug — латинская метка во врезке рамки в терминальном режиме.
+  Widget _card(ColorScheme cs, IconData icon, String title, String subtitle,
       VoidCallback onTap, [String? slug]) {
     final s = AppScope.of(context).settings;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-      child: TerminalBox(
-        label: slug,
-        borderColor: Colors.white.withValues(alpha: s.borderOpacity),
-        labelColor: cs.primary,
-        padding: EdgeInsets.zero,
-        child: ListTile(
-          leading: PixelIcon(icon, color: cs.primary, size: 22),
-          title: Text(title,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle:
-              Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: PixelIcon('chevron_right'),
-          onTap: onTap,
+    if (s.terminalBubbles) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+        child: TerminalBox(
+          label: slug,
+          borderColor: Colors.white.withValues(alpha: s.borderOpacity),
+          labelColor: cs.primary,
+          padding: EdgeInsets.zero,
+          child: ListTile(
+            leading: Icon(icon, color: cs.primary, size: 22),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle:
+                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: onTap,
+          ),
         ),
+      );
+    }
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: ListTile(
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration:
+              BoxDecoration(color: cs.primaryContainer, shape: BoxShape.circle),
+          child: Icon(icon, color: cs.onPrimaryContainer, size: 22),
+        ),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
       ),
     );
   }
@@ -176,19 +193,31 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _accountCard(BuildContext context, AppState app) {
     final cs = Theme.of(context).colorScheme;
     final s = app.settings;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-      child: TerminalBox(
-        label: 'account',
-        borderColor: Colors.white.withValues(alpha: s.borderOpacity),
-        labelColor: cs.primary,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            _accountTile(context, app),
-            _cloudStatus(context, app),
-          ],
+    if (s.terminalBubbles) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+        child: TerminalBox(
+          label: 'account',
+          borderColor: Colors.white.withValues(alpha: s.borderOpacity),
+          labelColor: cs.primary,
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _accountTile(context, app),
+              _cloudStatus(context, app),
+            ],
+          ),
         ),
+      );
+    }
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: Column(
+        children: [
+          _accountTile(context, app),
+          _cloudStatus(context, app),
+        ],
       ),
     );
   }
@@ -196,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Открыть под-экран категории.
   void _open(String title, List<Widget> Function(BuildContext) body) {
     final app = AppScope.of(context);
-    Navigator.of(context).push(PixelPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (ctx) => Scaffold(
         appBar: AppBar(title: Text(title)),
         body: ListenableBuilder(
@@ -226,7 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           title: Text(e.value ?? t.systemLang),
           trailing: s.localeCode == e.key
-              ? PixelIcon('check', color: cs.primary)
+              ? Icon(Icons.check_rounded, color: cs.primary)
               : null,
           onTap: () => s.localeCode = e.key,
         ),
@@ -236,8 +265,16 @@ class _SettingsPageState extends State<SettingsPage> {
   List<Widget> _sectionAppearance(BuildContext context) {
     final s = AppScope.of(context).settings;
     return [
+      _sub(t.hTerminal),
+      SwitchListTile(
+        secondary: const Icon(Icons.terminal_rounded),
+        title: Text(t.terminalBubbles),
+        subtitle: Text(t.terminalBubblesSub),
+        value: s.terminalBubbles,
+        onChanged: (v) => s.terminalBubbles = v,
+      ),
       ListTile(
-        leading: PixelIcon('density'),
+        leading: const Icon(Icons.border_style_rounded),
         title: Text(t.borderBrightness),
         subtitle: Slider(
           value: s.borderOpacity,
@@ -246,6 +283,31 @@ class _SettingsPageState extends State<SettingsPage> {
           divisions: 24,
           label: '${(s.borderOpacity * 100).round()}%',
           onChanged: (v) => s.borderOpacity = v,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (var i = 0; i < kTerminalThemes.length; i++)
+              ChoiceChip(
+                avatar: CircleAvatar(
+                  backgroundColor: Color(kTerminalThemes[i].accent),
+                  radius: 8,
+                ),
+                label: Text(kTerminalThemes[i].name),
+                selected: s.themePreset == i,
+                onSelected: (_) {
+                  s.themePreset = i;
+                  // «Своя» тема не трогает выбранный вручную акцент.
+                  if (i != kTerminalThemes.length - 1) {
+                    s.seedColor = kTerminalThemes[i].accent;
+                  }
+                },
+              ),
+          ],
         ),
       ),
       Padding(
@@ -281,22 +343,37 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+      _sub(t.hDesign),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Wrap(
+          spacing: 8,
+          children: [
+            for (var i = 0; i < DesignPreset.all.length; i++)
+              ChoiceChip(
+                label: Text(DesignPreset.all[i].name),
+                selected: s.designPreset == i,
+                onSelected: (_) => s.designPreset = i,
+              ),
+          ],
+        ),
+      ),
       ListTile(
-        leading: PixelIcon('sun'),
+        leading: const Icon(Icons.brightness_6_outlined),
         title: Text(t.theme),
         trailing: SegmentedButton<ThemeMode>(
           segments: [
-            ButtonSegment(value: ThemeMode.light, icon: PixelIcon('sun')),
+            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode)),
             ButtonSegment(
-                value: ThemeMode.system, icon: PixelIcon('auto')),
-            ButtonSegment(value: ThemeMode.dark, icon: PixelIcon('moon')),
+                value: ThemeMode.system, icon: Icon(Icons.brightness_auto)),
+            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode)),
           ],
           selected: {s.themeMode},
           onSelectionChanged: (v) => s.themeMode = v.first,
         ),
       ),
       SwitchListTile(
-        secondary: PixelIcon('moon'),
+        secondary: const Icon(Icons.contrast_rounded),
         title: Text(t.oledBg),
         subtitle: Text(t.oledBgSub),
         value: s.pureBlack,
@@ -319,20 +396,21 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
       ListTile(
-        leading: PixelIcon('font'),
+        leading: const Icon(Icons.font_download_outlined),
         title: Text(t.font),
         trailing: SegmentedButton<int>(
           segments: [
             ButtonSegment(value: 0, label: Text(t.fontNormal)),
+            ButtonSegment(value: 1, label: Text('Serif')),
             ButtonSegment(value: 2, label: Text('Mono')),
           ],
-          selected: {s.fontChoice == 1 ? 0 : s.fontChoice},
+          selected: {s.fontChoice},
           showSelectedIcon: false,
           onSelectionChanged: (v) => s.fontChoice = v.first,
         ),
       ),
       ListTile(
-        leading: PixelIcon('scale'),
+        leading: const Icon(Icons.format_size_rounded),
         title: Text(t.uiScale),
         subtitle: Slider(
           value: s.uiScale,
@@ -343,28 +421,79 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: (v) => s.uiScale = v,
         ),
       ),
+      ListTile(
+        leading: const Icon(Icons.rounded_corner_rounded),
+        title: Text(t.bubbleStyle),
+        trailing: SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 0, label: Text(t.bubbleSoft)),
+            ButtonSegment(value: 1, label: Text(t.bubbleRound)),
+            ButtonSegment(value: 2, label: Text(t.bubbleSharp)),
+          ],
+          selected: {s.bubbleStyle},
+          showSelectedIcon: false,
+          onSelectionChanged: (v) => s.bubbleStyle = v.first,
+        ),
+      ),
       SwitchListTile(
-        secondary: PixelIcon('density'),
+        secondary: const Icon(Icons.density_small_rounded),
         title: Text(t.compact),
         subtitle: Text(t.compactSub),
         value: s.compact,
         onChanged: (v) => s.compact = v,
       ),
       SwitchListTile(
-        secondary: PixelIcon('spark'),
+        secondary: const Icon(Icons.animation_rounded),
         title: Text(t.animations),
         subtitle: Text(t.animationsSub),
         value: s.animations,
         onChanged: (v) => s.animations = v,
       ),
+      if (s.animations) ...[
+        ListTile(
+          leading: const Icon(Icons.auto_awesome_motion_rounded),
+          title: Text(t.animStyle),
+          trailing: DropdownButton<int>(
+            value: s.animStyle,
+            underline: const SizedBox(),
+            items: [
+              const DropdownMenuItem(value: 0, child: Text('Fade')),
+              DropdownMenuItem(value: 1, child: Text(t.animRise)),
+              DropdownMenuItem(value: 2, child: Text(t.animScale)),
+              DropdownMenuItem(value: 3, child: Text(t.animRiseFade)),
+            ],
+            onChanged: (v) => s.animStyle = v ?? 3,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.speed_rounded),
+          title: Text(t.animSpeed),
+          trailing: SegmentedButton<int>(
+            segments: [
+              ButtonSegment(value: 0, label: Text(t.speedSlow)),
+              ButtonSegment(value: 1, label: Text(t.speedNormal)),
+              ButtonSegment(value: 2, label: Text(t.speedFast)),
+            ],
+            selected: {s.animSpeed},
+            showSelectedIcon: false,
+            onSelectionChanged: (v) => s.animSpeed = v.first,
+          ),
+        ),
+      ],
     ];
   }
 
   List<Widget> _sectionBackground(BuildContext context) {
     final s = AppScope.of(context).settings;
     return [
+      SwitchListTile(
+        secondary: const Icon(Icons.gradient_rounded),
+        title: Text(t.gradientBg),
+        value: s.chatBackground == 1,
+        onChanged: (v) => s.chatBackground = v ? 1 : 0,
+      ),
       ListTile(
-        leading: PixelIcon('picture'),
+        leading: const Icon(Icons.wallpaper_rounded),
         title: Text(t.chatPhoto),
         subtitle: s.chatBgImage != null ? Text(t.pickPhoto) : null,
         trailing: Row(
@@ -372,11 +501,11 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             if (s.chatBgImage != null)
               IconButton(
-                icon: PixelIcon('close'),
+                icon: const Icon(Icons.close_rounded),
                 onPressed: () => s.chatBgImage = null,
               ),
             IconButton(
-              icon: PixelIcon('picture'),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
               onPressed: () => _pickBgImage(s),
             ),
           ],
@@ -384,7 +513,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       if (s.chatBgImage != null) ...[
         ListTile(
-          leading: PixelIcon('blur'),
+          leading: const Icon(Icons.blur_on_rounded),
           title: Text(t.bgEffectLabel),
           trailing: SegmentedButton<int>(
             segments: [
@@ -398,7 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         ListTile(
-          leading: PixelIcon('moon'),
+          leading: const Icon(Icons.brightness_2_outlined),
           title: Text(t.dimLabel),
           subtitle: Slider(
             value: s.bgDim,
@@ -408,6 +537,48 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
+      ListTile(
+        leading: const Icon(Icons.ac_unit_rounded),
+        title: Text(t.weatherLabel),
+        trailing: SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 0, label: Text(t.effectNone)),
+            ButtonSegment(value: 1, label: Text(t.snow)),
+            ButtonSegment(value: 2, label: Text(t.rain)),
+          ],
+          selected: {s.weather},
+          showSelectedIcon: false,
+          onSelectionChanged: (v) => s.weather = v.first,
+        ),
+      ),
+      if (s.weather != 0) ...[
+        _slider(context, t.wSize, s.weatherSize, 0.5, 2.5,
+            (v) => s.weatherSize = v),
+        _slider(context, t.wDensity, s.weatherDensity, 0.3, 2.5,
+            (v) => s.weatherDensity = v),
+        _slider(context, t.wSpeed, s.weatherSpeed, 0.3, 2.5,
+            (v) => s.weatherSpeed = v),
+      ],
+      ListTile(
+        leading: const Icon(Icons.chat_bubble_outline_rounded),
+        title: Text(t.msgColors),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _msgColorDot(context, s, true),
+            const SizedBox(width: 8),
+            _msgColorDot(context, s, false),
+            IconButton(
+              tooltip: t.reset,
+              icon: const Icon(Icons.format_color_reset_rounded),
+              onPressed: () {
+                s.msgOutColor = -1;
+                s.msgInColor = -1;
+              },
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
@@ -416,7 +587,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = app.settings;
     return [
       SwitchListTile(
-        secondary: PixelIcon('wifi'),
+        secondary: const Icon(Icons.wifi_find_rounded),
         title: Text(t.autoDiscovery),
         subtitle: Text(t.autoDiscoverySub),
         value: s.autoDiscovery,
@@ -425,21 +596,27 @@ class _SettingsPageState extends State<SettingsPage> {
           app.discovery.start();
         },
       ),
+      ListTile(
+        leading: const Icon(Icons.settings_ethernet_rounded),
+        title: Text(t.discoveryPort),
+        subtitle: Text('${s.discoveryPort}'),
+        onTap: () => _editPort(context, s, app),
+      ),
       SwitchListTile(
-        secondary: PixelIcon('sync'),
+        secondary: const Icon(Icons.download_done_rounded),
         title: Text(t.autoAccept),
         value: s.autoAcceptFiles,
         onChanged: (v) => s.autoAcceptFiles = v,
       ),
       SwitchListTile(
-        secondary: PixelIcon('bell'),
+        secondary: const Icon(Icons.notifications_active_outlined),
         title: Text(t.notifyReceive),
         value: s.notifyOnReceive,
         onChanged: (v) => s.notifyOnReceive = v,
       ),
       if (Platform.isAndroid)
         SwitchListTile(
-          secondary: PixelIcon('cloud'),
+          secondary: const Icon(Icons.cloud_sync_rounded),
           title: Text(t.backgroundReceive),
           subtitle: Text(t.backgroundReceiveSub),
           value: s.backgroundReceive,
@@ -452,22 +629,6 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           },
         ),
-      Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          leading: PixelIcon('gear'),
-          title: Text(t.advanced),
-          childrenPadding: EdgeInsets.zero,
-          children: [
-            ListTile(
-              leading: PixelIcon('link'),
-              title: Text(t.discoveryPort),
-              subtitle: Text('${s.discoveryPort}'),
-              onTap: () => _editPort(context, s, app),
-            ),
-          ],
-        ),
-      ),
     ];
   }
 
@@ -476,43 +637,43 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = app.settings;
     return [
       _sub(t.cloudRouting),
-      for (final e in {
-        0: t.cloudModeAuto,
-        1: t.cloudModeAlways,
-        2: t.cloudModeNever,
-      }.entries)
-        ListTile(
-          title: Text(e.value),
-          trailing: PixelRadio<int>(
-            value: e.key,
-            groupValue: s.cloudMode,
-            onChanged: (v) => s.cloudMode = v,
-          ),
-          onTap: () => s.cloudMode = e.key,
+      RadioGroup<int>(
+        groupValue: s.cloudMode,
+        onChanged: (v) => s.cloudMode = v ?? 0,
+        child: Column(
+          children: [
+            RadioListTile<int>(
+                value: 0, title: Text(t.cloudModeAuto)),
+            RadioListTile<int>(
+                value: 1, title: Text(t.cloudModeAlways)),
+            RadioListTile<int>(
+                value: 2, title: Text(t.cloudModeNever)),
+          ],
         ),
+      ),
       SwitchListTile(
-        secondary: PixelIcon('sync'),
+        secondary: const Icon(Icons.data_saver_on_rounded),
         title: Text(t.selectiveSync),
         subtitle: Text(t.selectiveSyncSub),
         value: s.selectiveSync,
         onChanged: (v) => s.selectiveSync = v,
       ),
       ListTile(
-        leading: PixelIcon('clock'),
+        leading: const Icon(Icons.pending_actions_rounded),
         title: Text(t.offlineQueue),
         subtitle: ListenableBuilder(
           listenable: app.queue,
           builder: (_, __) => Text('${app.queue.items.length}'),
         ),
         onTap: () => Navigator.of(context).push(
-          PixelPageRoute(builder: (_) => const _OfflineQueuePage()),
+          MaterialPageRoute(builder: (_) => const _OfflineQueuePage()),
         ),
       ),
       ListTile(
-        leading: PixelIcon('devices'),
+        leading: const Icon(Icons.devices_other_rounded),
         title: Text(t.deviceHistory),
         onTap: () => Navigator.of(context).push(
-          PixelPageRoute(builder: (_) => const _DeviceHistoryPage()),
+          MaterialPageRoute(builder: (_) => const _DeviceHistoryPage()),
         ),
       ),
     ];
@@ -522,14 +683,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = AppScope.of(context).settings;
     return [
       SwitchListTile(
-        secondary: PixelIcon('shield'),
+        secondary: const Icon(Icons.enhanced_encryption_outlined),
         title: Text(t.encryptCloud),
         subtitle: Text(t.encryptCloudSub),
         value: s.encryptCloud,
         onChanged: (v) => s.encryptCloud = v,
       ),
       SwitchListTile(
-        secondary: PixelIcon('keypad'),
+        secondary: const Icon(Icons.pin_rounded),
         title: Text(t.pinLock),
         subtitle: Text(t.pinLockSub),
         value: s.pinEnabled,
@@ -545,13 +706,13 @@ class _SettingsPageState extends State<SettingsPage> {
       if (s.pinEnabled) ...[
         if (Platform.isAndroid || Platform.isIOS)
           SwitchListTile(
-            secondary: PixelIcon('fingerprint'),
+            secondary: const Icon(Icons.fingerprint_rounded),
             title: Text(t.biometric),
             value: s.biometricEnabled,
             onChanged: (v) => s.biometricEnabled = v,
           ),
         ListTile(
-          leading: PixelIcon('keypad'),
+          leading: const Icon(Icons.password_rounded),
           title: Text(t.setPin),
           onTap: () => _setupPin(context, s),
         ),
@@ -561,11 +722,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<bool> _setupPin(BuildContext context, Settings s) async {
     final first = await Navigator.of(context).push<String>(
-      PixelPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep1)),
+      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep1)),
     );
     if (first == null || !context.mounted) return false;
     final second = await Navigator.of(context).push<String>(
-      PixelPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep2)),
+      MaterialPageRoute(builder: (_) => _PinEntryPage(title: t.createPinStep2)),
     );
     if (second == null) return false;
     if (first != second) {
@@ -588,7 +749,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = AppScope.of(context).settings;
     return [
       SwitchListTile(
-        secondary: PixelIcon('keyboard'),
+        secondary: const Icon(Icons.keyboard_rounded),
         title: Text(t.allowTyping),
         subtitle: Text(_ydotoolStatus()),
         value: s.remoteInputEnabled,
@@ -610,13 +771,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = AppScope.of(context).settings;
     return [
       SwitchListTile(
-        secondary: PixelIcon('play'),
+        secondary: const Icon(Icons.play_circle_outline_rounded),
         title: Text(t.autoplay),
         value: s.autoplayMedia,
         onChanged: (v) => s.autoplayMedia = v,
       ),
       ListTile(
-        leading: PixelIcon('volume'),
+        leading: const Icon(Icons.volume_up_rounded),
         title: Text(t.playerVolume),
         subtitle: Slider(
           value: s.playerVolume,
@@ -633,7 +794,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final s = AppScope.of(context).settings;
     return [
       ListTile(
-        leading: PixelIcon('badge'),
+        leading: const Icon(Icons.badge_outlined),
         title: Text(t.deviceName),
         subtitle: Text(s.deviceName),
         onTap: () => _editName(context, s),
@@ -645,14 +806,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final app = AppScope.of(context);
     return [
       ListTile(
-        leading: PixelIcon('picture'),
+        leading: const Icon(Icons.slideshow_rounded),
         title: Text(t.showOnboarding),
         onTap: () => Navigator.of(context).push(
-          PixelPageRoute(builder: (_) => const OnboardingScreen()),
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
         ),
       ),
       ListTile(
-        leading: PixelIcon('trash',
+        leading: Icon(Icons.delete_sweep_outlined,
             color: Theme.of(context).colorScheme.error),
         title: Text(t.clearAll),
         onTap: () => _confirmClear(context, app),
@@ -676,17 +837,18 @@ class _SettingsPageState extends State<SettingsPage> {
         final acc = app.auth.account;
         if (acc == null) {
           return ListTile(
-            leading: PixelIcon('badge'),
+            leading: const Icon(Icons.account_circle_outlined),
             title: Text(t.signInGitHub),
             subtitle: Text(
                 t.signInSubtitle),
-            trailing: PixelIcon('chevron_right'),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => _loginDialog(context, app),
           );
         }
         return ListTile(
-          leading: PixelAvatar(
-            image: acc.avatarUrl != null ? NetworkImage(acc.avatarUrl!) : null,
+          leading: CircleAvatar(
+            backgroundImage:
+                acc.avatarUrl != null ? NetworkImage(acc.avatarUrl!) : null,
             child: acc.avatarUrl == null
                 ? Text(acc.login.characters.first.toUpperCase())
                 : null,
@@ -711,7 +873,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final cs = Theme.of(context).colorScheme;
         if (app.cloud.needsReauth) {
           return ListTile(
-            leading: PixelIcon('cloud', color: cs.error),
+            leading: Icon(Icons.cloud_off_rounded, color: cs.error),
             title: Text(t.cloudOff),
             subtitle: Text(t.cloudReauth),
             trailing: FilledButton(
@@ -721,7 +883,7 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         }
         return ListTile(
-          leading: PixelIcon('cloud', color: cs.primary),
+          leading: Icon(Icons.cloud_done_rounded, color: cs.primary),
           title: Text(t.cloudOn),
           subtitle: Text(app.cloud.syncing
               ? t.cloudSyncing
@@ -732,7 +894,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : IconButton(
-                  icon: PixelIcon('sync'),
+                  icon: const Icon(Icons.sync_rounded),
                   onPressed: () => app.cloud.pull(),
                 ),
         );
@@ -809,7 +971,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Uri.parse(auth.verificationUri ?? 'https://github.com/login/device'),
             mode: LaunchMode.externalApplication,
           ),
-          icon: PixelIcon('link'),
+          icon: const Icon(Icons.open_in_new_rounded),
           label: Text(t.loginOpen),
         ),
         const SizedBox(height: 16),
@@ -853,7 +1015,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 : null,
           ),
           child: selected
-              ? PixelIcon('check', color: Colors.white, size: 20)
+              ? const Icon(Icons.check, color: Colors.white, size: 20)
               : null,
         ),
       ),
@@ -881,7 +1043,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? Border.all(color: Colors.white, width: 3)
                 : Border.all(color: Colors.white24, width: 1),
           ),
-          child: PixelIcon(custom ? 'check' : 'palette',
+          child: Icon(custom ? Icons.check : Icons.colorize_rounded,
               color: Colors.white, size: 20),
         ),
       ),
@@ -919,6 +1081,22 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _slider(BuildContext context, String label, double value, double min,
+      double max, ValueChanged<double> onChanged) {
+    return ListTile(
+      dense: true,
+      title: Text(label),
+      subtitle: Slider(
+        value: value.clamp(min, max),
+        min: min,
+        max: max,
+        divisions: ((max - min) / 0.1).round(),
+        label: value.toStringAsFixed(1),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
   Future<void> _pickBgImage(Settings s) async {
     try {
       String? src;
@@ -942,6 +1120,62 @@ class _SettingsPageState extends State<SettingsPage> {
             .showSnackBar(SnackBar(content: Text('$e')));
       }
     }
+  }
+
+  Widget _msgColorDot(BuildContext context, Settings s, bool outgoing) {
+    final cs = Theme.of(context).colorScheme;
+    final v = outgoing ? s.msgOutColor : s.msgInColor;
+    final color = v != -1
+        ? Color(v)
+        : (outgoing ? cs.primaryContainer : cs.surfaceContainerHighest);
+    return GestureDetector(
+      onTap: () => _pickMsgColor(context, s, outgoing, color),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: cs.outlineVariant),
+        ),
+      ),
+    );
+  }
+
+  void _pickMsgColor(
+      BuildContext context, Settings s, bool outgoing, Color initial) {
+    Color picked = initial;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(outgoing ? tr(context).outgoing : tr(context).incoming),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: picked,
+            onColorChanged: (c) => picked = c,
+            enableAlpha: false,
+            labelTypes: const [],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(tr(context).cancel)),
+          FilledButton(
+            onPressed: () {
+              final argb = picked.toARGB32() | 0xFF000000;
+              if (outgoing) {
+                s.msgOutColor = argb;
+              } else {
+                s.msgInColor = argb;
+              }
+              Navigator.pop(context);
+            },
+            child: Text(tr(context).selectAction),
+          ),
+        ],
+      ),
+    );
   }
 
   void _editName(BuildContext context, Settings s) {
@@ -1098,7 +1332,7 @@ class _PinEntryPageState extends State<_PinEntryPage> {
                             child: const SizedBox(
                               width: 64,
                               height: 64,
-                              child: Center(child: PixelIcon('backspace')),
+                              child: Center(child: Icon(Icons.backspace_outlined)),
                             ),
                           );
                         }
@@ -1145,13 +1379,15 @@ class _OfflineQueuePage extends StatelessWidget {
             children: [
               for (final q in app.queue.items)
                 ListTile(
-                  leading: PixelIcon(q.kind == 'text' ? 'note' : 'file'),
+                  leading: Icon(q.kind == 'text'
+                      ? Icons.chat_bubble_outline_rounded
+                      : Icons.insert_drive_file_outlined),
                   title: Text(q.kind == 'text'
                       ? (q.text ?? '')
                       : q.filePath!.split('/').last),
                   subtitle: Text(q.peerName),
                   trailing: IconButton(
-                    icon: PixelIcon('close'),
+                    icon: const Icon(Icons.close_rounded),
                     onPressed: () => app.queue.cancel(q),
                   ),
                 ),
@@ -1178,7 +1414,7 @@ class _DeviceHistoryPage extends StatelessWidget {
         builder: (context, _) {
           final list = app.deviceHistory.all;
           if (list.isEmpty) {
-            return const Center(child: PixelIcon('devices', size: 48));
+            return const Center(child: Icon(Icons.devices_other_rounded, size: 48));
           }
           return ListView(
             children: [
@@ -1193,8 +1429,9 @@ class _DeviceHistoryPage extends StatelessWidget {
   Widget _deviceTile(BuildContext context, DeviceStat d) {
     final cs = Theme.of(context).colorScheme;
     return ListTile(
-      leading: PixelAvatar(
-        child: PixelIcon('phone', color: cs.onPrimaryContainer),
+      leading: CircleAvatar(
+        backgroundColor: cs.primaryContainer,
+        child: Icon(Icons.smartphone_rounded, color: cs.onPrimaryContainer),
       ),
       title: Text(d.name),
       subtitle: Text(

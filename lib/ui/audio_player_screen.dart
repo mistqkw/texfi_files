@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../core/player_service.dart';
 import '../l10n/app_strings.dart';
-import 'pixel/pixel_icons.dart';
 
 String _fmt(Duration d) {
   final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -66,7 +65,7 @@ class AudioPlayerScreen extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: p.art != null
                 ? Image.memory(p.art!, fit: BoxFit.cover)
-                : PixelIcon('note',
+                : Icon(Icons.music_note_rounded,
                     size: 120, color: cs.onPrimary),
           ),
         ),
@@ -130,12 +129,12 @@ class AudioPlayerScreen extends StatelessWidget {
                 IconButton(
                   iconSize: 32,
                   onPressed: p.previous,
-                  icon: PixelIcon('chevron_left', size: 32),
+                  icon: const Icon(Icons.skip_previous_rounded),
                 ),
               IconButton(
                 iconSize: 36,
                 onPressed: () => p.nudge(-10),
-                icon: PixelIcon('chevron_left', size: 36),
+                icon: const Icon(Icons.replay_10_rounded),
               ),
               const SizedBox(width: 8),
               Container(
@@ -145,21 +144,22 @@ class AudioPlayerScreen extends StatelessWidget {
                   iconSize: 44,
                   color: cs.onPrimary,
                   onPressed: p.toggle,
-                  icon: PixelIcon(p.playing ? 'pause' : 'play',
-                      size: 44, color: cs.onPrimary),
+                  icon: Icon(p.playing
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded),
                 ),
               ),
               const SizedBox(width: 8),
               IconButton(
                 iconSize: 36,
                 onPressed: () => p.nudge(10),
-                icon: PixelIcon('chevron_right', size: 36),
+                icon: const Icon(Icons.forward_10_rounded),
               ),
               if (p.queue.isNotEmpty)
                 IconButton(
                   iconSize: 32,
                   onPressed: p.next,
-                  icon: PixelIcon('chevron_right', size: 32),
+                  icon: const Icon(Icons.skip_next_rounded),
                 ),
             ],
           ),
@@ -169,7 +169,8 @@ class AudioPlayerScreen extends StatelessWidget {
               children: [
                 IconButton(
                   tooltip: tr(context).shuffle,
-                  icon: PixelIcon('shuffle',
+                  icon: Icon(
+                    Icons.shuffle_rounded,
                     color: p.shuffle ? cs.primary : cs.onSurfaceVariant,
                   ),
                   onPressed: p.toggleShuffle,
@@ -181,8 +182,10 @@ class AudioPlayerScreen extends StatelessWidget {
                     PlayerRepeatMode.all => tr(context).repeatAll,
                     PlayerRepeatMode.one => tr(context).repeatOne,
                   },
-                  icon: PixelIcon(
-                    'sync',
+                  icon: Icon(
+                    p.repeatMode == PlayerRepeatMode.one
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
                     color: p.repeatMode == PlayerRepeatMode.off
                         ? cs.onSurfaceVariant
                         : cs.primary,

@@ -1,11 +1,9 @@
 import 'dart:ui' show ClipOp;
 
 import 'package:flutter/material.dart';
-import 'pixel/pixel_theme.dart';
 
-/// Пиксель-карточка TexFi: чёрный фон, 2px квадратная обводка, сплошная
-/// офсетная тень (без blur), врезанная в верхнюю линию подпись вида
-/// `❯ phone · txt`. Общий примитив для всех карточек/пузырей приложения.
+/// Терминальный визуальный язык TexFi: чёрный фон, тонкая обводка,
+/// врезанная в верхнюю линию подпись вида `┌─❯ phone · txt ───┐`.
 
 /// Моноширинный стиль для служебных надписей (префиксы, время, метрики).
 /// Основной текст сообщений остаётся обычным шрифтом — так читаемее.
@@ -33,6 +31,20 @@ TextStyle monoStyle({
       height: 1.2,
     );
 
+/// Готовые темы: акцент + подсказка фона.
+class TerminalTheme {
+  final String name;
+  final int accent;
+  const TerminalTheme(this.name, this.accent);
+}
+
+const List<TerminalTheme> kTerminalThemes = [
+  TerminalTheme('Midnight', 0xFF4C7CFF),
+  TerminalTheme('Catppuccin', 0xFF89B4FA),
+  TerminalTheme('Gruvbox', 0xFFD79921),
+  TerminalTheme('Matrix', 0xFF3DDC84),
+  TerminalTheme('Своя', 0xFF4C7CFF),
+];
 
 /// Рамка с разрывом под врезанную подпись.
 class _TerminalBorderPainter extends CustomPainter {
@@ -107,8 +119,8 @@ class TerminalBox extends StatelessWidget {
     required this.labelColor,
     required this.child,
     this.padding = const EdgeInsets.fromLTRB(12, 10, 12, 10),
-    this.radius = PixelTheme.cardRadius,
-    this.stroke = PixelTheme.borderWidth,
+    this.radius = 4,
+    this.stroke = 1,
     this.fill,
   });
 
@@ -190,7 +202,6 @@ class TerminalBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: fill ?? Colors.black,
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: PixelTheme.hardShadow(),
       ),
       child: Padding(padding: padding, child: child),
     );
