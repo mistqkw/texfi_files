@@ -1,5 +1,22 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.0
+
+- 🔷 **Smaller app icon.** The mark filled three quarters of the canvas and the
+  launcher's circular mask cropped it almost to the edge. The adaptive layer is now
+  a separate image at 52% — comfortably inside the safe zone.
+- ⌨️ **The keyboard stops dragging the screen with it.** Only the composer lifts now;
+  the background, the snow and the feed stay put. It also no longer reappears by
+  itself after returning from another screen, and tapping the feed dismisses it.
+- ☑️ **Selection.** Pick items and delete them, move them to a folder, or label them
+  in one action. Long-press and drag paints the selection across rows.
+- 🏷 **Labels.** Mark any message or file with as many labels as you like — separate
+  from folders, shown on the card, and filterable from the top bar.
+- 📁 **Folders actually unload the feed.** An item filed into a folder now lives
+  there and no longer also shows up under "All".
+- 🎵 **The music player is pixel art now** — square transport buttons, a block seek
+  bar you can tap or drag, and no Material parts left.
+
 ## What's new in 1.4.0
 
 Full UI rebuild on the design-token architecture the rest of the TexFi ecosystem
