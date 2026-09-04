@@ -386,6 +386,25 @@ class AppStrings {
   String get compactSub => _('Плотнее, меньше отступов',
       'Denser, less spacing', 'Dichter, weniger Abstand',
       'Gęściej, mniej odstępów');
+  String get haptics =>
+      _('Вибрация', 'Haptics', 'Vibration', 'Wibracje');
+  String get hapticsSub => _('Отклик при нажатии и отправке',
+      'Feedback on taps and sends', 'Rückmeldung bei Tipp und Senden',
+      'Odzew przy dotknięciu i wysyłce');
+  String get bgBlur =>
+      _('Размытие фона', 'Background blur', 'Hintergrund-Unschärfe',
+          'Rozmycie tła');
+  String get bgDim =>
+      _('Затемнение фона', 'Background dim', 'Hintergrund abdunkeln',
+          'Przyciemnienie tła');
+  String get off => _('Выкл', 'Off', 'Aus', 'Wył');
+  String get snowSub => _('Падающий снег поверх фона',
+      'Falling snow over the background', 'Fallender Schnee über dem Hintergrund',
+      'Padający śnieg na tle');
+  String get snowSlow => _('Медленно', 'Slow', 'Langsam', 'Wolno');
+  String get snowMedium => _('Средне', 'Medium', 'Mittel', 'Średnio');
+  String get snowFast => _('Быстро', 'Fast', 'Schnell', 'Szybko');
+
   String get animations =>
       _('Анимации', 'Animations', 'Animationen', 'Animacje');
   String get animationsSub => _('Плавное появление и переходы',

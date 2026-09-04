@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../core/haptics.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
@@ -28,11 +29,41 @@ class _PeersPageState extends State<PeersPage> {
   late AppState _app;
   AppStrings get t => AppStrings(_app.settings.effectiveLanguageCode);
 
+  /// Идентификаторы устройств, о которых мы уже сообщили. Нужны, чтобы
+  /// отклик приходил на появление устройства, а не на каждое уведомление
+  /// discovery: тот шлёт notifyListeners на каждый цикл опроса, включая
+  /// циклы, в которых ничего не изменилось.
+  final Set<String> _announced = {};
+  bool _primed = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _app = AppScope.of(context);
+    _app.discovery.addListener(_onPeersChanged);
     _loadIp();
+  }
+
+  @override
+  void dispose() {
+    _app.discovery.removeListener(_onPeersChanged);
+    super.dispose();
+  }
+
+  void _onPeersChanged() {
+    final ids = _app.peers.where((p) => p.online).map((p) => p.id).toSet();
+    if (!_primed) {
+      // Первый заход: устройства, уже найденные к моменту открытия экрана,
+      // не «обнаружены только что» — молча запоминаем их.
+      _announced.addAll(ids);
+      _primed = true;
+      return;
+    }
+    final fresh = ids.difference(_announced);
+    _announced
+      ..removeWhere((id) => !ids.contains(id))
+      ..addAll(ids);
+    if (fresh.isNotEmpty) Haptics.peerFound();
   }
 
   Future<void> _loadIp() async {

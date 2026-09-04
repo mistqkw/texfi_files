@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../core/haptics.dart';
 
 import '../../core/theme/app_colors_ext.dart';
 import '../../core/theme/app_radius.dart';
@@ -116,7 +116,7 @@ class _PixelButtonState extends State<PixelButton> {
       onTapCancel: () => _setPressed(false),
       onTap: _enabled
           ? () {
-              HapticFeedback.selectionClick();
+              Haptics.tap();
               widget.onPressed!.call();
             }
           : null,

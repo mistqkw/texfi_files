@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_radius.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import '../core/haptics.dart';
 import '../app.dart';
 import 'album_art.dart';
 import 'audio_player_screen.dart';
@@ -66,7 +66,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
               MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
             ),
             onLongPress: () {
-              HapticFeedback.mediumImpact();
+              Haptics.tap();
               player.stop();
             },
             onPanUpdate: (d) => setState(() => _pos = _pos! + d.delta),

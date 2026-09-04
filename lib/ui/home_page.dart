@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart'
-    show HapticFeedback, SystemUiOverlayStyle;
+    show SystemUiOverlayStyle;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -18,6 +19,7 @@ import 'format.dart';
 import 'item_bubble.dart';
 import 'music_screen.dart';
 import '../core/theme/app_colors_ext.dart';
+import '../core/haptics.dart';
 import '../core/theme/app_motion.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
@@ -26,6 +28,7 @@ import 'pixel/pixel_card.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_route.dart';
+import 'pixel/pixel_snow.dart';
 import 'pixel/pixel_shadow.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
@@ -705,24 +708,22 @@ class _HomePageState extends State<HomePage> {
   /// Существование файла проверяется на каждом кадре сознательно: картинку
   /// могли удалить из галереи уже после выбора, и без проверки Image.file
   /// сыпал бы исключением декодирования непрерывно.
+  /// Подложка ленты: фото пользователя, размытие, затемнение и снег.
+  ///
+  /// Всё это — вынесенный в отдельный виджет слой, а не часть дерева
+  /// главного экрана: лента перестраивается на каждое изменение store
+  /// (пришло сообщение, обновился прогресс передачи), и без такого
+  /// разделения фоновая картинка пересоздавалась бы вместе с ней.
   Widget _bgLayer(ColorScheme cs) {
-    final path = _app.settings.chatBgImage;
-    if (path == null || !File(path).existsSync()) {
-      return const SizedBox.shrink();
-    }
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.file(File(path), fit: BoxFit.cover),
-        ColoredBox(color: Colors.black.withValues(alpha: _kBgDim)),
-      ],
+    final s = _app.settings;
+    return _BackgroundLayer(
+      path: s.chatBgImage,
+      blur: s.bgBlur,
+      dim: s.bgDim,
+      snow: s.snow,
+      snowSpeed: s.snowSpeed,
     );
   }
-
-  /// Затемнение фото-фона. Было настройкой 0..0.8 со значением по
-  /// умолчанию 0.35 — при светлой картинке этого не хватало, и белый текст
-  /// пропадал. 0.45 держит контраст в худшем случае.
-  static const double _kBgDim = 0.45;
 
 
   List<SavedItem> _applyFilter(List<SavedItem> items) {
@@ -1333,7 +1334,7 @@ class _SwipeRowState extends State<_SwipeRow> {
         final signed = details.direction == DismissDirection.endToStart
             ? -details.progress
             : details.progress;
-        if (details.reached && !_reached) HapticFeedback.lightImpact();
+        if (details.reached && !_reached) Haptics.tap();
         setState(() {
           _progress = signed;
           _reached = details.reached;
@@ -1431,7 +1432,7 @@ class _SendButtonState extends State<_SendButton>
   void pulse() {
     if (!mounted) return;
     _flash.forward(from: 0);
-    HapticFeedback.mediumImpact();
+    Haptics.sent();
   }
 
   @override
@@ -1479,5 +1480,106 @@ class _SendButtonState extends State<_SendButton>
         ),
       ),
     );
+  }
+}
+
+
+/// Фоновый слой: фото, размытие, затемнение, снег.
+///
+/// Отдельный [StatefulWidget] ради кэша изображения. Раньше здесь стоял
+/// `Image.file(File(path))` прямо в дереве главного экрана: каждый его
+/// пересбор создавал новый `FileImage`, а полноэкранное фото с телефона —
+/// это несколько мегапикселей, которые декодировались заново. Теперь
+/// провайдер создаётся один раз на путь и уменьшается до размера экрана
+/// через [ResizeImage].
+class _BackgroundLayer extends StatefulWidget {
+  const _BackgroundLayer({
+    required this.path,
+    required this.blur,
+    required this.dim,
+    required this.snow,
+    required this.snowSpeed,
+  });
+
+  final String? path;
+  final double blur;
+  final double dim;
+  final bool snow;
+  final int snowSpeed;
+
+  @override
+  State<_BackgroundLayer> createState() => _BackgroundLayerState();
+}
+
+class _BackgroundLayerState extends State<_BackgroundLayer> {
+  ImageProvider? _provider;
+  String? _resolvedPath;
+  int? _decodeWidth;
+
+  void _ensureProvider(double logicalWidth, double devicePixelRatio) {
+    final path = widget.path;
+    if (path == null) {
+      _provider = null;
+      _resolvedPath = null;
+      return;
+    }
+    // Существование файла проверяем при смене пути, а не на каждом кадре:
+    // картинку могли удалить из галереи уже после выбора, но синхронный
+    // доступ к диску в build() — сам по себе источник подтормаживаний.
+    final width = (logicalWidth * devicePixelRatio).round();
+    if (_resolvedPath == path && _decodeWidth == width) return;
+    _resolvedPath = path;
+    _decodeWidth = width;
+    if (!File(path).existsSync()) {
+      _provider = null;
+      return;
+    }
+    _provider = ResizeImage(
+      FileImage(File(path)),
+      width: width,
+      // Высоту не задаём: ResizeImage сохранит пропорции, а BoxFit.cover
+      // обрежет лишнее.
+      policy: ResizeImagePolicy.fit,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    _ensureProvider(media.size.width, media.devicePixelRatio);
+
+    final layers = <Widget>[];
+    if (_provider != null) {
+      Widget image = Image(
+        image: _provider!,
+        fit: BoxFit.cover,
+        // Готовый кадр не перепроявляем: без этого при каждом возврате на
+        // экран картинка коротко мигала.
+        gaplessPlayback: true,
+      );
+      if (widget.blur > 0) {
+        image = ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(
+            sigmaX: widget.blur,
+            sigmaY: widget.blur,
+            tileMode: TileMode.decal,
+          ),
+          child: image,
+        );
+      }
+      layers.add(Positioned.fill(child: image));
+      if (widget.dim > 0) {
+        layers.add(
+          Positioned.fill(
+            child: ColoredBox(color: Colors.black.withValues(alpha: widget.dim)),
+          ),
+        );
+      }
+    }
+    if (widget.snow) {
+      layers.add(Positioned.fill(child: PixelSnow(speed: widget.snowSpeed)));
+    }
+    if (layers.isEmpty) return const SizedBox.shrink();
+    return RepaintBoundary(child: Stack(fit: StackFit.expand, children: layers));
   }
 }

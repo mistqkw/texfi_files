@@ -9,6 +9,7 @@ import 'app_state.dart';
 import 'core/audio_handler.dart';
 import 'core/auth_service.dart';
 import 'core/background.dart';
+import 'core/haptics.dart';
 import 'core/quick_share.dart';
 import 'core/settings.dart';
 import 'l10n/app_strings.dart';
@@ -26,6 +27,12 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   final settings = await Settings.load();
+
+  // Возможности вибромотора опрашиваются один раз при старте: делать это
+  // при первом же нажатии значило бы, что первый отклик приходит с
+  // задержкой на асинхронный опрос платформы.
+  Haptics.enabled = settings.hapticsEnabled;
+  await Haptics.init();
   final store = Store();
   await store.init();
   final auth = await AuthService.load();

@@ -14,6 +14,7 @@ import '../core/settings.dart';
 import '../core/version.dart';
 import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
+import '../core/haptics.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
@@ -284,17 +285,31 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
-      _sub(t.hBackground),
       _switchTile(
         title: t.animations,
         subtitle: t.animationsSub,
         value: s.animations,
         onChanged: (v) => s.animations = v,
       ),
-      // Фото-фон сохранён как возможность, но больше не тянет за собой
-      // подсистему из эффекта, затемнения, погоды и цветов пузырей:
-      // затемнение теперь фиксированное — ровно такое, чтобы текст читался
-      // поверх любой картинки.
+      _switchTile(
+        title: t.haptics,
+        subtitle: t.hapticsSub,
+        value: s.hapticsEnabled,
+        onChanged: (v) {
+          s.hapticsEnabled = v;
+          Haptics.enabled = v;
+          // Отклик на само включение — иначе непонятно, сработало ли.
+          if (v) Haptics.tap();
+        },
+      ),
+
+      // --- Фон и эффекты ---
+      //
+      // Раздел вернулся после прошлой чистки. Тогда он ушёл целиком вместе
+      // с действительно избыточным (погода с тремя ползунками, цвета
+      // пузырей, пресеты палитр), но фото-фон, его размытие, затемнение и
+      // снег — то, чем пользуются, а не косметика ради косметики.
+      _sub(t.hBackground),
       _plainTile(
         icon: 'image',
         title: t.chatPhoto,
@@ -310,7 +325,88 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
         onTap: () => _pickBgImage(s),
       ),
+      // Размытие и затемнение имеют смысл только поверх картинки, поэтому
+      // без выбранного фото они просто не показываются — вместо того чтобы
+      // висеть неактивными и озадачивать.
+      if (s.chatBgImage != null) ...[
+        _sliderTile(
+          title: t.bgBlur,
+          value: s.bgBlur,
+          min: 0,
+          max: 24,
+          divisions: 12,
+          label: s.bgBlur <= 0 ? t.off : s.bgBlur.round().toString(),
+          onChanged: (v) => s.bgBlur = v,
+        ),
+        _sliderTile(
+          title: t.bgDim,
+          value: s.bgDim,
+          min: 0,
+          max: 0.8,
+          divisions: 8,
+          label: '${(s.bgDim * 100).round()}%',
+          onChanged: (v) => s.bgDim = v,
+        ),
+      ],
+      _switchTile(
+        title: t.snow,
+        subtitle: t.snowSub,
+        value: s.snow,
+        onChanged: (v) => s.snow = v,
+      ),
+      if (s.snow)
+        for (final e in {
+          0: t.snowSlow,
+          1: t.snowMedium,
+          2: t.snowFast,
+        }.entries)
+          _radioTile(
+            title: e.value,
+            selected: s.snowSpeed == e.key,
+            onTap: () => s.snowSpeed = e.key,
+          ),
     ];
+  }
+
+  /// Строка с ползунком и текущим значением справа.
+  Widget _sliderTile({
+    required String title,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String label,
+    required ValueChanged<double> onChanged,
+  }) {
+    return _wrap(
+      PixelCard(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(title, style: context.text.tileTitle)),
+                Text(label, style: context.text.statSmall),
+              ],
+            ),
+            Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _fontLabel(int i) => switch (i) {

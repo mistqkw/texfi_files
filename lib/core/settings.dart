@@ -38,8 +38,8 @@ class Settings extends ChangeNotifier {
   static const _obsoleteKeys = [
     'designPreset', 'themePreset', 'bubbleStyle', 'bubbleRadius', 'compact',
     'terminalBubbles', 'borderOpacity', 'seedColor', 'pureBlack',
-    'chatBackground', 'bgEffect', 'bgDim', 'gradientBg',
-    'weather', 'weatherSize', 'weatherDensity', 'weatherSpeed',
+    'chatBackground', 'bgEffect', 'gradientBg',
+    'weatherSize', 'weatherDensity', 'weatherSpeed',
     'msgOutColor', 'msgInColor',
     'prefixDevice', 'prefixType', 'prefixSize', 'prefixTime',
     'animStyle', 'animSpeed', 'wallpaperSeeded',
@@ -138,6 +138,43 @@ class Settings extends ChangeNotifier {
   bool get adminUnlocked => _p.getBool('adminUnlocked') ?? false;
   set adminUnlocked(bool v) {
     _p.setBool('adminUnlocked', v);
+    notifyListeners();
+  }
+
+  // Тактильный отклик. Единый выключатель для всего приложения — как в
+  // f0kus, чтобы настройка вела себя одинаково во всей экосистеме.
+  bool get hapticsEnabled => _p.getBool('hapticsEnabled') ?? true;
+  set hapticsEnabled(bool v) {
+    _p.setBool('hapticsEnabled', v);
+    notifyListeners();
+  }
+
+  // --- Фон ленты ---
+  // Затемнение фото-фона 0..0.8.
+  double get bgDim => _p.getDouble('bgDim') ?? 0.45;
+  set bgDim(double v) {
+    _p.setDouble('bgDim', v.clamp(0, 0.8));
+    notifyListeners();
+  }
+
+  // Размытие фото-фона в логических пикселях, 0..24. 0 = без размытия.
+  double get bgBlur => _p.getDouble('bgBlur') ?? 0;
+  set bgBlur(double v) {
+    _p.setDouble('bgBlur', v.clamp(0, 24));
+    notifyListeners();
+  }
+
+  // Снегопад поверх фона.
+  bool get snow => _p.getBool('snow') ?? false;
+  set snow(bool v) {
+    _p.setBool('snow', v);
+    notifyListeners();
+  }
+
+  // Скорость снега: 0 = медленно, 1 = средне, 2 = быстро.
+  int get snowSpeed => _p.getInt('snowSpeed') ?? 1;
+  set snowSpeed(int v) {
+    _p.setInt('snowSpeed', v.clamp(0, 2));
     notifyListeners();
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../core/haptics.dart';
 
 import '../../core/theme/app_colors_ext.dart';
 import '../../core/theme/app_motion.dart';
@@ -30,7 +30,7 @@ class PixelCheckbox extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: enabled
           ? () {
-              HapticFeedback.selectionClick();
+              Haptics.tap();
               onChanged!(!value);
             }
           : null,
@@ -75,7 +75,7 @@ class PixelSwitch extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: enabled
           ? () {
-              HapticFeedback.selectionClick();
+              Haptics.tap();
               onChanged!(!value);
             }
           : null,
@@ -135,7 +135,7 @@ class PixelRadio extends StatelessWidget {
       onTap: onTap == null
           ? null
           : () {
-              HapticFeedback.selectionClick();
+              Haptics.tap();
               onTap!();
             },
       child: Container(
