@@ -1,5 +1,36 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.4.0
+
+Full UI rebuild. The pixel-art redesign was reverted and redone from scratch, this
+time on the same design-token architecture the rest of the TexFi ecosystem uses,
+so files, f0kus and m0ney now genuinely share a vocabulary rather than merely
+resembling each other.
+
+- 🎨 **New visual language.** Cards and buttons carry a 2px pixel border and a solid
+  offset shadow with no blur; pressing one sinks it into its own shadow like a
+  physical key, without shifting the layout. Checkboxes, switches and radios are
+  custom pixel versions — no Material controls left in the interface. Press Start 2P
+  is used only for screen titles, section headers, button labels and large accent
+  numbers; everything you actually read is set in a bundled grotesque.
+- 🔷 **New app icon.** A P2P node — four satellites around a hub, three-tone shading
+  lit from the top left, checked at 60px and 32px before generating every platform
+  format.
+- 🐛 **Header overlap fixed.** The app name and status line used to sit in an AppBar
+  with a hard-coded height while both scaled with the UI scale setting, so past
+  roughly 115% they printed on top of each other. The capsule height is now derived
+  from the text actually drawn in it, so they cannot collide at any scale.
+- ⚙️ **Settings cut roughly in half.** Removed as pure cosmetics: four OS design
+  skins, four palette presets, the accent-colour picker, message bubble colours,
+  bubble corner style, border brightness, density, animation style and speed, and
+  the entire weather-effect subsystem. Custom photo backgrounds stay. Obsolete
+  stored values are cleaned up on upgrade, and a background image pointing at a
+  deleted file no longer throws on every frame.
+- ✨ **Motion pass.** Screen transitions are a short fade+scale instead of the
+  Material slide, which blurred 2px borders mid-transition. Device discovery shows a
+  pixel scanner wave instead of a spinner. Sending text or a file now gives a visible
+  flash and a haptic tick when it actually completes.
+
 ## What's new in 1.1.9
 
 - 📁 **Archive/group are now reliably reachable.** Both were only accessible via a
