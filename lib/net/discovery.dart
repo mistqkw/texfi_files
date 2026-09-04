@@ -169,7 +169,7 @@ class Discovery extends ChangeNotifier {
           continue;
         }
         seen.add(id);
-        _peers[id] = Peer(
+        final peer = Peer(
           id: id,
           name: (j['name'] as String?) ?? 'Устройство',
           platform: (j['platform'] as String?) ?? '?',
@@ -178,14 +178,30 @@ class Discovery extends ChangeNotifier {
           accountId: auth.accountId, // все из реестра — свой аккаунт
           lastSeen: updated ?? DateTime.now(),
         );
-        changed = true;
+        // Сравниваем с тем, что уже знаем. lastSeen в сравнение не входит:
+        // он меняется на каждом опросе, и по нему «изменилось» было бы
+        // истинно всегда — ради этого поля перерисовывать экран незачем.
+        final prev = _peers[id];
+        if (prev == null ||
+            prev.name != peer.name ||
+            prev.platform != peer.platform ||
+            prev.address != peer.address ||
+            prev.httpPort != peer.httpPort ||
+            prev.online != peer.online) {
+          changed = true;
+        }
+        _peers[id] = peer;
       } catch (_) {}
     }
     // Убираем исчезнувшие (кроме добавленных вручную).
+    final before = _peers.length;
     _peers.removeWhere(
         (id, p) => !seen.contains(id) && p.accountId != 'manual');
-    if (changed) notifyListeners();
-    notifyListeners();
+    // Уведомляем один раз и только если список действительно изменился.
+    // Раньше здесь стояли два вызова подряд, второй — безусловный: опрос
+    // идёт каждые 12 секунд, и каждый его цикл перестраивал весь главный
+    // экран (фон, шапку, всю ленту) даже когда ничего не менялось.
+    if (changed || _peers.length != before) notifyListeners();
   }
 
   /// Ручное подключение по IP (fallback, handshake /info).

@@ -376,7 +376,7 @@ class _HomePageState extends State<HomePage> {
             !_app.peers.any((p) => p.id == _target!.id && p.online)) {
           _target = _app.preferredPeer;
         }
-        final all = _app.store.items;
+        final all = _app.store.itemsChronological;
         final items = _applyFilter(all);
         if (!_didInitialScroll && items.isNotEmpty) {
           _didInitialScroll = true;
@@ -932,10 +932,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _timeline(List<SavedItem> items) {
-    // items идут от новых к старым (store.items = reversed). Развернём для ленты.
-    final ordered = items.reversed
-        .where((e) => !_pendingDelete.contains(e.id))
-        .toList();
+    // items уже в хронологическом порядке (store.itemsChronological).
+    final ordered = _pendingDelete.isEmpty
+        ? items
+        : items.where((e) => !_pendingDelete.contains(e.id)).toList();
     return SmoothScroll(
       controller: _scroll,
       builder: (physics) => ListView.builder(

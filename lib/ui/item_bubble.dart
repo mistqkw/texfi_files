@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
+import 'file_check.dart';
 import 'pixel/pixel_card.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
@@ -345,14 +346,25 @@ class ItemBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (path != null && File(path).existsSync())
+        if (path != null && FileCheck.exists(path))
           GestureDetector(
             onTap: () => _openImage(context, path),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
               child: Hero(
                 tag: path,
-                child: Image.file(File(path), fit: BoxFit.cover),
+                child: Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                  // Превью в ленте не выше 280px, а снимок с камеры — это
+                  // несколько тысяч пикселей по стороне. Без ограничения
+                  // Flutter держал в памяти полное разложение каждого
+                  // видимого снимка: десяток фотографий в ленте — сотни
+                  // мегабайт и заметные паузы при скролле.
+                  cacheHeight: 560,
+                  filterQuality: FilterQuality.low,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
               ),
             ),
           ),
@@ -556,7 +568,7 @@ class ItemBubble extends StatelessWidget {
 
   Future<void> _saveAs(BuildContext context) async {
     final src = item.filePath;
-    if (src == null || !File(src).existsSync()) return;
+    if (src == null || !FileCheck.exists(src)) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
       if (Platform.isAndroid) {

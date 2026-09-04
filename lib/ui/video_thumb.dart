@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'file_check.dart';
 import 'package:get_thumbnail_video/index.dart';
 import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
@@ -54,7 +55,7 @@ class _VideoThumbState extends State<VideoThumb> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    if (_thumbPath != null && File(_thumbPath!).existsSync()) {
+    if (FileCheck.exists(_thumbPath)) {
       return GestureDetector(
         onTap: widget.onOpen,
         child: Stack(
@@ -62,7 +63,13 @@ class _VideoThumbState extends State<VideoThumb> {
           children: [
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
-              child: Image.file(File(_thumbPath!), fit: BoxFit.cover),
+              child: Image.file(
+                File(_thumbPath!),
+                fit: BoxFit.cover,
+                cacheHeight: 560,
+                filterQuality: FilterQuality.low,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
             ),
             Container(
               width: 56,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'file_check.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/models.dart';
@@ -96,7 +97,7 @@ class _ImageGalleryState extends State<ImageGallery> {
             onPageChanged: (i) => setState(() => _index = i),
             itemBuilder: (context, i) {
               final path = widget.images[i].filePath;
-              if (path == null || !File(path).existsSync()) {
+              if (path == null || !FileCheck.exists(path)) {
                 return const Center(
                   child: Icon(
                     Icons.broken_image_outlined,

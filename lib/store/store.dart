@@ -16,7 +16,42 @@ class Store extends ChangeNotifier {
   late final File _tombstoneFile;
   bool _ready = false;
 
-  List<SavedItem> get items => List.unmodifiable(_items.reversed);
+  /// Лента от новых к старым.
+  ///
+  /// Раньше здесь на каждом обращении собирался новый список
+  /// (`List.unmodifiable(_items.reversed)`), а главный экран обращается к
+  /// нему несколько раз за перерисовку — и сам перерисовывается на каждое
+  /// уведомление store и discovery. Теперь список собирается один раз после
+  /// изменения и переиспользуется.
+  List<SavedItem>? _view;
+
+  List<SavedItem> get items =>
+      _view ??= List.unmodifiable(_items.reversed);
+
+  /// Сбрасывает кэш ленты. Вызывается из [_touch] вместе с уведомлением,
+  /// чтобы порядок «сначала инвалидировать, потом уведомить» нельзя было
+  /// перепутать в одном из полутора десятка мест, где меняется список.
+  /// Та же лента в хронологическом порядке (старые сверху) — в этом виде
+  /// её рисует главный экран.
+  ///
+  /// Отдельный кэш вместо `items.reversed` на месте: экран разворачивал уже
+  /// развёрнутый список на каждой перерисовке, то есть делал двойную работу
+  /// ради исходного порядка.
+  List<SavedItem>? _chronological;
+
+  List<SavedItem> get itemsChronological =>
+      _chronological ??= List.unmodifiable(_items);
+
+  void _invalidate() {
+    _view = null;
+    _chronological = null;
+  }
+
+  /// Инвалидация + уведомление одним вызовом.
+  void _touch() {
+    _invalidate();
+    super.notifyListeners();
+  }
   bool get ready => _ready;
   Directory get filesDir => _filesDir;
 
@@ -74,7 +109,7 @@ class Store extends ChangeNotifier {
       }
     }
     _ready = true;
-    notifyListeners();
+    _touch();
   }
 
   Future<void> _persistTombstones() =>
@@ -88,20 +123,20 @@ class Store extends ChangeNotifier {
   /// в облако, пока приём не завершится (см. [finishReceiving]).
   Future<void> addReceiving(SavedItem item) async {
     _items.add(item);
-    notifyListeners();
+    _touch();
   }
 
   /// Обновить прогресс приёма (вызывается часто — без записи на диск).
   void updateReceivedBytes(SavedItem item, int bytes) {
     item.fileSize = bytes;
-    notifyListeners();
+    _touch();
   }
 
   /// Приём завершён: фиксируем размер, персистим и запускаем облачную синхронизацию.
   Future<void> finishReceiving(SavedItem item, int finalSize) async {
     item.receiving = false;
     item.fileSize = finalSize;
-    notifyListeners();
+    _touch();
     await _persist();
     onItemAdded?.call(item);
   }
@@ -109,12 +144,12 @@ class Store extends ChangeNotifier {
   /// Приём прервался — убираем плейсхолдер из ленты.
   Future<void> cancelReceiving(SavedItem item) async {
     _items.removeWhere((e) => e.id == item.id);
-    notifyListeners();
+    _touch();
   }
 
   Future<void> add(SavedItem item) async {
     _items.add(item);
-    notifyListeners();
+    _touch();
     await _persist();
     onItemAdded?.call(item);
   }
@@ -124,7 +159,7 @@ class Store extends ChangeNotifier {
     if (has(item.id) || _tombstones.contains(item.id)) return;
     _items.add(item);
     _items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    notifyListeners();
+    _touch();
     await _persist();
   }
 
@@ -143,7 +178,7 @@ class Store extends ChangeNotifier {
       _tombstones.add(item.id);
       await _persistTombstones();
     }
-    notifyListeners();
+    _touch();
     // Удаляем локальный файл, если он в нашей папке.
     if (item.filePath != null && item.filePath!.startsWith(_filesDir.path)) {
       try {
@@ -157,7 +192,7 @@ class Store extends ChangeNotifier {
 
   Future<void> togglePin(SavedItem item) async {
     item.pinned = !item.pinned;
-    notifyListeners();
+    _touch();
     await _persist();
     onItemChanged?.call(item);
   }
@@ -166,20 +201,20 @@ class Store extends ChangeNotifier {
   /// локальный путь скачанного файла.
   Future<void> updateFilePath(SavedItem item, String path) async {
     item.filePath = path;
-    notifyListeners();
+    _touch();
     await _persist();
   }
 
   Future<void> toggleArchive(SavedItem item) async {
     item.archived = !item.archived;
-    notifyListeners();
+    _touch();
     await _persist();
     onItemChanged?.call(item);
   }
 
   Future<void> setGroup(SavedItem item, String? group) async {
     item.group = (group != null && group.trim().isEmpty) ? null : group?.trim();
-    notifyListeners();
+    _touch();
     await _persist();
     onItemChanged?.call(item);
   }
@@ -202,7 +237,7 @@ class Store extends ChangeNotifier {
     item.pinned = pinned;
     item.archived = archived;
     item.group = group;
-    notifyListeners();
+    _touch();
     await _persist();
   }
 
@@ -233,14 +268,14 @@ class Store extends ChangeNotifier {
         } catch (_) {}
       }
     }
-    notifyListeners();
+    _touch();
     await _persist();
     return true;
   }
 
   Future<void> clearAll() async {
     _items.clear();
-    notifyListeners();
+    _touch();
     try {
       if (_filesDir.existsSync()) {
         for (final f in _filesDir.listSync()) {

@@ -8,31 +8,42 @@ void main() {
     // Имена глифов — строки, поэтому опечатка в вызове не ловится
     // компилятором и молча рисует пустое место. Этот тест ловит обратную
     // ошибку: кривую сетку в самом реестре.
-    test('каждый глиф — квадратная сетка из строк одинаковой длины', () {
+    // Единая сетка — то, за счёт чего набор выглядит нарисованным, а не
+    // собранным из разных источников. Инвариант держится тестом, потому
+    // что нарушить его правкой одной иконки слишком легко.
+    test('весь интерфейсный набор — на сетке gridSize x gridSize', () {
       expect(PixelGlyphs.all, isNotEmpty);
       PixelGlyphs.all.forEach((name, rows) {
-        expect(rows, isNotEmpty, reason: 'глиф $name пуст');
-        final width = rows.first.length;
+        expect(
+          rows.length,
+          PixelGlyphs.gridSize,
+          reason: 'глиф $name: ${rows.length} строк вместо '
+              '${PixelGlyphs.gridSize}',
+        );
         for (final row in rows) {
           expect(
             row.length,
-            width,
-            reason: 'глиф $name: строка "$row" не совпадает по длине',
+            PixelGlyphs.gridSize,
+            reason: 'глиф $name: строка "$row" не той длины',
           );
         }
-        expect(
-          rows.length,
-          width,
-          reason: 'глиф $name не квадратный: ${rows.length}x$width',
-        );
       });
     });
 
-    test('в сетке только символы ".", "#" и "o"', () {
+    test('крупный знак приложения — квадратный', () {
+      expect(PixelGlyphs.mark, isNotEmpty);
+      for (final row in PixelGlyphs.mark) {
+        expect(row.length, PixelGlyphs.mark.length);
+      }
+    });
+
+    test('интерфейсные глифы — одноцветные', () {
+      // 'o' (светлая вставка) есть только у крупного знака: внутри иконки
+      // размером 20px второй тон превращается в грязь.
       PixelGlyphs.all.forEach((name, rows) {
         for (final row in rows) {
           expect(
-            RegExp(r'^[.#o]+$').hasMatch(row),
+            RegExp(r'^[.#]+$').hasMatch(row),
             isTrue,
             reason: 'глиф $name: недопустимый символ в "$row"',
           );
@@ -40,8 +51,23 @@ void main() {
       });
     });
 
-    test('символ приложения на месте', () {
-      expect(PixelGlyphs.all.containsKey('node'), isTrue);
+    test('иконки, на которые ссылается интерфейс, существуют', () {
+      // Имена глифов — строки, поэтому опечатка не ловится компилятором и
+      // молча рисует пустое место.
+      const used = [
+        'send', 'attach', 'mic', 'plus', 'close', 'check', 'back', 'chevron',
+        'search', 'trash', 'copy', 'share', 'download', 'file', 'folder',
+        'image', 'video', 'note', 'text', 'phone', 'laptop', 'device', 'star',
+        'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',
+        'warn', 'exchange', 'node',
+      ];
+      for (final name in used) {
+        expect(
+          PixelGlyphs.all.containsKey(name),
+          isTrue,
+          reason: 'глиф "$name" отсутствует в реестре',
+        );
+      }
     });
   });
 
@@ -50,7 +76,7 @@ void main() {
       const Directionality(
         textDirection: TextDirection.ltr,
         child: Center(
-          child: PixelIcon('node', size: 48, color: Color(0xFF4A7DFB)),
+          child: PixelIcon('mark', size: 48, color: Color(0xFF4A7DFB)),
         ),
       ),
     );
