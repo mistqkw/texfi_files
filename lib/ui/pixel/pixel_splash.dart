@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'pixel_icons.dart';
 import 'pixel_theme.dart';
 
-/// Входная анимация: символ приложения (две встречные стрелки) собирается
-/// из отдельных ячеек построчно, затем коротко вспыхивает акцентом.
+/// Входная анимация: символ приложения (P2P-узел) собирается из отдельных
+/// ячеек построчно, затем коротко вспыхивает акцентом.
 ///
 /// Длительность подобрана так, чтобы это читалось как заставка, а не как
 /// задержка: ~1.15с целиком, причём последние 200мс — уже уход в контент,
@@ -77,7 +77,7 @@ class _AssemblePainter extends CustomPainter {
   final double t;
   _AssemblePainter(this.t);
 
-  static final List<String> _glyph = PixelGlyphs.all['exchange']!;
+  static final List<String> _glyph = PixelGlyphs.all['node']!;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -100,14 +100,17 @@ class _AssemblePainter extends CustomPainter {
       if (rowProgress <= 0) continue;
       final line = _glyph[r];
       for (var c = 0; c < cols; c++) {
-        if (line.codeUnitAt(c) == 0x2E) continue;
+        final ch = line.codeUnitAt(c);
+        if (ch == 0x2E) continue;
         // Внутри строки ячейки проявляются слева направо.
         if (c / cols > rowProgress) continue;
-        paint.color = Color.lerp(
-          PixelTheme.accent,
-          Colors.white,
-          flash * (1 - flash) * 2.4,
-        )!;
+        paint.color = ch == 0x6F
+            ? Colors.white
+            : Color.lerp(
+                PixelTheme.accent,
+                Colors.white,
+                flash * (1 - flash) * 2.4,
+              )!;
         canvas.drawRect(
           Rect.fromLTWH(dx + c * cell, dy + r * cell, cell - 1, cell - 1),
           paint,

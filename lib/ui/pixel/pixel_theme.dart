@@ -83,6 +83,8 @@ class PixelTheme {
       Theme.of(context).brightness == Brightness.dark;
 
   /// Цвет бордера/тени для текущей темы.
-  static Color edge(BuildContext context) =>
-      isDark(context) ? darkBorder : lightBorder;
+  static Color edge(BuildContext context) => edge2(isDark(context));
+
+  /// То же, но по флагу темы: при сборке ThemeData контекста ещё нет.
+  static Color edge2(bool dark) => dark ? darkBorder : lightBorder;
 }
