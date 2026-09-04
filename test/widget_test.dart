@@ -61,6 +61,7 @@ void main() {
         'image', 'video', 'note', 'text', 'phone', 'laptop', 'device', 'star',
         'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',
         'warn', 'exchange', 'node', 'label', 'archive', 'pdf', 'code',
+        'play', 'pause', 'next', 'prev', 'shuffle', 'repeat', 'repeatone',
       ];
       for (final name in used) {
         expect(

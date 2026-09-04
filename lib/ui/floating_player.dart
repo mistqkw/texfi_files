@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_radius.dart';
+import 'pixel/pixel_icons.dart';
 import '../core/haptics.dart';
 import '../app.dart';
 import 'album_art.dart';
@@ -101,14 +102,12 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       width: _size,
                       height: _size,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [cs.primary, cs.tertiary],
-                        ),
+                        color: context.colors.surfaceVariant,
                       ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: Colors.white,
+                      child: PixelIcon(
+                        'note',
                         size: 26,
+                        color: context.colors.accent,
                       ),
                     ),
                   ),
@@ -117,10 +116,10 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       width: _size,
                       height: _size,
                       color: Colors.black45,
-                      child: const Icon(
-                        Icons.pause_rounded,
-                        color: Colors.white,
+                      child: const PixelIcon(
+                        'pause',
                         size: 22,
+                        color: Colors.white,
                       ),
                     ),
                   Positioned(

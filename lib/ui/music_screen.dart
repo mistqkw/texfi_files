@@ -7,6 +7,7 @@ import '../core/models.dart';
 import '../core/player_service.dart';
 import '../core/settings.dart';
 import 'album_art.dart';
+import 'pixel/pixel_icons.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'terminal.dart';
@@ -40,9 +41,12 @@ class _MusicScreenState extends State<MusicScreen> {
             listenable: app.player,
             builder: (context, _) => IconButton(
               tooltip: t.shuffle,
-              icon: Icon(
-                Icons.shuffle_rounded,
-                color: app.player.shuffle ? cs.primary : null,
+              icon: PixelIcon(
+                'shuffle',
+                size: 18,
+                color: app.player.shuffle
+                    ? context.colors.accent
+                    : context.colors.textTertiary,
               ),
               onPressed: app.player.toggleShuffle,
             ),
@@ -57,11 +61,12 @@ class _MusicScreenState extends State<MusicScreen> {
                   PlayerRepeatMode.all => t.repeatAll,
                   PlayerRepeatMode.one => t.repeatOne,
                 },
-                icon: Icon(
-                  mode == PlayerRepeatMode.one
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
-                  color: mode == PlayerRepeatMode.off ? null : cs.primary,
+                icon: PixelIcon(
+                  mode == PlayerRepeatMode.one ? 'repeatone' : 'repeat',
+                  size: 18,
+                  color: mode == PlayerRepeatMode.off
+                      ? context.colors.textTertiary
+                      : context.colors.accent,
                 ),
                 onPressed: app.player.cycleRepeat,
               );
@@ -134,7 +139,11 @@ class _MusicScreenState extends State<MusicScreen> {
                               0,
                               volume: app.settings.playerVolume,
                             ),
-                      icon: const Icon(Icons.playlist_play_rounded),
+                      icon: PixelIcon(
+                        'note',
+                        size: 18,
+                        color: context.colors.accent,
+                      ),
                       label: Text(t.playAll),
                     ),
                     const SizedBox(width: 12),
