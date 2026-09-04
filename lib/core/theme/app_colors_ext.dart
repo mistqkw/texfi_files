@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_palettes.dart';
+
 /// Семантические цвета темы. Доступ из виджетов — `context.colors`.
 class AppColorsExt extends ThemeExtension<AppColorsExt> {
   const AppColorsExt({
@@ -91,5 +93,12 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
 }
 
 extension AppColorsContext on BuildContext {
-  AppColorsExt get colors => Theme.of(this).extension<AppColorsExt>()!;
+  /// Палитра текущей темы.
+  ///
+  /// Если расширения в теме нет — берём палитру по яркости, а не падаем.
+  /// Раньше здесь стоял `!`: любой экран под чужой темой (системный диалог,
+  /// сторонний роут, виджет-тест) ронял отрисовку на пустом месте.
+  AppColorsExt get colors =>
+      Theme.of(this).extension<AppColorsExt>() ??
+      AppPalettes.forBrightness(Theme.of(this).brightness);
 }

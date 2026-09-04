@@ -27,8 +27,11 @@ import '../core/theme/app_text_styles_ext.dart';
 import 'pixel/pixel_card.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_burst.dart';
 import 'pixel/pixel_route.dart';
+import 'pixel/pixel_progress.dart';
 import 'pixel/pixel_snow.dart';
+import 'pixel/pixel_wordmark.dart';
 import 'pixel/pixel_shadow.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
@@ -183,6 +186,10 @@ class _HomePageState extends State<HomePage> {
       await _app.saveTextLocal(text, ttlSeconds: ttl);
     }
     _sendKey.currentState?.pulse();
+    // Текст уходит мгновенно, поэтому вспышку частиц здесь не показываем —
+    // она бы срабатывала на каждое сообщение и быстро надоела. Курсор
+    // отбивает такт только когда адресат действительно был.
+    if (_target != null) PixelWordmark.blink();
     _scrollToBottom();
   }
 
@@ -289,20 +296,15 @@ class _HomePageState extends State<HomePage> {
         duration: const Duration(minutes: 10),
         content: ValueListenableBuilder<double>(
           valueListenable: progress,
-          builder: (_, v, __) => Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('→ $name (${(v * 100).toStringAsFixed(0)}%)'),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(value: v == 0 ? null : v),
-                  ],
-                ),
-              ),
-            ],
+          builder: (_, v, _) => TweenAnimationBuilder<double>(
+            // Прогресс приходит рывками по мере отправки кусков; без
+            // сглаживания полоса прыгает через несколько ячеек разом.
+            tween: Tween<double>(end: v),
+            duration: kProgressCatchUp,
+            builder: (_, shown, _) => PixelTransferRow(
+              title: name,
+              value: v == 0 ? null : shown,
+            ),
           ),
         ),
       ),
@@ -314,6 +316,12 @@ class _HomePageState extends State<HomePage> {
           (p) => progress.value = p,
           onDone: () {
             entry.close();
+            // Момент прибытия: вспышка частиц с галочкой, вибро-квитанция и
+            // короткая серия миганий курсора в логотипе — файл дошёл, и это
+            // видно, а не только записано строкой в ленте.
+            if (mounted) PixelBurst.show(context);
+            PixelWordmark.blink();
+            Haptics.sent();
             _toast(t.sentName(name));
             // Записываем в свою ленту как исходящее.
             _app.store.add(
@@ -586,7 +594,10 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Wordmark(size: _kTitleSize, leading: _kTitleLeading),
+                  PixelWordmark(
+                    size: _kTitleSize,
+                    leading: _kTitleLeading,
+                  ),
                   const SizedBox(height: _kTitleGap),
                   Text(
                     status,
@@ -1573,61 +1584,5 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
     }
     if (layers.isEmpty) return const SizedBox.shrink();
     return RepaintBoundary(child: Stack(fit: StackFit.expand, children: layers));
-  }
-}
-
-
-/// Логотип в шапке.
-///
-/// В экосистеме название всегда несёт небольшую графическую идею: у f0kus
-/// и m0ney это подмена буквы цифрой. В «files» подменять нечего, поэтому
-/// идея другая и своя: часть названия набрана акцентом, а следом стоит
-/// пиксельный блок-курсор — отсылка к терминальной строке, из которой
-/// приложение выросло. Курсор статичен: мигающий на главном экране элемент
-/// пришлось бы перерисовывать постоянно, а стоит он ровно ничего.
-class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.size, required this.leading});
-
-  final double size;
-  final double leading;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final base = context.text.screenTitle.copyWith(
-      fontSize: size,
-      height: leading,
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Flexible(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'TexFi ', style: base),
-                TextSpan(
-                  text: 'files',
-                  style: base.copyWith(color: colors.accent),
-                ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        const SizedBox(width: 3),
-        Padding(
-          // Курсор садится на базовую линию текста, а не по центру строки.
-          padding: EdgeInsets.only(bottom: size * 0.12),
-          child: Container(
-            width: size * 0.5,
-            height: size * 0.5,
-            color: colors.accent,
-          ),
-        ),
-      ],
-    );
   }
 }

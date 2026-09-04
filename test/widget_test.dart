@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:texfi_files/ui/pixel/pixel_icons.dart';
+import 'package:texfi_files/ui/pixel/pixel_progress.dart';
 
 void main() {
   group('Реестр пиксельных глифов', () {
@@ -81,5 +82,72 @@ void main() {
       ),
     );
     expect(tester.getSize(find.byType(PixelIcon)), const Size(48, 48));
+  });
+
+  group('Полоса передачи', () {
+    // Неопределённое состояние крутит бегущую волну, определённое — нет.
+    // Ошибиться тут легко: контроллер, забытый в repeat(), тикает всё
+    // время, пока виджет на экране.
+    testWidgets('в неопределённом состоянии анимируется, в известном — нет',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(width: 200, child: PixelProgress(value: null)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.hasRunningAnimations, isTrue);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(width: 200, child: PixelProgress(value: 0.4)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('строка передачи показывает округлённый процент',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              child: PixelTransferRow(title: 'holiday.zip', value: 0.426),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('holiday.zip'), findsOneWidget);
+      expect(find.text('43%'), findsOneWidget);
+    });
+  });
+
+  group('Иконка по типу файла', () {
+    test('узнаваемые расширения получают свой глиф', () {
+      expect(fileGlyphFor('backup.zip'), 'archive');
+      expect(fileGlyphFor('manual.PDF'), 'pdf');
+      expect(fileGlyphFor('main.dart'), 'code');
+      expect(fileGlyphFor('notes.md'), 'text');
+    });
+
+    test('незнакомое и безымянное падают на общий лист', () {
+      expect(fileGlyphFor('archive.bin'), 'file');
+      expect(fileGlyphFor('без_расширения'), 'file');
+      expect(fileGlyphFor(null), 'file');
+    });
+
+    test('каждый выбранный глиф есть в реестре', () {
+      for (final name in const [
+        'backup.zip', 'manual.pdf', 'main.dart', 'notes.md', 'x.bin',
+      ]) {
+        expect(PixelGlyphs.all.containsKey(fileGlyphFor(name)), isTrue);
+      }
+    });
   });
 }

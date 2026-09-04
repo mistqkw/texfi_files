@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/haptics.dart';
@@ -36,16 +37,35 @@ class _PeersPageState extends State<PeersPage> {
   final Set<String> _announced = {};
   bool _primed = false;
 
+  /// Сколько ждать, прежде чем сменить «идёт поиск» на подсказку.
+  ///
+  /// Опрос реестра идёт раз в 12 секунд, поэтому раньше первого-второго
+  /// цикла говорить «никого нет» рано — это было бы неправдой.
+  static const Duration _patience = Duration(seconds: 20);
+
+  Timer? _patienceTimer;
+  bool _waitedLongEnough = false;
+
+  void _restartPatience() {
+    _patienceTimer?.cancel();
+    _waitedLongEnough = false;
+    _patienceTimer = Timer(_patience, () {
+      if (mounted) setState(() => _waitedLongEnough = true);
+    });
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _app = AppScope.of(context);
     _app.discovery.addListener(_onPeersChanged);
+    _restartPatience();
     _loadIp();
   }
 
   @override
   void dispose() {
+    _patienceTimer?.cancel();
     _app.discovery.removeListener(_onPeersChanged);
     super.dispose();
   }
@@ -63,6 +83,9 @@ class _PeersPageState extends State<PeersPage> {
     _announced
       ..removeWhere((id) => !ids.contains(id))
       ..addAll(ids);
+    // Кто-то появился — отсчёт терпения начинается заново: если устройство
+    // потом пропадёт, подсказка не выскочит мгновенно.
+    if (ids.isNotEmpty) _restartPatience();
     if (fresh.isEmpty) return;
     Haptics.peerFound();
     // Устройство, появившееся в сети, — событие, а не строчка, которая
@@ -197,6 +220,10 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _searching(BuildContext context) {
+    // Через [_patience] бесконечное «осматриваюсь» сменяется подсказкой с
+    // конкретным следующим шагом. Висящий сканер сам по себе не сообщает
+    // ничего: непонятно, ищет он или сломался, и что делать дальше.
+    final waiting = !_waitedLongEnough;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
@@ -206,12 +233,19 @@ class _PeersPageState extends State<PeersPage> {
             // Пиксельный сканер вместо CircularProgressIndicator: тот
             // крутится одинаково и когда идёт опрос сети, и когда всё
             // зависло. Здесь видно и сам факт опроса, и его темп.
-            const PixelScanner(size: 88),
+            if (waiting)
+              const PixelScanner(size: 88)
+            else
+              PixelIcon('wifi', size: 72, color: context.colors.textTertiary),
             AppSpacing.gapXl,
-            Text(t.searchingAccount, style: context.text.screenTitle),
+            Text(
+              waiting ? t.searchingAccount : t.nobodyAroundTitle,
+              textAlign: TextAlign.center,
+              style: context.text.screenTitle,
+            ),
             AppSpacing.gapSm,
             Text(
-              t.searchingAccountSub,
+              waiting ? t.searchingAccountSub : t.nobodyAroundText,
               textAlign: TextAlign.center,
               style: context.text.bodySmall,
             ),

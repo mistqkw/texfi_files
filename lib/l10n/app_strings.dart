@@ -530,6 +530,13 @@ class AppStrings {
       'Devices find each other via your GitHub account. Sign in under Settings → Account.',
       'Geräte finden sich über dein GitHub-Konto. Anmelden unter Einstellungen → Konto.',
       'Urządzenia znajdują się przez konto GitHub. Zaloguj w Ustawienia → Konto.');
+  String get nobodyAroundTitle => _('Пока никого рядом',
+      'Nobody around yet', 'Noch niemand in der Nähe', 'Na razie nikogo obok');
+  String get nobodyAroundText => _(
+      'Открой TexFi files на другом устройстве в этой же сети — оно появится здесь само.',
+      'Open TexFi files on another device on this network — it will show up here by itself.',
+      'Öffne TexFi files auf einem anderen Gerät im selben Netzwerk — es erscheint hier von selbst.',
+      'Otwórz TexFi files na innym urządzeniu w tej samej sieci — pojawi się tu samo.');
   String peerAppeared(String name) => _(
       '$name на связи',
       '$name is on the line',

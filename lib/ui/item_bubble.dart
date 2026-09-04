@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
+import '../core/theme/app_text_styles_ext.dart';
 import 'file_check.dart';
 import 'pixel/pixel_card.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_progress.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
@@ -234,17 +237,7 @@ class ItemBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(value: progress, strokeWidth: 3),
-                Icon(Icons.download_rounded, size: 18, color: cs.primary),
-              ],
-            ),
-          ),
+          PixelIcon('download', size: 22, color: context.colors.accent),
           const SizedBox(width: 12),
           Flexible(
             child: Column(
@@ -263,6 +256,11 @@ class ItemBubble extends StatelessWidget {
                       ? '${humanSize(item.fileSize)} / ${humanSize(expected)}'
                       : '${humanSize(item.fileSize)} · ${t.receivingLabel}',
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: 190,
+                  child: PixelProgress(value: progress, height: 8),
                 ),
               ],
             ),
@@ -351,7 +349,9 @@ class ItemBubble extends StatelessWidget {
             onTap: () => _openImage(context, path),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
-              child: Hero(
+              child: _GifBadge(
+                fileName: item.fileName,
+                child: Hero(
                 tag: path,
                 child: Image.file(
                   File(path),
@@ -365,6 +365,7 @@ class ItemBubble extends StatelessWidget {
                   filterQuality: FilterQuality.low,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
+              ),
               ),
             ),
           ),
@@ -525,13 +526,22 @@ class ItemBubble extends StatelessWidget {
             Container(
               width: 48,
               height: 48,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: cs.secondaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                color: context.colors.surfaceVariant,
+                borderRadius: AppRadius.controlSmallAll,
+                border: Border.all(
+                  color: context.colors.divider,
+                  width: AppRadius.pixelBorder,
+                ),
               ),
-              child: Icon(
-                Icons.insert_drive_file_rounded,
-                color: cs.onSecondaryContainer,
+              // Тип, который приложение узнало, получает свою иконку —
+              // архив, документ, исходник. Здесь до сих пор стояла
+              // материаловская «страница», единственная на весь экран.
+              child: PixelIcon(
+                fileGlyphFor(item.fileName),
+                size: 24,
+                color: context.colors.accent,
               ),
             ),
             const SizedBox(width: 12),
@@ -939,6 +949,50 @@ class _HoverRevealState extends State<_HoverReveal> {
         // случайные нажатия.
         child: IgnorePointer(ignoring: !_hover, child: widget.child),
       ),
+    );
+  }
+}
+
+
+/// Уголок «GIF» поверх превью.
+///
+/// Анимированная картинка в ленте выглядит как обычная — до нажатия не
+/// понять, что она движется. Метка ставится только для gif: во всех
+/// остальных случаях виджет прозрачен и ничего не добавляет к дереву.
+class _GifBadge extends StatelessWidget {
+  const _GifBadge({required this.fileName, required this.child});
+
+  final String? fileName;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!(fileName ?? '').toLowerCase().endsWith('.gif')) return child;
+    final colors = context.colors;
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          left: AppSpacing.sm,
+          bottom: AppSpacing.sm,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: colors.accent,
+              borderRadius: AppRadius.controlTinyAll,
+            ),
+            child: Text(
+              'GIF',
+              // Короткая акцентная метка — ровно тот случай, для которого
+              // пиксельный шрифт и оставлен.
+              style: context.text.pixelLabel.copyWith(
+                fontSize: 6,
+                color: colors.onAccent,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

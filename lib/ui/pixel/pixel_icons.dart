@@ -166,6 +166,42 @@ class PixelGlyphs {
       '..........',
       '##########',
     ],
+    'archive': [
+      '..........',
+      '.########.',
+      '.###..###.',
+      '.##.##.##.',
+      '.###..###.',
+      '.##.##.##.',
+      '.###..###.',
+      '.##.##.##.',
+      '.########.',
+      '..........',
+    ],
+    'pdf': [
+      '.######...',
+      '.##..###..',
+      '.##...###.',
+      '.##....##.',
+      '.########.',
+      '.########.',
+      '.##....##.',
+      '.##....##.',
+      '.########.',
+      '..........',
+    ],
+    'code': [
+      '..........',
+      '..........',
+      '.##.......',
+      '..##......',
+      '...##.....',
+      '..##......',
+      '.##.......',
+      '..........',
+      '....######',
+      '..........',
+    ],
     'file': [
       '.######...',
       '.##..###..',
@@ -573,4 +609,25 @@ class PixelIconButton extends StatelessWidget {
     );
     return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
+}
+
+/// Глиф для файла по его имени.
+///
+/// Мелкая, но заметная деталь: у типа файла, который приложение узнаёт,
+/// вместо безликого листа появляется своя иконка. Картинки, звук и видео
+/// сюда не попадают — у них свой [ItemKind] и превью.
+String fileGlyphFor(String? fileName) {
+  final name = (fileName ?? '').toLowerCase();
+  final ext = name.contains('.') ? name.split('.').last : '';
+  const archive = {'zip', 'rar', '7z', 'tar', 'gz', 'xz', 'zst', 'apk', 'iso'};
+  const document = {'pdf', 'doc', 'docx', 'odt', 'rtf', 'epub', 'djvu'};
+  const code = {
+    'dart', 'py', 'js', 'ts', 'json', 'yaml', 'yml', 'sh', 'c', 'h', 'cpp',
+    'rs', 'go', 'java', 'kt', 'xml', 'html', 'css', 'toml', 'ini', 'conf',
+  };
+  if (archive.contains(ext)) return 'archive';
+  if (document.contains(ext)) return 'pdf';
+  if (code.contains(ext)) return 'code';
+  if (ext == 'txt' || ext == 'md' || ext == 'log') return 'text';
+  return 'file';
 }
