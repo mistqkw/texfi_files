@@ -39,7 +39,13 @@ class SavedItem {
   final String? fromName; // имя пира-источника
   bool pinned; // закреплено
   bool archived; // архивировано (скрыто из общей ленты)
-  String? group; // название группы/коллекции
+  String? group; // название группы/коллекции (папки)
+
+  /// Метки элемента. Ярлыки поверх папки: элемент лежит в одной папке, но
+  /// может нести сколько угодно меток — «важное», «работа», «отправить
+  /// позже». Множество, а не список: одна и та же метка не должна
+  /// повторяться, и порядок для них ничего не значит.
+  Set<String> labels;
   bool cloud; // синхронизировано в облако аккаунта (GitHub-репо)
   String? remotePath; // путь файла в репозитории (если в облаке)
   String? fileHash; // sha256 содержимого — для дедупликации в облаке
@@ -62,6 +68,7 @@ class SavedItem {
     this.pinned = false,
     this.archived = false,
     this.group,
+    Set<String>? labels,
     this.cloud = false,
     this.remotePath,
     this.fileHash,
@@ -69,7 +76,7 @@ class SavedItem {
     this.expiresAt,
     this.receiving = false,
     this.expectedSize = 0,
-  });
+  }) : labels = labels ?? <String>{};
 
   bool get isMedia =>
       kind == ItemKind.audio || kind == ItemKind.video || kind == ItemKind.image;
@@ -88,6 +95,7 @@ class SavedItem {
         'pinned': pinned,
         'archived': archived,
         'group': group,
+        'labels': labels.toList(),
         'cloud': cloud,
         'remotePath': remotePath,
         'fileHash': fileHash,
@@ -111,6 +119,12 @@ class SavedItem {
         pinned: j['pinned'] as bool? ?? false,
         archived: j['archived'] as bool? ?? false,
         group: j['group'] as String?,
+        // Поле появилось позже: у записей, сохранённых прежними версиями,
+        // его просто нет — читаем как пустой набор, а не падаем.
+        labels: (j['labels'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toSet() ??
+            <String>{},
         cloud: j['cloud'] as bool? ?? false,
         remotePath: j['remotePath'] as String?,
         fileHash: j['fileHash'] as String?,

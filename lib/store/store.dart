@@ -219,6 +219,78 @@ class Store extends ChangeNotifier {
     onItemChanged?.call(item);
   }
 
+  /// Переложить сразу несколько элементов в папку (или вынуть из неё).
+  ///
+  /// Отдельно от [setGroup] ради одной записи на диск и одного уведомления
+  /// на всю пачку: при выделении из полусотни элементов поштучный вызов
+  /// означал бы полсотни перезаписей индекса.
+  Future<void> setGroupAll(Iterable<SavedItem> items, String? group) async {
+    final value = (group != null && group.trim().isEmpty) ? null : group?.trim();
+    var changed = false;
+    for (final item in items) {
+      if (item.group == value) continue;
+      item.group = value;
+      changed = true;
+    }
+    if (!changed) return;
+    _touch();
+    await _persist();
+    for (final item in items) {
+      onItemChanged?.call(item);
+    }
+  }
+
+  /// Поставить или снять метку.
+  Future<void> toggleLabel(SavedItem item, String label) async {
+    final tag = label.trim();
+    if (tag.isEmpty) return;
+    if (!item.labels.remove(tag)) item.labels.add(tag);
+    _touch();
+    await _persist();
+    onItemChanged?.call(item);
+  }
+
+  /// Поставить метку сразу на несколько элементов.
+  ///
+  /// Если метка уже стоит у всех выделенных — снимаем её. Так одна и та же
+  /// кнопка и ставит, и снимает, и результат предсказуем.
+  Future<void> toggleLabelAll(Iterable<SavedItem> items, String label) async {
+    final tag = label.trim();
+    if (tag.isEmpty) return;
+    final list = items.toList();
+    if (list.isEmpty) return;
+    final everyone = list.every((e) => e.labels.contains(tag));
+    for (final item in list) {
+      if (everyone) {
+        item.labels.remove(tag);
+      } else {
+        item.labels.add(tag);
+      }
+    }
+    _touch();
+    await _persist();
+    for (final item in list) {
+      onItemChanged?.call(item);
+    }
+  }
+
+  /// Удалить сразу несколько элементов.
+  Future<void> removeAll(Iterable<SavedItem> items) async {
+    for (final item in items.toList()) {
+      await remove(item);
+    }
+  }
+
+  /// Все метки, встречающиеся в ленте (по алфавиту).
+  List<String> get labels {
+    final set = <String>{};
+    for (final it in _items) {
+      set.addAll(it.labels);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
   /// Применяет пин/архив/группу, пришедшие из общего облачного индекса с
   /// другого устройства, к уже существующему локальному элементу. Отдельно
   /// от toggle*/setGroup, чтобы не вызывать onItemChanged и не зациклить

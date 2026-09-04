@@ -104,7 +104,11 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/icon_1024.png"
   adaptive_icon_background: "#0B0B0E"
-  adaptive_icon_foreground: "assets/icon_1024.png"
+  # Отдельный передний план с прозрачным фоном и уменьшенным знаком.
+  # Раньше сюда подавалась та же картинка, что и в legacy: знак занимал 75%
+  # стороны, круглая маска обрезала его почти вплотную, и в лаунчере иконка
+  # выглядела раздутой. Безопасная зона adaptive-иконки — внутренние ~66%.
+  adaptive_icon_foreground: "assets/icon_foreground.png"
   remove_alpha_ios: false
   windows:
     generate: true

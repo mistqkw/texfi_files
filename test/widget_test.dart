@@ -60,7 +60,7 @@ void main() {
         'search', 'trash', 'copy', 'share', 'download', 'file', 'folder',
         'image', 'video', 'note', 'text', 'phone', 'laptop', 'device', 'star',
         'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',
-        'warn', 'exchange', 'node',
+        'warn', 'exchange', 'node', 'label', 'archive', 'pdf', 'code',
       ];
       for (final name in used) {
         expect(

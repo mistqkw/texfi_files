@@ -530,6 +530,16 @@ class AppStrings {
       'Devices find each other via your GitHub account. Sign in under Settings → Account.',
       'Geräte finden sich über dein GitHub-Konto. Anmelden unter Einstellungen → Konto.',
       'Urządzenia znajdują się przez konto GitHub. Zaloguj w Ustawienia → Konto.');
+  String get select => _('Выбрать', 'Select', 'Auswählen', 'Wybierz');
+  String get labels => _('Метки', 'Labels', 'Labels', 'Etykiety');
+  String get newLabel => _('Новая метка', 'New label', 'Neues Label',
+      'Nowa etykieta');
+  String get moveToFolder => _('В папку', 'Move to folder', 'In Ordner',
+      'Do folderu');
+  String selectedCount(int n) => _(
+      '$n ${_plural(n, 'выбран', 'выбрано', 'выбрано')}',
+      '$n selected', '$n ausgewählt', 'Wybrano: $n');
+  String get selectAll => _('Все', 'All', 'Alle', 'Wszystkie');
   String get nobodyAroundTitle => _('Пока никого рядом',
       'Nobody around yet', 'Noch niemand in der Nähe', 'Na razie nikogo obok');
   String get nobodyAroundText => _(

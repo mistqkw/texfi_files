@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart'
     show SystemUiOverlayStyle;
@@ -28,6 +29,7 @@ import 'pixel/pixel_card.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_burst.dart';
+import 'pixel/pixel_button.dart';
 import 'pixel/pixel_route.dart';
 import 'pixel/pixel_progress.dart';
 import 'pixel/pixel_snow.dart';
@@ -57,6 +59,18 @@ class _HomePageState extends State<HomePage> {
   _filter; // null=все, '__pinned__'=закреплённые, '__archive__'=архив, иначе имя группы
   bool _searching = false;
   final _sendKey = GlobalKey<_SendButtonState>();
+
+  /// Режим выделения: идентификаторы отмеченных элементов.
+  ///
+  /// Храним id, а не сами объекты: элемент может быть пересоздан при
+  /// обновлении ленты (приём файла, синхронизация), и ссылка на старый
+  /// экземпляр молча выпала бы из выделения.
+  final Set<String> _selected = {};
+  bool _selecting = false;
+
+  /// Что именно делает протяжка при выделении: отмечает или снимает.
+  /// Определяется по первому задетому элементу — как в файловых менеджерах.
+  bool _paintValue = true;
   final _search = TextEditingController();
   String _query = '';
 
@@ -400,6 +414,13 @@ class _HomePageState extends State<HomePage> {
           // Обои видны и за плавающей капсулой шапки — иначе она сливается
           // с фоном Scaffold и перестаёт читаться как отдельный блок.
           extendBodyBehindAppBar: true,
+          // Клавиатура не сжимает тело экрана.
+          //
+          // По умолчанию Scaffold уменьшает body на высоту клавиатуры — а
+          // вместе с ним уезжал и фон: картинка перемасштабировалась, снег
+          // перестраивался, лента прыгала. Теперь высота постоянна, а под
+          // клавиатуру приподнимается только поле ввода (см. _inputBar).
+          resizeToAvoidBottomInset: false,
           body: Stack(
             children: [
               Positioned.fill(child: _bgLayer(cs)),
@@ -417,14 +438,22 @@ class _HomePageState extends State<HomePage> {
                     child: Stack(
                       children: [
                         Positioned.fill(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 180),
-                            child: items.isEmpty
-                                ? _empty(context)
-                                : KeyedSubtree(
-                                    key: ValueKey(_filter),
-                                    child: _timeline(items),
-                                  ),
+                          // Тап мимо поля ввода прячет клавиатуру.
+                          // translucent, а не opaque: жесты самой ленты
+                          // (прокрутка, свайп по сообщению) должны
+                          // продолжать работать.
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () => FocusScope.of(context).unfocus(),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              child: items.isEmpty
+                                  ? _empty(context)
+                                  : KeyedSubtree(
+                                      key: ValueKey(_filter),
+                                      child: _timeline(items),
+                                    ),
+                            ),
                           ),
                         ),
                         if (_dragHover)
@@ -562,6 +591,7 @@ class _HomePageState extends State<HomePage> {
   /// заголовок живёт в жёстко заданном toolbarHeight — ровно та причина,
   /// по которой строки налезали друг на друга.
   Widget _barContent(BuildContext context) {
+    if (_selecting) return _selectionBar(context);
     final colors = context.colors;
     final online = _app.peers.where((p) => p.online).length;
     final status = !_app.auth.isLoggedIn
@@ -628,6 +658,184 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Шапка режима выделения: сколько отмечено и что с этим можно сделать.
+  ///
+  /// Занимает место обычной шапки, а не появляется сверху неё: иначе
+  /// содержимое ленты уезжало бы вниз при каждом входе в режим.
+  Widget _selectionBar(BuildContext context) {
+    final colors = context.colors;
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: _barScaler(context)),
+      child: Container(
+        height: _barHeight(context),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xs, 0, AppSpacing.xs, 0),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: AppRadius.cardMediumAll,
+          border: Border.all(color: colors.accent, width: AppRadius.pixelBorder),
+        ),
+        child: Row(
+          children: [
+            PixelIconButton(
+              icon: 'close',
+              size: 16,
+              tooltip: t.cancel,
+              onPressed: _endSelection,
+            ),
+            Expanded(
+              child: Text(
+                t.selectedCount(_selected.length),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.screenTitle.copyWith(
+                  fontSize: _kStatusSize + 1,
+                  color: colors.accent,
+                ),
+              ),
+            ),
+            PixelIconButton(
+              icon: 'label',
+              size: 17,
+              tooltip: t.labels,
+              onPressed: _selected.isEmpty ? null : _labelSelected,
+            ),
+            PixelIconButton(
+              icon: 'folder',
+              size: 17,
+              tooltip: t.moveToFolder,
+              onPressed: _selected.isEmpty ? null : _moveSelected,
+            ),
+            PixelIconButton(
+              icon: 'trash',
+              size: 17,
+              color: colors.danger,
+              tooltip: t.delete,
+              onPressed: _selected.isEmpty ? null : _deleteSelected,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteSelected() async {
+    final items = _selectedItems;
+    if (items.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.delete),
+        content: Text(t.selectedCount(items.length)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _app.store.removeAll(items);
+    Haptics.sent();
+    _endSelection();
+  }
+
+  Future<void> _moveSelected() async {
+    final items = _selectedItems;
+    if (items.isEmpty) return;
+    final group = await _pickGroup(context);
+    if (group == null) return;
+    // Пустая строка из диалога означает «вынуть из папки».
+    await _app.store.setGroupAll(items, group.isEmpty ? null : group);
+    Haptics.tap();
+    _endSelection();
+  }
+
+  Future<void> _labelSelected() async {
+    final items = _selectedItems;
+    if (items.isEmpty) return;
+    final tag = await _pickLabel(context);
+    if (tag == null || tag.isEmpty) return;
+    await _app.store.toggleLabelAll(items, tag);
+    Haptics.tap();
+    _endSelection();
+  }
+
+  /// Выбор папки: существующие плюс создание новой. Пустая строка —
+  /// «вынуть из папки».
+  Future<String?> _pickGroup(BuildContext context) {
+    final groups = _app.store.groups;
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheet) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final g in groups)
+                PixelTile(
+                  icon: 'folder',
+                  title: g,
+                  onTap: () => Navigator.pop(sheet, g),
+                ),
+              PixelTile(
+                icon: 'close',
+                title: t.removeFromGroup,
+                onTap: () => Navigator.pop(sheet, ''),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: _NewNameField(
+                  hint: t.newGroup,
+                  onSubmit: (v) => Navigator.pop(sheet, v),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _pickLabel(BuildContext context) {
+    final known = _app.store.labels;
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheet) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final tag in known)
+                PixelTile(
+                  icon: 'label',
+                  title: tag,
+                  onTap: () => Navigator.pop(sheet, tag),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: _NewNameField(
+                  hint: t.newLabel,
+                  onSubmit: (v) => Navigator.pop(sheet, v),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Кнопка перехода к устройствам со счётчиком найденных.
   Widget _devicesButton(BuildContext context, int online) {
     final colors = context.colors;
@@ -639,7 +847,7 @@ class _HomePageState extends State<HomePage> {
           tooltip: t.ttDevices,
           onPressed: () {
             FocusScope.of(context).unfocus();
-            pixelPush(context, (_) => const PeersPage());
+            _openPage((_) => const PeersPage());
           },
         ),
         if (online > 0)
@@ -665,6 +873,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Открыть экран, погасив клавиатуру и до, и после перехода.
+  ///
+  /// Одного unfocus перед push мало: возвращаясь, Flutter восстанавливает
+  /// прежний фокус, и клавиатура сама выезжала на главном экране, хотя
+  /// пользователь ничего не набирал.
+  Future<void> _openPage(WidgetBuilder builder) async {
+    FocusScope.of(context).unfocus();
+    await pixelPush(context, builder);
+    if (mounted) FocusScope.of(context).unfocus();
+  }
+
   void _openMenu(BuildContext context) {
     // Клавиатура от поля ввода не закрывается сама при пуше нового роута —
     // без этого она «протекала» на следующий экран.
@@ -678,6 +897,22 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Вход в режим выделения — рядом с остальными действиями
+              // экрана, а не спрятан в меню отдельного сообщения.
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: PixelTile(
+                  icon: 'check',
+                  title: t.select,
+                  onTap: () {
+                    Navigator.pop(sheet);
+                    setState(() {
+                      _selecting = true;
+                      _selected.clear();
+                    });
+                  },
+                ),
+              ),
               for (final e in [
                 ('note', t.music, const MusicScreen()),
                 ('text', t.ttKeyboard, const RemoteKeyboardPage()),
@@ -690,7 +925,7 @@ class _HomePageState extends State<HomePage> {
                     title: e.$2,
                     onTap: () {
                       Navigator.pop(sheet);
-                      pixelPush(context, (_) => e.$3);
+                      _openPage((_) => e.$3);
                     },
                   ),
                 ),
@@ -729,14 +964,25 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  /// Префикс значения фильтра для метки.
+  static const _labelFilter = 'label:';
+
   List<SavedItem> _applyFilter(List<SavedItem> items) {
     List<SavedItem> base;
     if (_filter == '__archive__') {
       base = items.where((e) => e.archived).toList();
     } else if (_filter == '__pinned__') {
       base = items.where((e) => e.pinned && !e.archived).toList();
+    } else if (_filter != null && _filter!.startsWith(_labelFilter)) {
+      final tag = _filter!.substring(_labelFilter.length);
+      base = items.where((e) => !e.archived && e.labels.contains(tag)).toList();
     } else if (_filter == null) {
-      base = items.where((e) => !e.archived).toList();
+      // «Все» — это лента, а не свалка: элемент, разложенный по папке,
+      // живёт в ней и здесь больше не мозолит глаза. Иначе папки не
+      // разгружают ленту, а только дублируют её.
+      base = items
+          .where((e) => !e.archived && (e.group == null || e.group!.isEmpty))
+          .toList();
     } else {
       base = items.where((e) => e.group == _filter && !e.archived).toList();
     }
@@ -801,14 +1047,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _filterBar(BuildContext context, List<SavedItem> all) {
-    // Один проход по ленте вместо трёх отдельных (store.groups +
-    // store.items.any ×2), каждый из которых заново обходил бы весь список
-    // и пересобирал store.items (реверс + копия) при каждой перерисовке.
+    // Один проход по ленте вместо нескольких отдельных: каждый заново
+    // обходил бы весь список при любой перерисовке.
     final groupSet = <String>{};
+    final labelSet = <String>{};
     var hasPinned = false;
     var hasArchived = false;
     for (final it in all) {
       if (it.group != null && it.group!.isNotEmpty) groupSet.add(it.group!);
+      if (!it.archived) labelSet.addAll(it.labels);
       if (it.archived) {
         hasArchived = true;
       } else if (it.pinned) {
@@ -816,69 +1063,85 @@ class _HomePageState extends State<HomePage> {
       }
     }
     final groups = groupSet.toList()..sort();
-    if (groups.isEmpty && !hasPinned && !hasArchived) {
+    final labels = labelSet.toList()..sort();
+    if (groups.isEmpty && labels.isEmpty && !hasPinned && !hasArchived) {
       return const SizedBox.shrink();
     }
-    // сбросить фильтр, если группа исчезла
-    if (_filter != null &&
-        _filter != '__pinned__' &&
-        _filter != '__archive__' &&
-        !groups.contains(_filter)) {
-      _filter = null;
-    }
+    // Сбрасываем фильтр, если папка или метка исчезли.
+    final known = {
+      null,
+      '__pinned__',
+      '__archive__',
+      ...groups,
+      ...labels.map((e) => '$_labelFilter$e'),
+    };
+    if (!known.contains(_filter)) _filter = null;
+
     return SizedBox(
-      height: 46,
+      height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
         children: [
-          _filterChip(
-            context,
-            label: t.all,
-            value: null,
-            icon: Icons.apps_rounded,
-          ),
+          _filterChip(label: t.all, value: null, icon: 'folder'),
           if (hasPinned)
-            _filterChip(
-              context,
-              label: t.pinned,
-              value: '__pinned__',
-              icon: Icons.push_pin_rounded,
-            ),
+            _filterChip(label: t.pinned, value: '__pinned__', icon: 'star'),
           if (hasArchived)
             _filterChip(
-              context,
               label: t.archived,
               value: '__archive__',
-              icon: Icons.archive_rounded,
+              icon: 'archive',
             ),
           for (final g in groups)
+            _filterChip(label: g, value: g, icon: 'folder'),
+          for (final l in labels)
             _filterChip(
-              context,
-              label: g,
-              value: g,
-              icon: Icons.folder_rounded,
+              label: l,
+              value: '$_labelFilter$l',
+              icon: 'label',
             ),
         ],
       ),
     );
   }
 
-  Widget _filterChip(
-    BuildContext context, {
+  Widget _filterChip({
     required String label,
     required String? value,
-    required IconData icon,
+    required String icon,
   }) {
     final selected = _filter == value;
+    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: ChoiceChip(
-        avatar: Icon(icon, size: 16),
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => setState(() => _filter = value),
-        visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: PixelCard(
+        accent: selected,
+        background: selected ? colors.accent : null,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        onTap: () => setState(() => _filter = value),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PixelIcon(
+              icon,
+              size: 13,
+              color: selected ? colors.onAccent : colors.accent,
+            ),
+            AppSpacing.wGapSm,
+            Text(
+              label,
+              style: context.text.tileTitleSmall.copyWith(
+                color: selected ? colors.onAccent : colors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -939,7 +1202,7 @@ class _HomePageState extends State<HomePage> {
     final ordered = _pendingDelete.isEmpty
         ? items
         : items.where((e) => !_pendingDelete.contains(e.id)).toList();
-    return SmoothScroll(
+    final list = SmoothScroll(
       controller: _scroll,
       builder: (physics) => ListView.builder(
         controller: _scroll,
@@ -952,18 +1215,32 @@ class _HomePageState extends State<HomePage> {
               i == 0 || !_sameDay(ordered[i - 1].createdAt, item.createdAt);
           final animate = _app.settings.animations && !_seen.contains(item.id);
           _seen.add(item.id);
+          final selected = _selected.contains(item.id);
           final row = Column(
             key: ValueKey(item.id),
             children: [
               if (showDay) _dayChip(context, item.createdAt),
-              _SwipeRow(
-                itemId: item.id,
-                onShare: () => shareItem(item),
-                onDelete: () => _requestDelete(item),
-                child: ItemBubble(
-                  item: item,
-                  onDelete: () => _requestDelete(item),
-                ),
+              // MetaData помечает строку её id: по нему протяжка узнаёт,
+              // над каким элементом сейчас палец (обычный hit-test по
+              // координатам ничего не сказал бы о содержимом).
+              MetaData(
+                metaData: item.id,
+                child: _selecting
+                    ? _SelectableRow(
+                        selected: selected,
+                        onTap: () => _toggleSelected(item.id),
+                        child: ItemBubble(item: item, onDelete: () {}),
+                      )
+                    : _SwipeRow(
+                        itemId: item.id,
+                        onShare: () => shareItem(item),
+                        onDelete: () => _requestDelete(item),
+                        child: ItemBubble(
+                          item: item,
+                          onDelete: () => _requestDelete(item),
+                          onSelect: () => _startSelection(item.id),
+                        ),
+                      ),
               ),
             ],
           );
@@ -971,7 +1248,78 @@ class _HomePageState extends State<HomePage> {
         },
       ),
     );
+    if (!_selecting) return list;
+    // Зажать и провести — «закрасить» выделение. Именно долгое нажатие, а
+    // не обычная протяжка: иначе жест отбирал бы у списка прокрутку.
+    return GestureDetector(
+      onLongPressStart: (d) => _paintAt(d.globalPosition, start: true),
+      onLongPressMoveUpdate: (d) => _paintAt(d.globalPosition),
+      child: list,
+    );
   }
+
+  // ── Выделение ──
+
+  void _startSelection(String id) {
+    Haptics.tap();
+    setState(() {
+      _selecting = true;
+      _selected
+        ..clear()
+        ..add(id);
+    });
+  }
+
+  void _toggleSelected(String id) {
+    Haptics.tap();
+    setState(() {
+      if (!_selected.remove(id)) _selected.add(id);
+      // Сняли последний — выходим из режима: пустая панель действий над
+      // нулём элементов бесполезна.
+      if (_selected.isEmpty) _selecting = false;
+    });
+  }
+
+  void _endSelection() {
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
+
+  /// Отмечает элемент под пальцем во время протяжки.
+  void _paintAt(Offset globalPosition, {bool start = false}) {
+    final view = View.of(context);
+    final result = HitTestResult();
+    WidgetsBinding.instance.hitTestInView(result, globalPosition, view.viewId);
+    for (final entry in result.path) {
+      final target = entry.target;
+      if (target is! RenderMetaData) continue;
+      final id = target.metaData;
+      if (id is! String) continue;
+      if (start) {
+        // Направление задаёт первый задетый элемент: начали с
+        // невыделенного — красим, с выделенного — стираем.
+        _paintValue = !_selected.contains(id);
+      }
+      final already = _selected.contains(id);
+      if (already == _paintValue) return;
+      setState(() {
+        if (_paintValue) {
+          _selected.add(id);
+        } else {
+          _selected.remove(id);
+        }
+        if (_selected.isEmpty) _selecting = false;
+      });
+      Haptics.tap();
+      return;
+    }
+  }
+
+  List<SavedItem> get _selectedItems => _app.store.itemsChronological
+      .where((e) => _selected.contains(e.id))
+      .toList();
 
   bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
@@ -1003,14 +1351,22 @@ class _HomePageState extends State<HomePage> {
 
   Widget _inputBar(BuildContext context) {
     final colors = context.colors;
+    // Поле ввода само отступает на высоту клавиатуры — это единственное,
+    // что должно на неё реагировать.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+      // Системный отступ снизу нужен только когда клавиатуры нет: под ней
+      // он даёт лишний зазор.
+      bottom: keyboard == 0,
+      child: AnimatedPadding(
+        duration: AppMotion.fast,
+        curve: AppMotion.standard,
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
           0,
           AppSpacing.md,
-          AppSpacing.sm,
+          AppSpacing.sm + keyboard,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1584,5 +1940,106 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
     }
     if (layers.isEmpty) return const SizedBox.shrink();
     return RepaintBoundary(child: Stack(fit: StackFit.expand, children: layers));
+  }
+}
+
+
+/// Строка ленты в режиме выделения.
+///
+/// Собственные жесты сообщения (свайп, меню по долгому нажатию) здесь
+/// отключены: пока идёт выбор, любое касание должно означать «отметить», а
+/// не запускать действие над одним элементом.
+class _SelectableRow extends StatelessWidget {
+  const _SelectableRow({
+    required this.selected,
+    required this.onTap,
+    required this.child,
+  });
+
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ColoredBox(
+        color: selected
+            ? colors.accent.withValues(alpha: 0.18)
+            : Colors.transparent,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.md),
+              child: PixelCheckbox(
+                value: selected,
+                // Обрабатывает вся строка — отдельный обработчик у галочки
+                // означал бы две зоны с разным поведением.
+                onChanged: (_) => onTap(),
+              ),
+            ),
+            Expanded(child: IgnorePointer(child: child)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Поле «создать новое» с кнопкой подтверждения.
+///
+/// Отдельный виджет, потому что контроллер должен жить ровно столько,
+/// сколько открыт лист: в замыкании внутри builder'а он создавался бы
+/// заново на каждую перестройку и терял введённый текст.
+class _NewNameField extends StatefulWidget {
+  const _NewNameField({required this.hint, required this.onSubmit});
+
+  final String hint;
+  final ValueChanged<String> onSubmit;
+
+  @override
+  State<_NewNameField> createState() => _NewNameFieldState();
+}
+
+class _NewNameFieldState extends State<_NewNameField> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _controller.text.trim();
+    if (value.isEmpty) return;
+    widget.onSubmit(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(hintText: widget.hint),
+            onSubmitted: (_) => _submit(),
+          ),
+        ),
+        AppSpacing.wGapSm,
+        PixelButton(
+          label: tr(context).save,
+          expand: false,
+          compact: true,
+          onPressed: _submit,
+        ),
+      ],
+    );
   }
 }

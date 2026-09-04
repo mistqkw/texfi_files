@@ -6,7 +6,9 @@ import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
 import 'file_check.dart';
+import 'pixel/pixel_button.dart';
 import 'pixel/pixel_card.dart';
+import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_progress.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +29,17 @@ import 'video_thumb.dart';
 class ItemBubble extends StatelessWidget {
   final SavedItem item;
   final VoidCallback onDelete;
-  const ItemBubble({super.key, required this.item, required this.onDelete});
+
+  /// Перейти в режим выделения с этого элемента. null — режим недоступен
+  /// (например, элемент уже показан внутри выделения).
+  final VoidCallback? onSelect;
+
+  const ItemBubble({
+    super.key,
+    required this.item,
+    required this.onDelete,
+    this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +178,19 @@ class ItemBubble extends StatelessWidget {
         if (item.archived) ...[
           const SizedBox(width: 6),
           Icon(Icons.archive_rounded, size: 11, color: dim),
+        ],
+        // Метки видны прямо на карточке — иначе пометить элемент можно, а
+        // увидеть пометку нельзя, и смысл теряется.
+        for (final tag in item.labels) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              border: Border.all(color: cs.primary.withValues(alpha: 0.7)),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(tag, style: monoStyle(color: cs.primary, size: 9)),
+          ),
         ],
         if (item.expiresAt != null) ...[
           const SizedBox(width: 6),
@@ -650,6 +675,94 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
+  /// Метки элемента: список существующих с галочками плюс поле для новой.
+  ///
+  /// Отдельно от папки: папка одна и определяет, где элемент лежит, а
+  /// меток может быть сколько угодно и они ничего не перекладывают.
+  void _labelDialog(BuildContext context) {
+    final store = AppScope.of(context).store;
+    final controller = TextEditingController();
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheet) => Padding(
+        // Лист поднимается над клавиатурой — иначе поле новой метки
+        // оказывается под ней.
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheet).bottom,
+        ),
+        child: SafeArea(
+          child: StatefulBuilder(
+            builder: (context, setSheet) {
+              final known = store.labels;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final tag in known)
+                    ListTile(
+                      leading: PixelIcon(
+                        'label',
+                        size: 18,
+                        color: context.colors.accent,
+                      ),
+                      title: Text(tag),
+                      trailing: PixelCheckbox(
+                        value: item.labels.contains(tag),
+                        onChanged: (_) {
+                          store.toggleLabel(item, tag);
+                          setSheet(() {});
+                        },
+                      ),
+                      onTap: () {
+                        store.toggleLabel(item, tag);
+                        setSheet(() {});
+                      },
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(
+                              hintText: tr(context).newLabel,
+                            ),
+                            onSubmitted: (v) {
+                              if (v.trim().isEmpty) return;
+                              store.toggleLabel(item, v);
+                              controller.clear();
+                              setSheet(() {});
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        PixelButton(
+                          label: tr(context).save,
+                          expand: false,
+                          compact: true,
+                          onPressed: () {
+                            final v = controller.text.trim();
+                            if (v.isEmpty) return;
+                            store.toggleLabel(item, v);
+                            controller.clear();
+                            setSheet(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   void _groupDialog(BuildContext context) {
     final store = AppScope.of(context).store;
     final groups = store.groups;
@@ -751,6 +864,9 @@ class ItemBubble extends StatelessWidget {
         ),
       ),
       items: [
+        if (onSelect != null)
+          tile(_MenuAction.select, Icons.checklist_rounded, t.select),
+        tile(_MenuAction.label, Icons.label_outline_rounded, t.labels),
         if (item.kind == ItemKind.text)
           tile(_MenuAction.copy, Icons.copy_rounded, t.copy),
         if (item.filePath != null)
@@ -781,6 +897,10 @@ class ItemBubble extends StatelessWidget {
     );
     if (action == null || !context.mounted) return;
     switch (action) {
+      case _MenuAction.select:
+        onSelect?.call();
+      case _MenuAction.label:
+        _labelDialog(context);
       case _MenuAction.copy:
         _copy(context);
       case _MenuAction.open:
@@ -804,6 +924,8 @@ class ItemBubble extends StatelessWidget {
 }
 
 enum _MenuAction {
+  select,
+  label,
   copy,
   open,
   saveAs,
