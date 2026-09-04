@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:texfi_files/ui/pixel/pixel_icons.dart';
+import 'package:texfi_files/ui/selection_paint.dart';
 import 'package:texfi_files/ui/pixel/pixel_progress.dart';
 
 void main() {
@@ -149,6 +150,79 @@ void main() {
       ]) {
         expect(PixelGlyphs.all.containsKey(fileGlyphFor(name)), isTrue);
       }
+    });
+  });
+
+  group('Закраска выделения протяжкой', () {
+    final ids = List.generate(10, (i) => 'id$i');
+
+    test('закрашивает весь отрезок между замерами, а не одну строку', () {
+      // Это и был баг «выделил много, а в папку добавилось несколько»:
+      // события движения приходят раз в кадр, и строки между двумя
+      // замерами пропускались.
+      final selected = <String>{};
+      applySelectionPaint(
+        selected: selected,
+        ids: ids,
+        from: 2,
+        to: 7,
+        value: true,
+      );
+      expect(selected, {'id2', 'id3', 'id4', 'id5', 'id6', 'id7'});
+    });
+
+    test('направление протяжки не важно', () {
+      final up = <String>{};
+      final down = <String>{};
+      applySelectionPaint(
+          selected: up, ids: ids, from: 7, to: 2, value: true);
+      applySelectionPaint(
+          selected: down, ids: ids, from: 2, to: 7, value: true);
+      expect(up, down);
+    });
+
+    test('снимает выделение тем же отрезком', () {
+      final selected = {...ids};
+      applySelectionPaint(
+          selected: selected, ids: ids, from: 0, to: 4, value: false);
+      expect(selected, {'id5', 'id6', 'id7', 'id8', 'id9'});
+    });
+
+    test('сообщает, изменилось ли что-нибудь', () {
+      final selected = <String>{'id3'};
+      expect(
+        applySelectionPaint(
+            selected: selected, ids: ids, from: 3, to: 3, value: true),
+        isFalse,
+        reason: 'повторная закраска той же строки ничего не меняет',
+      );
+      expect(
+        applySelectionPaint(
+            selected: selected, ids: ids, from: 3, to: 4, value: true),
+        isTrue,
+      );
+    });
+
+    test('индексы за пределами ленты обрезаются, а не роняют', () {
+      final selected = <String>{};
+      // Лента могла измениться между двумя замерами пальца.
+      expect(
+        applySelectionPaint(
+            selected: selected, ids: ids, from: -5, to: 2, value: true),
+        isTrue,
+      );
+      expect(selected, {'id0', 'id1', 'id2'});
+
+      expect(
+        applySelectionPaint(
+            selected: selected, ids: ids, from: 50, to: 80, value: true),
+        isFalse,
+      );
+      expect(
+        applySelectionPaint(
+            selected: selected, ids: const [], from: 0, to: 3, value: true),
+        isFalse,
+      );
     });
   });
 }

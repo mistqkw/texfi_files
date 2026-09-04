@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
@@ -30,6 +31,7 @@ import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_burst.dart';
 import 'pixel/pixel_button.dart';
+import 'selection_paint.dart';
 import 'pixel/pixel_route.dart';
 import 'pixel/pixel_progress.dart';
 import 'pixel/pixel_snow.dart';
@@ -71,6 +73,16 @@ class _HomePageState extends State<HomePage> {
   /// Что именно делает протяжка при выделении: отмечает или снимает.
   /// Определяется по первому задетому элементу — как в файловых менеджерах.
   bool _paintValue = true;
+
+  /// Порядок строк на экране — нужен протяжке, чтобы закрасить всё между
+  /// двумя замерами пальца, а не только строку прямо под ним.
+  List<SavedItem> _ordered = const [];
+
+  /// Индекс последней задетой строки.
+  int? _lastPaintIndex;
+
+  /// Автопрокрутка, пока палец держат у края списка.
+  Timer? _edgeScroll;
   final _search = TextEditingController();
   String _query = '';
 
@@ -150,6 +162,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    // Таймер автопрокрутки переживёт экран, если его не остановить, и
+    // продолжит дёргать уже уничтоженный ScrollController.
+    _stopEdgeScroll();
     _input.dispose();
     _scroll.dispose();
     _search.dispose();
@@ -384,29 +399,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Store намеренно НЕ в этом списке.
+    //
+    // Он уведомляет чаще всех — во время приёма файла раз в 256KB, то есть
+    // десятки раз в секунду. Пока он был здесь, каждое такое уведомление
+    // пересобирало весь экран: фон, шапку, панель фильтров, поле ввода и
+    // всю ленту. Теперь на store подписана только сама лента (см. _feed),
+    // а здесь остаётся то, что меняется редко.
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        _app,
-        _app.store,
-        _app.discovery,
-        _app.auth,
-      ]),
+      listenable: Listenable.merge([_app, _app.discovery, _app.auth]),
       builder: (context, _) {
         // авто-выбор адресата
         _target ??= _app.preferredPeer;
         if (_target != null &&
             !_app.peers.any((p) => p.id == _target!.id && p.online)) {
           _target = _app.preferredPeer;
-        }
-        final all = _app.store.itemsChronological;
-        final items = _applyFilter(all);
-        if (!_didInitialScroll && items.isNotEmpty) {
-          _didInitialScroll = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scroll.hasClients) {
-              _scroll.jumpTo(_scroll.position.maxScrollExtent);
-            }
-          });
         }
         final cs = Theme.of(context).colorScheme;
         final scaffold = Scaffold(
@@ -428,12 +435,6 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   SizedBox(height: appBarTotalHeight(context)),
                   if (_searching) _searchBar(context),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: _filterBar(context, all),
-                  ),
                   Expanded(
                     child: Stack(
                       children: [
@@ -445,15 +446,7 @@ class _HomePageState extends State<HomePage> {
                           child: GestureDetector(
                             behavior: HitTestBehavior.translucent,
                             onTap: () => FocusScope.of(context).unfocus(),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              child: items.isEmpty
-                                  ? _empty(context)
-                                  : KeyedSubtree(
-                                      key: ValueKey(_filter),
-                                      child: _timeline(items),
-                                    ),
-                            ),
+                            child: _feed(context),
                           ),
                         ),
                         if (_dragHover)
@@ -1068,6 +1061,13 @@ class _HomePageState extends State<HomePage> {
       return const SizedBox.shrink();
     }
     // Сбрасываем фильтр, если папка или метка исчезли.
+    //
+    // Именно отложенно, а не прямо здесь. Раньше присваивание стояло в
+    // build без setState: лента к этому моменту уже отфильтрована старым
+    // значением, поэтому кадр уходил с пустым списком и схлопнувшейся
+    // панелью, а перерисовка не назначалась — панель «пропадала» до
+    // следующего постороннего обновления. Это и был баг с исчезающей
+    // шторкой архива и папок.
     final known = {
       null,
       '__pinned__',
@@ -1075,7 +1075,13 @@ class _HomePageState extends State<HomePage> {
       ...groups,
       ...labels.map((e) => '$_labelFilter$e'),
     };
-    if (!known.contains(_filter)) _filter = null;
+    if (!known.contains(_filter)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !known.contains(_filter)) {
+          setState(() => _filter = null);
+        }
+      });
+    }
 
     return SizedBox(
       height: 44,
@@ -1197,11 +1203,53 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
+  /// Лента вместе с панелью фильтров — единственная часть экрана,
+  /// подписанная на store.
+  Widget _feed(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _app.store,
+      builder: (context, _) {
+        final all = _app.store.itemsChronological;
+        final items = _applyFilter(all);
+        if (!_didInitialScroll && items.isNotEmpty) {
+          _didInitialScroll = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scroll.hasClients) {
+              _scroll.jumpTo(_scroll.position.maxScrollExtent);
+            }
+          });
+        }
+        return Column(
+          children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: _filterBar(context, all),
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: items.isEmpty
+                    ? _empty(context)
+                    : KeyedSubtree(
+                        key: ValueKey(_filter),
+                        child: _timeline(items),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _timeline(List<SavedItem> items) {
     // items уже в хронологическом порядке (store.itemsChronological).
     final ordered = _pendingDelete.isEmpty
         ? items
         : items.where((e) => !_pendingDelete.contains(e.id)).toList();
+    _ordered = ordered;
     final list = SmoothScroll(
       controller: _scroll,
       builder: (physics) => ListView.builder(
@@ -1224,7 +1272,9 @@ class _HomePageState extends State<HomePage> {
               // над каким элементом сейчас палец (обычный hit-test по
               // координатам ничего не сказал бы о содержимом).
               MetaData(
-                metaData: item.id,
+                // Индекс, а не только id: по нему протяжка закрашивает
+                // весь отрезок между предыдущим замером и текущим.
+                metaData: i,
                 child: _selecting
                     ? _SelectableRow(
                         selected: selected,
@@ -1253,7 +1303,12 @@ class _HomePageState extends State<HomePage> {
     // не обычная протяжка: иначе жест отбирал бы у списка прокрутку.
     return GestureDetector(
       onLongPressStart: (d) => _paintAt(d.globalPosition, start: true),
-      onLongPressMoveUpdate: (d) => _paintAt(d.globalPosition),
+      onLongPressMoveUpdate: (d) {
+        _paintAt(d.globalPosition);
+        _updateEdgeScroll(d.globalPosition);
+      },
+      onLongPressEnd: (_) => _stopEdgeScroll(),
+      onLongPressCancel: _stopEdgeScroll,
       child: list,
     );
   }
@@ -1281,40 +1336,115 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _endSelection() {
+    _stopEdgeScroll();
+    _lastPaintIndex = null;
     setState(() {
       _selecting = false;
       _selected.clear();
     });
   }
 
-  /// Отмечает элемент под пальцем во время протяжки.
+  /// Отмечает строки, задетые протяжкой.
+  ///
+  /// Закрашивается весь отрезок от прошлого замера до текущего, а не одна
+  /// строка под пальцем: события движения приходят раз в кадр, и при
+  /// быстрой протяжке между двумя замерами оставалось несколько строк —
+  /// они молча не попадали в выделение. Отсюда и было «выделил много, а в
+  /// папку добавилось только несколько».
   void _paintAt(Offset globalPosition, {bool start = false}) {
+    final index = _rowAt(globalPosition);
+    if (index == null) return;
+    if (start) {
+      // Направление задаёт первая задетая строка: начали с невыделенной —
+      // красим, с выделенной — стираем.
+      final id = _idAt(index);
+      _paintValue = id != null && !_selected.contains(id);
+      _lastPaintIndex = index;
+      _applyPaint(index, index);
+      return;
+    }
+    final from = _lastPaintIndex ?? index;
+    _lastPaintIndex = index;
+    _applyPaint(from, index);
+  }
+
+  /// Индекс строки под точкой экрана, если она там есть.
+  int? _rowAt(Offset globalPosition) {
     final view = View.of(context);
     final result = HitTestResult();
     WidgetsBinding.instance.hitTestInView(result, globalPosition, view.viewId);
     for (final entry in result.path) {
       final target = entry.target;
-      if (target is! RenderMetaData) continue;
-      final id = target.metaData;
-      if (id is! String) continue;
-      if (start) {
-        // Направление задаёт первый задетый элемент: начали с
-        // невыделенного — красим, с выделенного — стираем.
-        _paintValue = !_selected.contains(id);
+      if (target is RenderMetaData && target.metaData is int) {
+        return target.metaData as int;
       }
-      final already = _selected.contains(id);
-      if (already == _paintValue) return;
-      setState(() {
-        if (_paintValue) {
-          _selected.add(id);
-        } else {
-          _selected.remove(id);
-        }
-        if (_selected.isEmpty) _selecting = false;
-      });
-      Haptics.tap();
+    }
+    return null;
+  }
+
+  String? _idAt(int index) =>
+      index >= 0 && index < _ordered.length ? _ordered[index].id : null;
+
+  void _applyPaint(int from, int to) {
+    final changed = applySelectionPaint(
+      selected: _selected,
+      ids: [for (final e in _ordered) e.id],
+      from: from,
+      to: to,
+      value: _paintValue,
+    );
+    if (!changed) return;
+    setState(() {
+      if (_selected.isEmpty) _selecting = false;
+    });
+    Haptics.tap();
+  }
+
+  /// Прокрутка, пока палец держат у верхнего или нижнего края списка.
+  ///
+  /// Скорость растёт по мере приближения к самому краю, но упирается в
+  /// потолок: без него у границы лента улетала на сотни элементов за
+  /// мгновение и выделяла их все.
+  void _updateEdgeScroll(Offset globalPosition) {
+    if (!_scroll.hasClients) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final local = box.globalToLocal(globalPosition);
+    const zone = 90.0;
+    final height = box.size.height;
+    double speed = 0;
+    if (local.dy < zone) {
+      speed = -(1 - local.dy / zone);
+    } else if (local.dy > height - zone) {
+      speed = 1 - (height - local.dy) / zone;
+    }
+    if (speed == 0) {
+      _stopEdgeScroll();
       return;
     }
+    // 14 логических пикселей за кадр на полной скорости — примерно
+    // страница в секунду: успеваешь разглядеть, что отмечается.
+    final step = speed.clamp(-1.0, 1.0) * 14;
+    _edgeScroll ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!_scroll.hasClients) return;
+      final pos = _scroll.position;
+      final target = (pos.pixels + _edgeStep)
+          .clamp(pos.minScrollExtent, pos.maxScrollExtent);
+      if (target == pos.pixels) return;
+      _scroll.jumpTo(target);
+      // После прокрутки под пальцем уже другая строка — дорисовываем.
+      _paintAt(_lastPointer);
+    });
+    _edgeStep = step;
+    _lastPointer = globalPosition;
+  }
+
+  double _edgeStep = 0;
+  Offset _lastPointer = Offset.zero;
+
+  void _stopEdgeScroll() {
+    _edgeScroll?.cancel();
+    _edgeScroll = null;
   }
 
   List<SavedItem> get _selectedItems => _app.store.itemsChronological
