@@ -33,11 +33,29 @@ class AppStrings {
   String get filesWord => 'files';
   String get signInPrompt =>
       _('Войдите в аккаунт', 'Sign in', 'Anmelden', 'Zaloguj się');
-  String devicesInAccount(int n) => _('$n устройств в аккаунте',
-      '$n devices in account', '$n Geräte im Konto', '$n urządzeń w koncie');
-  String get searchingDevices => _('Ищу устройства аккаунта…',
-      'Looking for account devices…',
-      'Suche Konto-Geräte…', 'Szukam urządzeń konta…');
+  String devicesInAccount(int n) => _(
+      '$n ${_plural(n, 'устройство', 'устройства', 'устройств')} на связи',
+      n == 1 ? '1 device on the line' : '$n devices on the line',
+      n == 1 ? '1 Gerät verbunden' : '$n Geräte verbunden',
+      '$n ${_plural(n, 'urządzenie', 'urządzenia', 'urządzeń')} na łączu');
+  String get searchingDevices => _('Ищу твои устройства…',
+      'Looking for your devices…',
+      'Suche deine Geräte…', 'Szukam Twoich urządzeń…');
+
+  /// Славянское склонение по числу: 1 устройство, 2 устройства, 5 устройств.
+  ///
+  /// Раньше во всех случаях подставлялась форма множественного числа, и
+  /// шапка писала «1 устройств» — мелочь, которая сразу выдаёт, что текст
+  /// не вычитывали.
+  static String _plural(int n, String one, String few, String many) {
+    final mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return many;
+    return switch (n % 10) {
+      1 => one,
+      2 || 3 || 4 => few,
+      _ => many,
+    };
+  }
   String get ttKeyboard => _('Клавиатура на ПК', 'Keyboard on PC',
       'Tastatur am PC', 'Klawiatura na PC');
   String get ttDevices => _('Устройства', 'Devices', 'Geräte', 'Urządzenia');
@@ -497,9 +515,9 @@ class AppStrings {
       _('ваш аккаунт', 'your account', 'dein Konto', 'twoje konto');
   String get online => _('онлайн', 'online', 'online', 'online');
   String get offline => _('не в сети', 'offline', 'offline', 'offline');
-  String get searchingAccount => _('Ищу устройства вашего аккаунта…',
-      'Looking for your account devices…', 'Suche deine Konto-Geräte…',
-      'Szukam urządzeń Twojego konta…');
+  String get searchingAccount => _('Осматриваюсь в сети…',
+      'Looking around the network…', 'Sehe mich im Netzwerk um…',
+      'Rozglądam się po sieci…');
   String get searchingAccountSub => _(
       'Войдите этим же GitHub-аккаунтом на другом устройстве. Для передачи они должны быть в одной сети.',
       'Sign in with the same GitHub account on another device. They must share a network to transfer.',
@@ -512,6 +530,11 @@ class AppStrings {
       'Devices find each other via your GitHub account. Sign in under Settings → Account.',
       'Geräte finden sich über dein GitHub-Konto. Anmelden unter Einstellungen → Konto.',
       'Urządzenia znajdują się przez konto GitHub. Zaloguj w Ustawienia → Konto.');
+  String peerAppeared(String name) => _(
+      '$name на связи',
+      '$name is on the line',
+      '$name ist verbunden',
+      '$name na łączu');
   String get connectByIp =>
       _('Подключиться по IP', 'Connect by IP', 'Per IP verbinden',
           'Połącz przez IP');

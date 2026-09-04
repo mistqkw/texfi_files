@@ -55,7 +55,7 @@ void main() {
       // Имена глифов — строки, поэтому опечатка не ловится компилятором и
       // молча рисует пустое место.
       const used = [
-        'send', 'attach', 'mic', 'plus', 'close', 'check', 'back', 'chevron',
+        'send', 'mic', 'plus', 'close', 'check', 'back', 'chevron',
         'search', 'trash', 'copy', 'share', 'download', 'file', 'folder',
         'image', 'video', 'note', 'text', 'phone', 'laptop', 'device', 'star',
         'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',

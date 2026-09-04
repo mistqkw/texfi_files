@@ -63,7 +63,32 @@ class _PeersPageState extends State<PeersPage> {
     _announced
       ..removeWhere((id) => !ids.contains(id))
       ..addAll(ids);
-    if (fresh.isNotEmpty) Haptics.peerFound();
+    if (fresh.isEmpty) return;
+    Haptics.peerFound();
+    // Устройство, появившееся в сети, — событие, а не строчка, которая
+    // молча дописалась в список: без отклика человек узнаёт о нём, только
+    // если в этот момент смотрел на экран.
+    if (!mounted) return;
+    final name = _app.peers
+        .firstWhere(
+          (p) => p.id == fresh.first,
+          orElse: () => _app.peers.first,
+        )
+        .name;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Row(
+            children: [
+              PixelIcon('node', size: 16, color: context.colors.accent),
+              AppSpacing.wGapMd,
+              Expanded(child: Text(t.peerAppeared(name))),
+            ],
+          ),
+        ),
+      );
   }
 
   Future<void> _loadIp() async {

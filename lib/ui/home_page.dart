@@ -586,15 +586,7 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'TexFi files',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.screenTitle.copyWith(
-                      fontSize: _kTitleSize,
-                      height: _kTitleLeading,
-                    ),
-                  ),
+                  _Wordmark(size: _kTitleSize, leading: _kTitleLeading),
                   const SizedBox(height: _kTitleGap),
                   Text(
                     status,
@@ -1036,7 +1028,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           PixelIconButton(
-                            icon: 'attach',
+                            icon: 'plus',
                             size: 18,
                             tooltip: t.messageHint,
                             onPressed: _attachMenu,
@@ -1581,5 +1573,61 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
     }
     if (layers.isEmpty) return const SizedBox.shrink();
     return RepaintBoundary(child: Stack(fit: StackFit.expand, children: layers));
+  }
+}
+
+
+/// Логотип в шапке.
+///
+/// В экосистеме название всегда несёт небольшую графическую идею: у f0kus
+/// и m0ney это подмена буквы цифрой. В «files» подменять нечего, поэтому
+/// идея другая и своя: часть названия набрана акцентом, а следом стоит
+/// пиксельный блок-курсор — отсылка к терминальной строке, из которой
+/// приложение выросло. Курсор статичен: мигающий на главном экране элемент
+/// пришлось бы перерисовывать постоянно, а стоит он ровно ничего.
+class _Wordmark extends StatelessWidget {
+  const _Wordmark({required this.size, required this.leading});
+
+  final double size;
+  final double leading;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final base = context.text.screenTitle.copyWith(
+      fontSize: size,
+      height: leading,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'TexFi ', style: base),
+                TextSpan(
+                  text: 'files',
+                  style: base.copyWith(color: colors.accent),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 3),
+        Padding(
+          // Курсор садится на базовую линию текста, а не по центру строки.
+          padding: EdgeInsets.only(bottom: size * 0.12),
+          child: Container(
+            width: size * 0.5,
+            height: size * 0.5,
+            color: colors.accent,
+          ),
+        ),
+      ],
+    );
   }
 }
