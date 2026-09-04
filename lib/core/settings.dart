@@ -1,11 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Глобальные настройки приложения. Максимум опций по просьбе пользователя.
+/// Глобальные настройки приложения.
+///
+/// Набор намеренно небольшой: всё, что было чистой косметикой (скины,
+/// пресеты палитр, погодные эффекты, цвета пузырей, стили и скорость
+/// анимаций), убрано в пользу одного визуального языка. Осталось то, что
+/// либо меняет поведение, либо нужно для доступности.
 class Settings extends ChangeNotifier {
   final SharedPreferences _p;
   Settings(this._p);
@@ -19,34 +22,39 @@ class Settings extends ChangeNotifier {
     if (!p.containsKey('deviceName')) {
       await p.setString('deviceName', _defaultName());
     }
-    // Один раз на установку: подставляем фирменные обои по умолчанию,
-    // чтобы приложение сразу выглядело «как надо», а не голым градиентом.
-    // Флаг отдельный от chatBgImage — иначе если юзер потом сам уберёт
-    // обои (chatBgImage становится null), при следующем запуске мы бы их
-    // тут же подставили обратно.
-    if (!p.containsKey('wallpaperSeeded')) {
-      await p.setBool('wallpaperSeeded', true);
-      // Не трогаем, если это апгрейд и человек уже выбрал свою картинку.
-      if (!p.containsKey('chatBgImage')) {
-        await _seedDefaultWallpaper(p);
-      }
-    }
+    // Обои по умолчанию больше не подставляются: фон приложения — ровный
+    // тёмный, а фото остаётся сознательным выбором пользователя.
+    await _migrate(p);
     return s;
   }
 
-  static Future<void> _seedDefaultWallpaper(SharedPreferences p) async {
-    try {
-      final data = await rootBundle.load('assets/wallpapers/default_space.jpg');
-      final base = await getApplicationSupportDirectory();
-      final dir = Directory('${base.path}/texfi');
-      if (!dir.existsSync()) dir.createSync(recursive: true);
-      final file = File('${dir.path}/default_wallpaper.jpg');
-      await file.writeAsBytes(
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      );
-      await p.setString('chatBgImage', file.path);
-    } catch (_) {
-      // Не критично — останется обычный градиентный фон.
+  /// Ключи настроек, которых больше нет.
+  ///
+  /// Читать их всё равно никто не будет — каждый геттер подставляет
+  /// значение по умолчанию при отсутствующем ключе, — но чистим, чтобы
+  /// хранилище не таскало за собой мусор от версии к версии и чтобы
+  /// повторное появление настройки с тем же именем не подхватило чужое
+  /// старое значение.
+  static const _obsoleteKeys = [
+    'designPreset', 'themePreset', 'bubbleStyle', 'bubbleRadius', 'compact',
+    'terminalBubbles', 'borderOpacity', 'seedColor', 'pureBlack',
+    'chatBackground', 'bgEffect', 'bgDim', 'gradientBg',
+    'weather', 'weatherSize', 'weatherDensity', 'weatherSpeed',
+    'msgOutColor', 'msgInColor',
+    'prefixDevice', 'prefixType', 'prefixSize', 'prefixTime',
+    'animStyle', 'animSpeed', 'wallpaperSeeded',
+  ];
+
+  static Future<void> _migrate(SharedPreferences p) async {
+    for (final key in _obsoleteKeys) {
+      if (p.containsKey(key)) await p.remove(key);
+    }
+    // Фото-фон мог указывать на файл, которого уже нет: удалённая
+    // картинка, переустановка, вычищенный кеш. Без этой проверки экран
+    // уходил в бесконечный поток ошибок декодирования на каждом кадре.
+    final bg = p.getString('chatBgImage');
+    if (bg != null && !File(bg).existsSync()) {
+      await p.remove('chatBgImage');
     }
   }
 
@@ -102,28 +110,9 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
-  int get seedColor => _p.getInt('seedColor') ?? 0xFF4C7CFF; // Signal Blue (на тёмном)
-  set seedColor(int v) {
-    _p.setInt('seedColor', v);
-    notifyListeners();
-  }
-
-  bool get pureBlack => _p.getBool('pureBlack') ?? true;
-  set pureBlack(bool v) {
-    _p.setBool('pureBlack', v);
-    notifyListeners();
-  }
-
   double get uiScale => _p.getDouble('uiScale') ?? 1.0;
   set uiScale(double v) {
     _p.setDouble('uiScale', v.clamp(0.8, 1.4));
-    notifyListeners();
-  }
-
-  // Дизайн-пресет (скин): 0=Material, 1=Apple, 2=Samsung, 3=Windows.
-  int get designPreset => _p.getInt('designPreset') ?? 0;
-  set designPreset(int v) {
-    _p.setInt('designPreset', v.clamp(0, 3));
     notifyListeners();
   }
 
@@ -131,27 +120,6 @@ class Settings extends ChangeNotifier {
   int get fontChoice => _p.getInt('fontChoice') ?? 0;
   set fontChoice(int v) {
     _p.setInt('fontChoice', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  // Стиль скругления пузырей: 0 = мягкий, 1 = круглый, 2 = острый.
-  int get bubbleStyle => _p.getInt('bubbleStyle') ?? 0;
-  set bubbleStyle(int v) {
-    _p.setInt('bubbleStyle', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  // Компактная плотность (меньше отступы).
-  bool get compact => _p.getBool('compact') ?? false;
-  set compact(bool v) {
-    _p.setBool('compact', v);
-    notifyListeners();
-  }
-
-  // Фон ленты: 0 = обычный, 1 = мягкий градиент акцента.
-  int get chatBackground => _p.getInt('chatBackground') ?? 1;
-  set chatBackground(int v) {
-    _p.setInt('chatBackground', v.clamp(0, 1));
     notifyListeners();
   }
 
@@ -163,105 +131,6 @@ class Settings extends ChangeNotifier {
     } else {
       _p.setString('chatBgImage', v);
     }
-    notifyListeners();
-  }
-
-  // Эффект фото-фона: 0=нет, 1=блюр, 2=пиксели.
-  int get bgEffect => _p.getInt('bgEffect') ?? 0;
-  set bgEffect(int v) {
-    _p.setInt('bgEffect', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  // Затемнение фона 0..0.8.
-  double get bgDim => _p.getDouble('bgDim') ?? 0.35;
-  set bgDim(double v) {
-    _p.setDouble('bgDim', v.clamp(0, 0.8));
-    notifyListeners();
-  }
-
-  // Погодный эффект: 0=нет, 1=снег, 2=дождь.
-  int get weather => _p.getInt('weather') ?? 0;
-  set weather(int v) {
-    _p.setInt('weather', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  double get weatherSize => _p.getDouble('weatherSize') ?? 1.0;
-  set weatherSize(double v) {
-    _p.setDouble('weatherSize', v.clamp(0.5, 2.5));
-    notifyListeners();
-  }
-
-  double get weatherDensity => _p.getDouble('weatherDensity') ?? 1.0;
-  set weatherDensity(double v) {
-    _p.setDouble('weatherDensity', v.clamp(0.3, 2.5));
-    notifyListeners();
-  }
-
-  double get weatherSpeed => _p.getDouble('weatherSpeed') ?? 1.0;
-  set weatherSpeed(double v) {
-    _p.setDouble('weatherSpeed', v.clamp(0.3, 2.5));
-    notifyListeners();
-  }
-
-  // Цвет пузырей: -1 = по теме, иначе ARGB.
-  int get msgOutColor => _p.getInt('msgOutColor') ?? -1;
-  set msgOutColor(int v) {
-    _p.setInt('msgOutColor', v);
-    notifyListeners();
-  }
-
-  int get msgInColor => _p.getInt('msgInColor') ?? -1;
-  set msgInColor(int v) {
-    _p.setInt('msgInColor', v);
-    notifyListeners();
-  }
-
-  // --- Терминальный дизайн ленты ---
-  // Включён ли терминальный вид сообщений (рамка с врезанной подписью).
-  bool get terminalBubbles => _p.getBool('terminalBubbles') ?? true;
-  set terminalBubbles(bool v) {
-    _p.setBool('terminalBubbles', v);
-    notifyListeners();
-  }
-
-  // Яркость обводки блоков 0.06..1.0.
-  double get borderOpacity => _p.getDouble('borderOpacity') ?? 0.55;
-  set borderOpacity(double v) {
-    _p.setDouble('borderOpacity', v.clamp(0.06, 1.0));
-    notifyListeners();
-  }
-
-  // Готовая тема: 0=Midnight, 1=Catppuccin, 2=Gruvbox, 3=Matrix, 4=своя.
-  int get themePreset => _p.getInt('themePreset') ?? 0;
-  set themePreset(int v) {
-    _p.setInt('themePreset', v.clamp(0, 4));
-    notifyListeners();
-  }
-
-  // Что показывать во врезке рамки.
-  bool get prefixDevice => _p.getBool('prefixDevice') ?? true;
-  set prefixDevice(bool v) {
-    _p.setBool('prefixDevice', v);
-    notifyListeners();
-  }
-
-  bool get prefixType => _p.getBool('prefixType') ?? true;
-  set prefixType(bool v) {
-    _p.setBool('prefixType', v);
-    notifyListeners();
-  }
-
-  bool get prefixSize => _p.getBool('prefixSize') ?? false;
-  set prefixSize(bool v) {
-    _p.setBool('prefixSize', v);
-    notifyListeners();
-  }
-
-  bool get prefixTime => _p.getBool('prefixTime') ?? false;
-  set prefixTime(bool v) {
-    _p.setBool('prefixTime', v);
     notifyListeners();
   }
 
@@ -278,33 +147,6 @@ class Settings extends ChangeNotifier {
     _p.setBool('animations', v);
     notifyListeners();
   }
-
-  // Стиль анимации появления: 0=fade, 1=подъём, 2=масштаб, 3=подъём+fade.
-  int get animStyle => _p.getInt('animStyle') ?? 3;
-  set animStyle(int v) {
-    _p.setInt('animStyle', v.clamp(0, 3));
-    notifyListeners();
-  }
-
-  // Скорость анимаций: 0=медленно, 1=обычно, 2=быстро.
-  int get animSpeed => _p.getInt('animSpeed') ?? 1;
-  set animSpeed(int v) {
-    _p.setInt('animSpeed', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  int get animDurationMs => switch (animSpeed) {
-        0 => 520,
-        2 => 180,
-        _ => 320,
-      };
-
-  /// Радиус пузыря по выбранному стилю.
-  double get bubbleRadius => switch (bubbleStyle) {
-        1 => 26,
-        2 => 8,
-        _ => 18,
-      };
 
   // --- Сеть ---
   bool get autoDiscovery => _p.getBool('autoDiscovery') ?? true;
