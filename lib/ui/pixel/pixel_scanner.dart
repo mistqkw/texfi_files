@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'pixel_theme.dart';
+import '../../core/theme/app_colors_ext.dart';
+import '../../core/theme/app_motion.dart';
 
-/// Индикатор поиска устройств: концентрические пиксельные «кольца», которые
-/// расходятся от центра — радар, а не крутящийся Material-спиннер.
+/// Индикатор поиска устройств.
 ///
-/// Кольца рисуются по сетке квадратами и «щёлкают» по шагам сетки, а не
-/// плывут непрерывно: непрерывное движение сглаживается субпикселями и
-/// выпадает из рубленой пиксельной графики остального интерфейса.
+/// Материаловский CircularProgressIndicator в этом интерфейсе выглядит
+/// чужеродно и, что важнее, ничего не сообщает: он крутится одинаково и
+/// когда идёт опрос сети, и когда всё зависло. Здесь — расходящиеся
+/// концентрические кольца из квадратных ячеек: видно, что идёт волна
+/// опроса, и видно её темп.
 class PixelScanner extends StatefulWidget {
   final double size;
   final Color? color;
+
   const PixelScanner({super.key, this.size = 72, this.color});
 
   @override
@@ -20,7 +23,7 @@ class _PixelScannerState extends State<PixelScanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1600),
+    duration: AppMotion.scan,
   )..repeat();
 
   @override
@@ -31,70 +34,59 @@ class _PixelScannerState extends State<PixelScanner>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color ?? PixelTheme.accent;
     return SizedBox(
       width: widget.size,
       height: widget.size,
-      child: RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: _c,
-          builder: (context, _) =>
-              CustomPaint(painter: _ScannerPainter(_c.value, color)),
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) => CustomPaint(
+          painter: _ScanPainter(_c.value, widget.color ?? context.colors.accent),
         ),
       ),
     );
   }
 }
 
-class _ScannerPainter extends CustomPainter {
+class _ScanPainter extends CustomPainter {
   final double t;
   final Color color;
-  _ScannerPainter(this.t, this.color);
+  _ScanPainter(this.t, this.color);
 
-  // Логическая сетка: нечётная, чтобы у радара был ровно один центр.
-  static const int _grid = 15;
+  /// Сетка кольца. Нечётная, чтобы был настоящий центральный пиксель.
+  static const int grid = 11;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cell = size.width / _grid;
-    const center = _grid ~/ 2;
+    final cell = (size.width / grid).floorToDouble().clamp(1.0, 1e9);
+    final origin = ((size.width - cell * grid) / 2).floorToDouble();
+    const c = grid ~/ 2;
     final paint = Paint();
 
-    // Три волны, разнесённые по фазе на треть периода.
-    for (var wave = 0; wave < 3; wave++) {
-      final phase = (t + wave / 3) % 1.0;
-      // Радиус шагает по целым клеткам — «щелчками», без плавного роста.
-      final radius = (phase * (center + 1)).floor();
-      if (radius == 0) continue;
-      // Чем дальше волна ушла, тем слабее — затухание сигнала.
-      final alpha = (1.0 - phase).clamp(0.0, 1.0);
-      paint.color = color.withValues(alpha: alpha * 0.9);
-
-      for (var y = 0; y < _grid; y++) {
-        for (var x = 0; x < _grid; x++) {
-          final dx = (x - center).abs();
-          final dy = (y - center).abs();
-          // Ромбовидное «кольцо» (манхэттенское расстояние) — на пиксельной
-          // сетке оно рисуется чисто, без ступенчатых артефактов окружности.
-          if (dx + dy == radius) {
-            canvas.drawRect(
-              Rect.fromLTWH(x * cell, y * cell, cell + 0.5, cell + 0.5),
-              paint,
-            );
-          }
+    for (var y = 0; y < grid; y++) {
+      for (var x = 0; x < grid; x++) {
+        // Кольцо по «шахматной» метрике — расходится квадратами, а не
+        // окружностями: круг на такой сетке разваливается в зубцы.
+        final ring = (x - c).abs() > (y - c).abs()
+            ? (x - c).abs()
+            : (y - c).abs();
+        if (ring == 0) {
+          paint.color = color;
+        } else {
+          // Волна: фаза зависит от номера кольца, поэтому подсветка
+          // уходит от центра к краю.
+          final phase = (t * grid - ring) % grid / grid;
+          final lit = phase < 0.28 ? (1 - phase / 0.28) : 0.0;
+          if (lit <= 0.02) continue;
+          paint.color = color.withValues(alpha: lit * 0.9);
         }
+        canvas.drawRect(
+          Rect.fromLTWH(origin + x * cell, origin + y * cell, cell - 1, cell - 1),
+          paint,
+        );
       }
     }
-
-    // Неподвижная точка в центре — само устройство.
-    paint.color = color;
-    canvas.drawRect(
-      Rect.fromLTWH(center * cell, center * cell, cell + 0.5, cell + 0.5),
-      paint,
-    );
   }
 
   @override
-  bool shouldRepaint(covariant _ScannerPainter old) =>
-      old.t != t || old.color != color;
+  bool shouldRepaint(_ScanPainter old) => old.t != t || old.color != color;
 }

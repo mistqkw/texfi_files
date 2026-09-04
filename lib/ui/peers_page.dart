@@ -1,5 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_text_styles_ext.dart';
+import 'pixel/pixel_card.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_scanner.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -7,10 +13,6 @@ import '../app.dart';
 import '../l10n/app_strings.dart';
 import '../app_state.dart';
 import '../core/models.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_scanner.dart';
-import 'pixel/pixel_route.dart';
 
 const _qrScheme = 'texfi';
 
@@ -56,20 +58,20 @@ class _PeersPageState extends State<PeersPage> {
         actions: [
           IconButton(
             tooltip: t.showQr,
-            icon: PixelIcon('qr_code'),
+            icon: const Icon(Icons.qr_code_rounded),
             onPressed: _showMyQr,
           ),
           if (mobile)
             IconButton(
               tooltip: t.scanQr,
-              icon: PixelIcon('qr_scan'),
+              icon: const Icon(Icons.qr_code_scanner_rounded),
               onPressed: _scanQr,
             ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addByIp,
-        icon: PixelIcon('link'),
+        icon: const Icon(Icons.add_link_rounded),
         label: Text(t.byIp),
       ),
       body: ListenableBuilder(
@@ -100,38 +102,62 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _selfCard(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     final port = _app.server.port;
-    return ListTile(
-      leading: PixelAvatar(
-        child: PixelIcon('devices', color: cs.onPrimaryContainer),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.sm,
+        AppSpacing.page,
+        AppSpacing.xs,
       ),
-      title: Text(_app.settings.deviceName,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(_localIp != null
-          ? '${t.thisDevice} · $_localIp:$port'
-          : '${t.thisDevice} · $port'),
-      trailing: PixelIcon('check', size: 10, color: Colors.green),
+      child: PixelCard(
+        accent: true,
+        child: Row(
+          children: [
+            PixelIcon('laptop', size: 26, color: colors.accent),
+            AppSpacing.wGapLg,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_app.settings.deviceName, style: context.text.tileTitle),
+                  const SizedBox(height: 2),
+                  Text(
+                    _localIp != null
+                        ? '${t.thisDevice} · $_localIp:$port'
+                        : '${t.thisDevice} · $port',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            _StatusDot(online: true),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _searching(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const PixelScanner(size: 76),
-            const SizedBox(height: 16),
-            Text(t.searchingAccount,
-                style: TextStyle(color: cs.onSurfaceVariant)),
-            const SizedBox(height: 4),
+            // Пиксельный сканер вместо CircularProgressIndicator: тот
+            // крутится одинаково и когда идёт опрос сети, и когда всё
+            // зависло. Здесь видно и сам факт опроса, и его темп.
+            const PixelScanner(size: 88),
+            AppSpacing.gapXl,
+            Text(t.searchingAccount, style: context.text.screenTitle),
+            AppSpacing.gapSm,
             Text(
               t.searchingAccountSub,
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+              style: context.text.bodySmall,
             ),
           ],
         ),
@@ -140,23 +166,21 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _needLogin(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PixelIcon('badge',
-                size: 64, color: cs.onSurfaceVariant),
-            const SizedBox(height: 16),
-            Text(t.needLoginTitle,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
+            PixelIcon('shield', size: 68, color: colors.textTertiary),
+            AppSpacing.gapXl,
+            Text(t.needLoginTitle, style: context.text.screenTitle),
+            AppSpacing.gapSm,
             Text(
               t.needLoginText,
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurfaceVariant),
+              style: context.text.bodySmall,
             ),
           ],
         ),
@@ -165,30 +189,58 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _peerTile(BuildContext context, Peer p) {
-    final cs = Theme.of(context).colorScheme;
-    return ListTile(
-      leading: PixelAvatar(
-        background: p.online ? cs.tertiaryContainer : cs.surfaceContainerHighest,
-        borderColor: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
-        child: PixelIcon(
-          p.platform == 'android' ? 'phone' : 'devices',
-          color: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
+    final colors = context.colors;
+    final trusted = _app.isTrusted(p);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.xs,
+        AppSpacing.page,
+        AppSpacing.xs,
+      ),
+      child: PixelCard(
+        child: Row(
+          children: [
+            PixelIcon(
+              p.platform == 'android' ? 'phone' : 'laptop',
+              size: 24,
+              color: p.online ? colors.accent : colors.textTertiary,
+            ),
+            AppSpacing.wGapLg,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          p.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.tileTitle,
+                        ),
+                      ),
+                      if (trusted) ...[
+                        AppSpacing.wGapXs,
+                        PixelIcon('check', size: 13, color: colors.success),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    trusted
+                        ? '${p.address} · ${t.yourAccount}'
+                        : '${p.address} · ${p.online ? t.online : t.offline}',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            _StatusDot(online: p.online),
+          ],
         ),
       ),
-      title: Row(
-        children: [
-          Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
-          if (_app.isTrusted(p)) ...[
-            const SizedBox(width: 6),
-            PixelIcon('check', size: 16, color: cs.primary),
-          ],
-        ],
-      ),
-      subtitle: Text(_app.isTrusted(p)
-          ? '${p.address} · ${t.yourAccount}'
-          : '${p.address} · ${p.online ? t.online : t.offline}'),
-      trailing: PixelIcon('check',
-          size: 10, color: p.online ? Colors.green : cs.outline),
     );
   }
 
@@ -294,7 +346,7 @@ class _PeersPageState extends State<PeersPage> {
       }
     }
     final result = await Navigator.of(context).push<String>(
-      PixelPageRoute(builder: (_) => const _QrScannerPage()),
+      MaterialPageRoute(builder: (_) => const _QrScannerPage()),
     );
     if (result == null || !result.startsWith('$_qrScheme:')) return;
     final parts = result.split(':');
@@ -354,7 +406,7 @@ class _QrScannerPageState extends State<_QrScannerPage> {
         title: Text(t.scanQr),
         actions: [
           IconButton(
-            icon: PixelIcon('flash', color: _torch ? Colors.amber : Colors.white),
+            icon: Icon(_torch ? Icons.flash_on_rounded : Icons.flash_off_rounded),
             onPressed: () {
               _controller.toggleTorch();
               setState(() => _torch = !_torch);
@@ -384,8 +436,10 @@ class _QrScannerPageState extends State<_QrScannerPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PixelIcon(
-                    denied ? 'camera' : 'warn',
+                  Icon(
+                    denied
+                        ? Icons.no_photography_outlined
+                        : Icons.error_outline_rounded,
                     size: 48,
                     color: Colors.white70,
                   ),
@@ -398,7 +452,7 @@ class _QrScannerPageState extends State<_QrScannerPage> {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _start,
-                    icon: PixelIcon('sync'),
+                    icon: const Icon(Icons.refresh_rounded),
                     label: Text(t.retry),
                   ),
                 ],
@@ -427,6 +481,30 @@ class _ScanFrame extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Индикатор состояния устройства.
+///
+/// Квадрат, а не круг: круглая точка в 8px на пиксельной сетке всегда
+/// выходит кривой — сглаживание размывает её в пятно.
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.online});
+
+  final bool online;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: online ? colors.success : colors.textTertiary,
+        border: Border.all(color: colors.divider, width: 1),
       ),
     );
   }

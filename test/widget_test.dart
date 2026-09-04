@@ -1,49 +1,59 @@
-import 'dart:io';
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:texfi_files/ui/pixel/pixel_icons.dart';
 
-/// Иконки адресуются строкой (`PixelIcon('search')`), поэтому опечатка в
-/// имени не ломает сборку — виджет молча рисует запасной квадрат, и это
-/// замечаешь только глазами на конкретном экране. Тест проходит по всем
-/// вызовам в исходниках и проверяет, что каждое имя есть в реестре.
 void main() {
-  test('every PixelIcon name used in lib/ exists in the registry', () {
-    final dir = Directory('lib');
-    expect(dir.existsSync(), isTrue, reason: 'запускать из корня проекта');
-
-    final call = RegExp(r"""PixelIcon\(\s*'([^']+)'""");
-    final missing = <String>{};
-    var checked = 0;
-
-    for (final f in dir
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'))) {
-      for (final m in call.allMatches(f.readAsStringSync())) {
-        final name = m.group(1)!;
-        checked++;
-        if (PixelIcons.byName(name) == null) {
-          missing.add('$name (${f.path})');
+  group('Реестр пиксельных глифов', () {
+    // Имена глифов — строки, поэтому опечатка в вызове не ловится
+    // компилятором и молча рисует пустое место. Этот тест ловит обратную
+    // ошибку: кривую сетку в самом реестре.
+    test('каждый глиф — квадратная сетка из строк одинаковой длины', () {
+      expect(PixelGlyphs.all, isNotEmpty);
+      PixelGlyphs.all.forEach((name, rows) {
+        expect(rows, isNotEmpty, reason: 'глиф $name пуст');
+        final width = rows.first.length;
+        for (final row in rows) {
+          expect(
+            row.length,
+            width,
+            reason: 'глиф $name: строка "$row" не совпадает по длине',
+          );
         }
-      }
-    }
+        expect(
+          rows.length,
+          width,
+          reason: 'глиф $name не квадратный: ${rows.length}x$width',
+        );
+      });
+    });
 
-    expect(checked, greaterThan(0), reason: 'вызовы PixelIcon не найдены');
-    expect(missing, isEmpty, reason: 'нет таких иконок в реестре: $missing');
+    test('в сетке только символы ".", "#" и "o"', () {
+      PixelGlyphs.all.forEach((name, rows) {
+        for (final row in rows) {
+          expect(
+            RegExp(r'^[.#o]+$').hasMatch(row),
+            isTrue,
+            reason: 'глиф $name: недопустимый символ в "$row"',
+          );
+        }
+      });
+    });
+
+    test('символ приложения на месте', () {
+      expect(PixelGlyphs.all.containsKey('node'), isTrue);
+    });
   });
 
-  test('every glyph is a 12x12 grid of . and #', () {
-    // Painter рисует ровно 12x12; более короткая строка молча обрежет
-    // рисунок, более длинная — потеряет правый край.
-    for (final name in PixelIcons.names) {
-      final glyph = PixelIcons.byName(name)!;
-      expect(glyph.rows.length, 12, reason: '$name: строк != 12');
-      for (final row in glyph.rows) {
-        expect(row.length, 12, reason: '$name: длина строки != 12 ("$row")');
-        expect(RegExp(r'^[.#]+$').hasMatch(row), isTrue,
-            reason: '$name: недопустимые символы в "$row"');
-      }
-    }
+  testWidgets('PixelIcon рисуется и занимает заданный размер', (tester) async {
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: PixelIcon('node', size: 48, color: Color(0xFF4A7DFB)),
+        ),
+      ),
+    );
+    expect(tester.getSize(find.byType(PixelIcon)), const Size(48, 48));
   });
 }

@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_motion.dart';
+import '../core/theme/app_spacing.dart';
+import 'pixel/pixel_button.dart';
+import 'pixel/pixel_card.dart';
+import 'pixel/pixel_icons.dart';
+import '../core/theme/app_colors_ext.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_theme.dart';
 import 'terminal.dart';
 
 class _Slide {
+  /// Имя глифа из [PixelGlyphs].
   final String icon;
   final String title;
   final String text;
-  final String? image;
-  const _Slide(this.icon, this.title, this.text, {this.image});
+  const _Slide(this.icon, this.title, this.text);
 }
 
 List<_Slide> _buildSlides(AppStrings t) => [
-      _Slide('star', t.obTitle1, t.obText1,
-          image: 'assets/logo.png'),
+      // Первый слайд — сам знак приложения, тот же, что в лаунчере и на
+      // заставке.
+      _Slide('node', t.obTitle1, t.obText1),
       _Slide('send', t.obTitle2, t.obText2),
-      _Slide('cloud', t.obTitle3, t.obText3),
-      _Slide('palette', t.obTitle4, t.obText4),
+      _Slide('exchange', t.obTitle3, t.obText3),
+      _Slide('contrast', t.obTitle4, t.obText4),
     ];
 
 /// Приветственный экран с анимациями — при первом запуске.
@@ -58,12 +62,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // Терминальный вид стал единственным оформлением приложения, но
+    // ветвления по нему в этом экране ещё остались — держим константу,
+    // чтобы не переписывать раскладку целиком в рамках редизайна шапки.
+    const terminal = true;
     final t = tr(context);
     final slides = _buildSlides(t);
     _count = slides.length;
     final last = _index == slides.length - 1;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -71,23 +79,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      '❯ ${_index + 1}/${slides.length}',
-                      style: monoStyle(
-                        color: cs.primary.withValues(alpha: 0.8),
-                        size: 12,
+                  if (terminal)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        '❯ ${_index + 1}/${slides.length}',
+                        style: monoStyle(
+                          color: cs.primary.withValues(alpha: 0.8),
+                          size: 12,
+                        ),
                       ),
                     ),
-                  ),
                   const Spacer(),
                   AnimatedOpacity(
                     opacity: last ? 0 : 1,
-                    duration: const Duration(milliseconds: 200),
-                    child: TextButton(
+                    duration: AppMotion.normal,
+                    child: PixelButton(
+                      label: t.skip,
+                      expand: false,
+                      compact: true,
+                      primary: false,
                       onPressed: last ? null : _finish,
-                      child: Text(t.skip),
                     ),
                   ),
                 ],
@@ -101,6 +113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemBuilder: (context, i) => _SlideView(
                   slide: slides[i],
                   active: _index == i,
+                  terminal: terminal,
                 ),
               ),
             ),
@@ -109,18 +122,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: PixelButton(
-                  onPressed: _next,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: Text(
-                      last ? t.start : t.next,
-                      style: TextStyle(fontSize: 16, color: cs.onPrimary),
-                    ),
-                  ),
-                ),
+              child: PixelButton(
+                label: last ? t.start : t.next,
+                onPressed: _next,
               ),
             ),
           ],
@@ -130,29 +134,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _dots(ColorScheme cs, int count) {
+    final colors = _dotColors(cs);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < count; i++)
           AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: i == _index ? 24 : 8,
+            duration: AppMotion.normal,
+            curve: AppMotion.standard,
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            width: i == _index ? 22 : 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: i == _index ? cs.primary : cs.outlineVariant,
-            ),
+            // Без скругления: капсула здесь была бы единственной мягкой
+            // формой на экране.
+            color: i == _index ? colors.$1 : colors.$2,
           ),
       ],
     );
   }
+
+  (Color, Color) _dotColors(ColorScheme cs) => (cs.primary, cs.outline);
 }
 
 class _SlideView extends StatelessWidget {
   final _Slide slide;
   final bool active;
-  const _SlideView({required this.slide, required this.active});
+  final bool terminal;
+  const _SlideView({
+    required this.slide,
+    required this.active,
+    required this.terminal,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +181,7 @@ class _SlideView extends StatelessWidget {
             child: AnimatedOpacity(
               opacity: active ? 1 : 0.4,
               duration: const Duration(milliseconds: 300),
-              child: _icon(cs),
+              child: _slideIcon(),
             ),
           ),
           const SizedBox(height: 48),
@@ -182,15 +194,25 @@ class _SlideView extends StatelessWidget {
               duration: const Duration(milliseconds: 350),
               child: Column(
                 children: [
-                  PixelHeading(slide.title, size: 15, color: cs.primary, textAlign: TextAlign.center),
+                  Text(
+                    slide.title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: terminal ? cs.primary : null,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     slide.text,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       height: 1.4,
-                      color: Colors.white70,
+                      color: terminal
+                          ? Colors.white70
+                          : cs.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -202,21 +224,15 @@ class _SlideView extends StatelessWidget {
     );
   }
 
-  /// Чёрный квадрат с белой рамкой и врезанной подписью — та же
-  /// пиксель-карточка, что и у блоков в ленте.
-  Widget _icon(ColorScheme cs) {
-    return TerminalBox(
-      label: slide.image != null ? 'texfi' : 'preview',
-      borderColor: Colors.white.withValues(alpha: 0.55),
-      labelColor: cs.primary,
-      padding: const EdgeInsets.all(28),
-      child: SizedBox(
-        width: 96,
-        height: 96,
-        child: slide.image != null
-            ? Image.asset(slide.image!, fit: BoxFit.cover)
-            : PixelIcon(slide.icon, size: 64, color: cs.primary),
+  /// Терминальный вид: чёрный квадрат с белой рамкой вместо градиентного
+  /// круга — та же врезанная подпись, что и у блоков в ленте.
+  Widget _slideIcon() {
+    return Builder(
+      builder: (context) => PixelCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: PixelIcon(slide.icon, size: 96, color: context.colors.accent),
       ),
     );
   }
+
 }

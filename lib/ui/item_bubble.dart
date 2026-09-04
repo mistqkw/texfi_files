@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_spacing.dart';
+import 'pixel/pixel_card.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
@@ -12,11 +16,9 @@ import 'album_art.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'image_gallery.dart';
-import 'pixel/pixel_icons.dart';
 import 'player_page.dart';
 import 'terminal.dart';
 import 'video_thumb.dart';
-import 'pixel/pixel_route.dart';
 
 class ItemBubble extends StatelessWidget {
   final SavedItem item;
@@ -26,15 +28,17 @@ class ItemBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final s = AppScope.of(context).settings;
-    // Пиксель-карточка: чёрный блок с белой рамкой и врезанной подписью.
+    final colors = context.colors;
+    // Один вид карточки вместо двух. Раньше сосуществовали «классический»
+    // пузырь с градиентом, хвостом и мягкой тенью и «терминальный» блок с
+    // рамкой — переключаемые настройкой. Пиксельная карточка со сплошной
+    // тенью годится и там, и там, а два оформления одного и того же
+    // элемента расходились при каждой правке.
     return Container(
-      // Тянемся на всю ширину: внешний Column ленты центрирует детей, и без
-      // этого блоки вставали бы по центру вместо краёв.
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        vertical: s.compact ? 4 : 7,
-        horizontal: 12,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.md,
       ),
       child: Column(
         crossAxisAlignment: item.outgoing
@@ -43,19 +47,20 @@ class ItemBubble extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ConstraintsBox(
+            // IntrinsicWidth — чтобы короткое сообщение обёртывалось по
+            // содержимому, а не растягивалось во всю ширину.
             child: IntrinsicWidth(
               child: GestureDetector(
                 onLongPressStart: (d) => _menu(context, d.globalPosition),
                 onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-                child: TerminalBox(
-                  label: _prefixLabel(s),
-                  // Белая обводка на чёрном блоке — основа стиля.
-                  borderColor: Colors.white.withValues(
-                    alpha: s.borderOpacity,
-                  ),
-                  labelColor: item.outgoing
-                      ? cs.primary
-                      : cs.onSurfaceVariant,
+                child: PixelCard(
+                  // Своё сообщение выделяется акцентной рамкой, чужое —
+                  // обычной. Направление читается по рамке, а не по цвету
+                  // заливки: заливка мешала бы вложенным превью.
+                  accent: item.outgoing,
+                  background: item.outgoing
+                      ? colors.surfaceVariant
+                      : colors.surface,
                   padding: _framePadding,
                   child: _content(context, cs),
                 ),
@@ -71,23 +76,28 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  /// Превью аудио: настоящая обложка из тегов, если она есть, иначе
-  /// заглушка — тонкая рамка с иконкой.
+  /// Превью аудио: настоящая обложка из тегов, если она есть.
+  /// В терминальном режиме заглушка — тонкая рамка с иконкой, без плашки.
   Widget _mediaThumb(BuildContext context, ColorScheme cs, bool isVideo) {
-    final name = isVideo ? 'play' : 'volume';
+    final icon = isVideo ? Icons.play_arrow_rounded : Icons.music_note_rounded;
     final fallback = Container(
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
+        color: context.colors.surfaceVariant,
+        border: Border.all(
+          color: context.colors.accent,
+          width: AppRadius.pixelBorder,
+        ),
+        borderRadius: AppRadius.controlSmallAll,
       ),
-      child: Center(child: PixelIcon(name, size: 26, color: cs.primary)),
+      child: Icon(icon, color: context.colors.accent, size: 26),
     );
     if (isVideo) return fallback;
     return AlbumArtThumb(
       filePath: item.filePath,
       size: 52,
-      radius: 0,
+      radius: AppRadius.controlSmall,
       fallback: fallback,
     );
   }
@@ -99,18 +109,18 @@ class ItemBubble extends StatelessWidget {
       // Отступы даёт само содержимое — иначе у текста был бы двойной.
       : EdgeInsets.zero;
 
-  /// Содержимое врезки в верхней линии рамки: устройство · тип · размер · время.
+  /// Подпись элемента: устройство · тип.
+  ///
+  /// Состав был четырьмя отдельными переключателями (устройство, тип,
+  /// размер, время) — шестнадцать сочетаний одной строки, причём размер и
+  /// время и так показаны в мета-строке под карточкой.
   String _prefixLabel(Settings s) {
     final parts = <String>[];
-    if (s.prefixDevice) {
-      final name = item.fromName ?? (item.outgoing ? s.deviceName : null);
-      if (name != null && name.trim().isNotEmpty) {
-        parts.add(name.trim().toLowerCase());
-      }
+    final name = item.fromName ?? (item.outgoing ? s.deviceName : null);
+    if (name != null && name.trim().isNotEmpty) {
+      parts.add(name.trim().toLowerCase());
     }
-    if (s.prefixType) parts.add(_typeTag);
-    if (s.prefixSize && item.fileSize > 0) parts.add(humanSize(item.fileSize));
-    if (s.prefixTime) parts.add(clockTime(item.createdAt));
+    parts.add(_typeTag);
     return parts.join(' · ');
   }
 
@@ -129,28 +139,43 @@ class ItemBubble extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Устройство и тип: раньше жили во врезке рамки карточки.
+        Builder(
+          builder: (context) {
+            final label = _prefixLabel(AppScope.of(context).settings);
+            if (label.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(label, style: monoStyle(color: dim, size: 10)),
+            );
+          },
+        ),
         Text(clockTime(item.createdAt), style: monoStyle(color: dim, size: 10)),
         if (item.group != null) ...[
           const SizedBox(width: 6),
-          PixelIcon('link', size: 11, color: dim),
+          Icon(Icons.folder_rounded, size: 11, color: dim),
         ],
         if (item.pinned) ...[
           const SizedBox(width: 6),
-          PixelIcon('thumbtack', size: 11, color: cs.primary),
+          Icon(Icons.push_pin, size: 11, color: cs.primary),
         ],
         if (item.archived) ...[
           const SizedBox(width: 6),
-          PixelIcon('picture', size: 11, color: dim),
+          Icon(Icons.archive_rounded, size: 11, color: dim),
         ],
-        const SizedBox(width: 6),
-        PixelIcon(item.cloud ? 'cloud' : 'devices', size: 11, color: item.cloud ? cs.primary : dim),
         if (item.expiresAt != null) ...[
           const SizedBox(width: 6),
-          PixelIcon('clock', size: 11, color: cs.error),
-          const SizedBox(width: 2),
-          Text(_ttlLeft(item.expiresAt!),
-              style: monoStyle(color: cs.error, size: 10)),
+          Text(
+            _ttlLeft(item.expiresAt!),
+            style: monoStyle(color: cs.primary, size: 10),
+          ),
         ],
+        const SizedBox(width: 6),
+        Icon(
+          item.cloud ? Icons.cloud_done_rounded : Icons.smartphone_rounded,
+          size: 11,
+          color: item.cloud ? cs.primary : dim,
+        ),
         _moreButton(context, dim),
       ],
     );
@@ -167,7 +192,7 @@ class ItemBubble extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.only(left: 6),
-        child: PixelIcon('menu', size: 14, color: color),
+        child: Icon(Icons.more_horiz_rounded, size: 14, color: color),
       ),
     );
   }
@@ -215,7 +240,7 @@ class ItemBubble extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(value: progress, strokeWidth: 3),
-                PixelIcon('sync', size: 18, color: cs.primary),
+                Icon(Icons.download_rounded, size: 18, color: cs.primary),
               ],
             ),
           ),
@@ -272,29 +297,42 @@ class ItemBubble extends StatelessWidget {
     );
   }
 
-  /// Кнопки «копировать/переслать» под текстом — проявляются при наведении
-  /// мышью, на телефоне скрыты (там есть долгое нажатие и свайп).
+  /// Кнопки «копировать/переслать» под текстом. В терминальном режиме они
+  /// проявляются только при наведении мышью, на телефоне — скрыты (там есть
+  /// долгое нажатие и свайп).
   Widget _textActions(BuildContext context, ColorScheme cs) {
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
           onTap: () => _copy(context),
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: PixelIcon('copy', size: 13, color: cs.onSurfaceVariant),
+            child: Icon(
+              Icons.copy_rounded,
+              size: 15,
+              color: cs.onSurfaceVariant,
+            ),
           ),
         ),
         const SizedBox(width: 2),
         InkWell(
           onTap: _share,
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: PixelIcon('send', size: 13, color: cs.onSurfaceVariant),
+            child: Icon(
+              Icons.reply_rounded,
+              size: 15,
+              color: cs.onSurfaceVariant,
+            ),
           ),
         ),
       ],
     );
+    // Мета-строка живёт под карточкой (`_meta`), поэтому здесь только
+    // действия — иначе время печаталось бы дважды.
     return Align(
       alignment: Alignment.centerLeft,
       child: _HoverReveal(child: row),
@@ -329,6 +367,7 @@ class ItemBubble extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox.shrink(),
             ],
           ),
         ),
@@ -340,13 +379,13 @@ class ItemBubble extends StatelessWidget {
     if (isVideo) {
       Navigator.of(
         context,
-      ).push(PixelPageRoute(builder: (_) => PlayerPage(item: item)));
+      ).push(MaterialPageRoute(builder: (_) => PlayerPage(item: item)));
     } else {
       final app = AppScope.of(context);
       app.player.playItem(item, volume: app.settings.playerVolume);
       Navigator.of(
         context,
-      ).push(PixelPageRoute(builder: (_) => const AudioPlayerScreen()));
+      ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
     }
   }
 
@@ -370,6 +409,7 @@ class ItemBubble extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox.shrink(),
               ],
             ),
           ),
@@ -404,6 +444,7 @@ class ItemBubble extends StatelessWidget {
                     '${isVideo ? tr(context).videoWord : tr(context).audioWord} · ${humanSize(item.fileSize)}',
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -420,7 +461,7 @@ class ItemBubble extends StatelessWidget {
         app.player.playItem(item, volume: app.settings.playerVolume);
         Navigator.of(
           context,
-        ).push(PixelPageRoute(builder: (_) => const AudioPlayerScreen()));
+        ).push(MaterialPageRoute(builder: (_) => const AudioPlayerScreen()));
       },
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -434,7 +475,7 @@ class ItemBubble extends StatelessWidget {
                 color: cs.primary,
                 shape: BoxShape.circle,
               ),
-              child: PixelIcon('mic', color: cs.onPrimary, size: 24),
+              child: Icon(Icons.mic_rounded, color: cs.onPrimary, size: 24),
             ),
             const SizedBox(width: 12),
             Column(
@@ -450,6 +491,7 @@ class ItemBubble extends StatelessWidget {
                   humanSize(item.fileSize),
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
+                const SizedBox.shrink(),
               ],
             ),
           ],
@@ -475,7 +517,8 @@ class ItemBubble extends StatelessWidget {
                 color: cs.secondaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: PixelIcon('file',
+              child: Icon(
+                Icons.insert_drive_file_rounded,
                 color: cs.onSecondaryContainer,
               ),
             ),
@@ -496,12 +539,13 @@ class ItemBubble extends StatelessWidget {
                     humanSize(item.fileSize),
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),
             IconButton(
               tooltip: tr(context).save,
-              icon: PixelIcon('sync'),
+              icon: const Icon(Icons.download_rounded),
               onPressed: () => _saveAs(context),
             ),
           ],
@@ -575,7 +619,7 @@ class ItemBubble extends StatelessWidget {
         .toList();
     final idx = all.indexWhere((e) => e.id == item.id);
     Navigator.of(context).push(
-      PixelPageRoute(
+      MaterialPageRoute(
         builder: (_) => ImageGallery(
           images: all.isEmpty ? [item] : all,
           initialIndex: idx < 0 ? 0 : idx,
@@ -597,9 +641,9 @@ class ItemBubble extends StatelessWidget {
           children: [
             for (final g in groups)
               ListTile(
-                leading: PixelIcon('folder'),
+                leading: const Icon(Icons.folder_rounded),
                 title: Text(g),
-                trailing: item.group == g ? PixelIcon('check') : null,
+                trailing: item.group == g ? const Icon(Icons.check) : null,
                 onTap: () {
                   store.setGroup(item, g);
                   Navigator.pop(context);
@@ -614,7 +658,7 @@ class ItemBubble extends StatelessWidget {
                       controller: controller,
                       decoration: InputDecoration(
                         hintText: tr(context).newGroup,
-                        prefixIcon: PixelIcon('folder'),
+                        prefixIcon: Icon(Icons.create_new_folder_outlined),
                       ),
                     ),
                   ),
@@ -654,7 +698,7 @@ class ItemBubble extends StatelessWidget {
 
     PopupMenuItem<_MenuAction> tile(
       _MenuAction value,
-      String icon,
+      IconData icon,
       String label, {
       bool danger = false,
     }) {
@@ -664,7 +708,7 @@ class ItemBubble extends StatelessWidget {
         height: 44,
         child: Row(
           children: [
-            PixelIcon(icon, size: 16, color: danger ? cs.error : cs.onSurfaceVariant),
+            Icon(icon, size: 19, color: danger ? cs.error : cs.onSurfaceVariant),
             const SizedBox(width: 14),
             Text(label, style: TextStyle(color: color)),
           ],
@@ -676,37 +720,41 @@ class ItemBubble extends StatelessWidget {
       context: context,
       position: position,
       elevation: 0,
-      color: Colors.black,
+      color: context.colors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+        borderRadius: AppRadius.cardSmallAll,
+        side: BorderSide(
+          color: context.colors.divider,
+          width: AppRadius.pixelBorder,
+        ),
       ),
       items: [
         if (item.kind == ItemKind.text)
-          tile(_MenuAction.copy, 'copy', t.copy),
+          tile(_MenuAction.copy, Icons.copy_rounded, t.copy),
         if (item.filePath != null)
-          tile(_MenuAction.open, 'link', t.open),
+          tile(_MenuAction.open, Icons.open_in_new_rounded, t.open),
         if (item.filePath != null)
-          tile(_MenuAction.saveAs, 'sync', t.saveAs),
-        tile(_MenuAction.share, 'send', t.share),
+          tile(_MenuAction.saveAs, Icons.download_rounded, t.saveAs),
+        tile(_MenuAction.share, Icons.ios_share_rounded, t.share),
         tile(
           _MenuAction.pin,
-          'thumbtack',
+          item.pinned ? Icons.push_pin : Icons.push_pin_outlined,
           item.pinned ? t.unpin : t.pin,
         ),
         tile(
           _MenuAction.archive,
-          'archive',
+          item.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
           item.archived ? t.unarchive : t.archive,
         ),
         tile(
           _MenuAction.group,
-          'folder',
+          Icons.folder_outlined,
           item.group == null ? t.addToGroup : t.groupName(item.group!),
         ),
         if (item.group != null)
-          tile(_MenuAction.ungroup, 'folder', t.removeFromGroup),
-        tile(_MenuAction.delete, 'trash', t.delete, danger: true),
+          tile(_MenuAction.ungroup, Icons.folder_off_outlined, t.removeFromGroup),
+        tile(_MenuAction.delete, Icons.delete_outline_rounded, t.delete,
+            danger: true),
       ],
     );
     if (action == null || !context.mounted) return;
@@ -806,7 +854,8 @@ class _DownloadTileState extends State<_DownloadTile> {
                         color: cs.primaryContainer,
                         shape: BoxShape.circle,
                       ),
-                      child: PixelIcon('cloud',
+                      child: Icon(
+                        Icons.cloud_download_rounded,
                         color: cs.onPrimaryContainer,
                       ),
                     ),

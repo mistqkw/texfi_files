@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Глобальные настройки приложения. Максимум опций по просьбе пользователя.
+/// Глобальные настройки приложения.
+///
+/// Набор намеренно небольшой: всё, что было чистой косметикой (скины,
+/// пресеты палитр, погодные эффекты, цвета пузырей, стили и скорость
+/// анимаций), убрано в пользу одного визуального языка. Осталось то, что
+/// либо меняет поведение, либо нужно для доступности.
 class Settings extends ChangeNotifier {
   final SharedPreferences _p;
   Settings(this._p);
@@ -17,7 +22,40 @@ class Settings extends ChangeNotifier {
     if (!p.containsKey('deviceName')) {
       await p.setString('deviceName', _defaultName());
     }
+    // Обои по умолчанию больше не подставляются: фон приложения — ровный
+    // тёмный, а фото остаётся сознательным выбором пользователя.
+    await _migrate(p);
     return s;
+  }
+
+  /// Ключи настроек, которых больше нет.
+  ///
+  /// Читать их всё равно никто не будет — каждый геттер подставляет
+  /// значение по умолчанию при отсутствующем ключе, — но чистим, чтобы
+  /// хранилище не таскало за собой мусор от версии к версии и чтобы
+  /// повторное появление настройки с тем же именем не подхватило чужое
+  /// старое значение.
+  static const _obsoleteKeys = [
+    'designPreset', 'themePreset', 'bubbleStyle', 'bubbleRadius', 'compact',
+    'terminalBubbles', 'borderOpacity', 'seedColor', 'pureBlack',
+    'chatBackground', 'bgEffect', 'bgDim', 'gradientBg',
+    'weather', 'weatherSize', 'weatherDensity', 'weatherSpeed',
+    'msgOutColor', 'msgInColor',
+    'prefixDevice', 'prefixType', 'prefixSize', 'prefixTime',
+    'animStyle', 'animSpeed', 'wallpaperSeeded',
+  ];
+
+  static Future<void> _migrate(SharedPreferences p) async {
+    for (final key in _obsoleteKeys) {
+      if (p.containsKey(key)) await p.remove(key);
+    }
+    // Фото-фон мог указывать на файл, которого уже нет: удалённая
+    // картинка, переустановка, вычищенный кеш. Без этой проверки экран
+    // уходил в бесконечный поток ошибок декодирования на каждом кадре.
+    final bg = p.getString('chatBgImage');
+    if (bg != null && !File(bg).existsSync()) {
+      await p.remove('chatBgImage');
+    }
   }
 
   static String _defaultName() {
@@ -72,35 +110,16 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
-  int get seedColor => _p.getInt('seedColor') ?? 0xFF4C7CFF; // Signal Blue (на тёмном)
-  set seedColor(int v) {
-    _p.setInt('seedColor', v);
-    notifyListeners();
-  }
-
-  bool get pureBlack => _p.getBool('pureBlack') ?? true;
-  set pureBlack(bool v) {
-    _p.setBool('pureBlack', v);
-    notifyListeners();
-  }
-
   double get uiScale => _p.getDouble('uiScale') ?? 1.0;
   set uiScale(double v) {
     _p.setDouble('uiScale', v.clamp(0.8, 1.4));
     notifyListeners();
   }
 
-  // Шрифт: 0=обычный, 2=моноширинный.
+  // Шрифт: 0=обычный, 1=с засечками, 2=моноширинный.
   int get fontChoice => _p.getInt('fontChoice') ?? 0;
   set fontChoice(int v) {
     _p.setInt('fontChoice', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  // Компактная плотность (меньше отступы).
-  bool get compact => _p.getBool('compact') ?? false;
-  set compact(bool v) {
-    _p.setBool('compact', v);
     notifyListeners();
   }
 
@@ -112,52 +131,6 @@ class Settings extends ChangeNotifier {
     } else {
       _p.setString('chatBgImage', v);
     }
-    notifyListeners();
-  }
-
-  // Эффект фото-фона: 0=нет, 1=блюр, 2=пиксели.
-  int get bgEffect => _p.getInt('bgEffect') ?? 0;
-  set bgEffect(int v) {
-    _p.setInt('bgEffect', v.clamp(0, 2));
-    notifyListeners();
-  }
-
-  // Затемнение фона 0..0.8.
-  double get bgDim => _p.getDouble('bgDim') ?? 0.35;
-  set bgDim(double v) {
-    _p.setDouble('bgDim', v.clamp(0, 0.8));
-    notifyListeners();
-  }
-
-  // Яркость обводки блоков 0.06..1.0.
-  double get borderOpacity => _p.getDouble('borderOpacity') ?? 0.55;
-  set borderOpacity(double v) {
-    _p.setDouble('borderOpacity', v.clamp(0.06, 1.0));
-    notifyListeners();
-  }
-
-  // Что показывать во врезке рамки.
-  bool get prefixDevice => _p.getBool('prefixDevice') ?? true;
-  set prefixDevice(bool v) {
-    _p.setBool('prefixDevice', v);
-    notifyListeners();
-  }
-
-  bool get prefixType => _p.getBool('prefixType') ?? true;
-  set prefixType(bool v) {
-    _p.setBool('prefixType', v);
-    notifyListeners();
-  }
-
-  bool get prefixSize => _p.getBool('prefixSize') ?? false;
-  set prefixSize(bool v) {
-    _p.setBool('prefixSize', v);
-    notifyListeners();
-  }
-
-  bool get prefixTime => _p.getBool('prefixTime') ?? false;
-  set prefixTime(bool v) {
-    _p.setBool('prefixTime', v);
     notifyListeners();
   }
 

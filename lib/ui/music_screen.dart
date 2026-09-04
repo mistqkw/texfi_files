@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_text_styles_ext.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -9,8 +11,6 @@ import 'audio_player_screen.dart';
 import 'format.dart';
 import 'terminal.dart';
 import '../l10n/app_strings.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_route.dart';
 
 /// Экран «Музыка»: вся аудио-музыка из ленты, с плейлистами по группам.
 /// (Голосовые сообщения сюда не попадают — отдельный тип элемента.)
@@ -31,19 +31,17 @@ class _MusicScreenState extends State<MusicScreen> {
     final s = app.settings;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text(
-          t.music,
-          style: monoStyle(color: cs.onSurface, size: 18, weight: FontWeight.w700),
-        ),
+        backgroundColor: context.colors.background,
+        title: Text(t.music, style: context.text.screenTitle),
         actions: [
           ListenableBuilder(
             listenable: app.player,
             builder: (context, _) => IconButton(
               tooltip: t.shuffle,
-              icon: PixelIcon('shuffle',
+              icon: Icon(
+                Icons.shuffle_rounded,
                 color: app.player.shuffle ? cs.primary : null,
               ),
               onPressed: app.player.toggleShuffle,
@@ -59,8 +57,10 @@ class _MusicScreenState extends State<MusicScreen> {
                   PlayerRepeatMode.all => t.repeatAll,
                   PlayerRepeatMode.one => t.repeatOne,
                 },
-                icon: PixelIcon(
-                  'sync',
+                icon: Icon(
+                  mode == PlayerRepeatMode.one
+                      ? Icons.repeat_one_rounded
+                      : Icons.repeat_rounded,
                   color: mode == PlayerRepeatMode.off ? null : cs.primary,
                 ),
                 onPressed: app.player.cycleRepeat,
@@ -134,7 +134,7 @@ class _MusicScreenState extends State<MusicScreen> {
                               0,
                               volume: app.settings.playerVolume,
                             ),
-                      icon: PixelIcon('note'),
+                      icon: const Icon(Icons.playlist_play_rounded),
                       label: Text(t.playAll),
                     ),
                     const SizedBox(width: 12),
@@ -152,7 +152,9 @@ class _MusicScreenState extends State<MusicScreen> {
                   itemBuilder: (context, i) {
                     final it = tracks[i];
                     final isCur = app.player.current?.id == it.id;
-                    return _terminalTile(context, app, it, tracks, i, isCur, s, cs, t);
+                    return _terminalTile(
+                      context, app, it, tracks, i, isCur, s, cs, t,
+                    );
                   },
                 ),
               ),
@@ -175,7 +177,7 @@ class _MusicScreenState extends State<MusicScreen> {
     AppStrings t,
   ) {
     final accent = isCur ? cs.primary : Colors.white;
-    final alpha = isCur ? 0.85 : s.borderOpacity;
+    final alpha = isCur ? 0.85 : 0.55;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: TerminalBox(
@@ -195,8 +197,10 @@ class _MusicScreenState extends State<MusicScreen> {
                 border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
                 borderRadius: BorderRadius.circular(3),
               ),
-              child: PixelIcon(
-                isCur && app.player.playing ? 'waveform' : 'note',
+              child: Icon(
+                isCur && app.player.playing
+                    ? Icons.graphic_eq_rounded
+                    : Icons.music_note_rounded,
                 color: cs.primary,
                 size: 22,
               ),
@@ -216,12 +220,12 @@ class _MusicScreenState extends State<MusicScreen> {
             style: monoStyle(color: cs.onSurfaceVariant, size: 11),
           ),
           trailing: isCur && app.player.playing
-              ? PixelIcon('waveform', color: cs.primary, size: 20)
+              ? Icon(Icons.graphic_eq_rounded, color: cs.primary, size: 20)
               : null,
           onTap: () {
             app.player.playQueue(tracks, i, volume: app.settings.playerVolume);
             Navigator.of(context).push(
-              PixelPageRoute(builder: (_) => const AudioPlayerScreen()),
+              MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
             );
           },
         ),

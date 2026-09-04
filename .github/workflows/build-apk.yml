@@ -80,8 +80,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Нужен для RELEASE_NOTES.md — текст релиза правится в репозитории,
-      # а не в этом workflow.
+      # а не в этом workflow. fetch-depth: 0 — чтобы был сам тег с его
+      # аннотацией: из неё берётся заголовок релиза.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           name: texfi-files-apk
@@ -94,9 +97,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Заголовок берём из аннотации тега, если она есть: это позволяет
+          # назвать выпуск по-человечески ("redesign v2 beta 0.1"), не завязывая
+          # имя на схему тега. Пустая аннотация — прежнее поведение.
+          title="$(git tag -l --format='%(contents:subject)' "${GITHUB_REF_NAME}")"
+          if [ -z "$title" ]; then
+            title="TexFi files ${GITHUB_REF_NAME}"
+          fi
+
+          # Тег со суффиксом (v1.4.0-beta.1) — предварительный выпуск.
+          case "${GITHUB_REF_NAME}" in
+            *-*) prerelease="--prerelease" ;;
+            *)   prerelease="" ;;
+          esac
+
           gh release create "${GITHUB_REF_NAME}" \
             dist/app-release.apk \
             dist/TexFi-files-windows-x64.zip \
             -R "${GITHUB_REPOSITORY}" \
-            --title "TexFi files ${GITHUB_REF_NAME}" \
+            --title "$title" \
+            $prerelease \
             --notes-file RELEASE_NOTES.md

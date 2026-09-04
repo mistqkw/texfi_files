@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'pixel_theme.dart';
+import 'package:flutter/services.dart';
 
-/// Пиксельные чекбокс/переключатель/радио — квадратные, с 2px обводкой,
-/// вместо стандартных Material-виджетов.
+import '../../core/theme/app_colors_ext.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_radius.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_text_styles_ext.dart';
+import 'pixel_card.dart';
+import 'pixel_icons.dart';
 
+/// Пиксельный чекбокс вместо материалового.
 class PixelCheckbox extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-  final double size;
   const PixelCheckbox({
     super.key,
     required this.value,
@@ -15,85 +18,94 @@ class PixelCheckbox extends StatelessWidget {
     this.size = 22,
   });
 
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final double size;
+
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
+    final enabled = onChanged != null;
     return GestureDetector(
-      onTap: onChanged == null ? null : () => onChanged!(!value),
-      child: Container(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              onChanged!(!value);
+            }
+          : null,
+      child: AnimatedContainer(
+        duration: AppMotion.instant,
         width: size,
         height: size,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: value ? cs.primary : Colors.transparent,
-          borderRadius: PixelTheme.controlRadiusAll,
+          color: value ? colors.accent : colors.surfaceVariant,
+          borderRadius: AppRadius.controlSmallAll,
           border: Border.all(
-            color: value ? cs.primary : cs.outlineVariant,
-            width: PixelTheme.borderWidth,
+            color: value ? colors.accent : colors.divider,
+            width: AppRadius.pixelBorder,
           ),
         ),
         child: value
-            ? CustomPaint(painter: _CheckPainter(cs.onPrimary))
+            ? PixelIcon('check', size: size - 6, color: colors.onAccent)
             : null,
       ),
     );
   }
 }
 
-class _CheckPainter extends CustomPainter {
-  final Color color;
-  _CheckPainter(this.color);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = size.width * 0.14
-      ..strokeCap = StrokeCap.square
-      ..style = PaintingStyle.stroke;
-    final path = Path()
-      ..moveTo(size.width * 0.22, size.height * 0.52)
-      ..lineTo(size.width * 0.42, size.height * 0.72)
-      ..lineTo(size.width * 0.8, size.height * 0.28);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CheckPainter old) => old.color != color;
-}
-
-/// Квадратный переключатель: два состояния, ползунок-квадрат внутри рамки.
+/// Пиксельный переключатель: две позиции, ручка перещёлкивает, а не
+/// перетекает — скользящее скругление здесь единственное место, где
+/// движение было бы «мягким».
 class PixelSwitch extends StatelessWidget {
+  const PixelSwitch({super.key, required this.value, required this.onChanged});
+
   final bool value;
   final ValueChanged<bool>? onChanged;
-  const PixelSwitch({super.key, required this.value, required this.onChanged});
+
+  static const double _w = 46;
+  static const double _h = 24;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    const w = 40.0, h = 22.0, knob = 16.0, pad = 3.0;
+    final colors = context.colors;
+    final enabled = onChanged != null;
     return GestureDetector(
-      onTap: onChanged == null ? null : () => onChanged!(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: w,
-        height: h,
-        decoration: BoxDecoration(
-          color: value ? cs.primary.withValues(alpha: 0.28) : Colors.transparent,
-          borderRadius: PixelTheme.controlRadiusAll,
-          border: Border.all(
-            color: value ? cs.primary : cs.outlineVariant,
-            width: PixelTheme.borderWidth,
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              onChanged!(!value);
+            }
+          : null,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: Container(
+          width: _w,
+          height: _h,
+          decoration: BoxDecoration(
+            color: value ? colors.accent : colors.surfaceVariant,
+            borderRadius: AppRadius.controlSmallAll,
+            border: Border.all(
+              color: value ? colors.accent : colors.divider,
+              width: AppRadius.pixelBorder,
+            ),
           ),
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: pad),
-            child: Container(
-              width: knob,
-              height: knob,
-              color: value ? cs.primary : cs.outlineVariant,
+          child: AnimatedAlign(
+            duration: AppMotion.instant,
+            curve: AppMotion.standard,
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Container(
+                width: 16,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: value ? colors.onAccent : colors.textTertiary,
+                  borderRadius: AppRadius.controlTinyAll,
+                ),
+              ),
             ),
           ),
         ),
@@ -102,202 +114,103 @@ class PixelSwitch extends StatelessWidget {
   }
 }
 
-/// Квадратный радио-индикатор.
-class PixelRadio<T> extends StatelessWidget {
-  final T value;
-  final T groupValue;
-  final ValueChanged<T>? onChanged;
+/// Пиксельный radio — квадратный, с залитой сердцевиной.
+class PixelRadio extends StatelessWidget {
   const PixelRadio({
     super.key,
-    required this.value,
-    required this.groupValue,
-    required this.onChanged,
+    required this.selected,
+    required this.onTap,
+    this.size = 22,
   });
+
+  final bool selected;
+  final VoidCallback? onTap;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final selected = value == groupValue;
+    final colors = context.colors;
     return GestureDetector(
-      onTap: onChanged == null ? null : () => onChanged!(value),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            },
       child: Container(
-        width: 20,
-        height: 20,
+        width: size,
+        height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
+          color: colors.surfaceVariant,
+          borderRadius: AppRadius.controlSmallAll,
           border: Border.all(
-            color: selected ? cs.primary : cs.outlineVariant,
-            width: PixelTheme.borderWidth,
+            color: selected ? colors.accent : colors.divider,
+            width: AppRadius.pixelBorder,
           ),
         ),
         child: selected
-            ? Container(width: 10, height: 10, color: cs.primary)
+            ? Container(
+                width: size - 10,
+                height: size - 10,
+                color: colors.accent,
+              )
             : null,
       ),
     );
   }
 }
 
-/// Пиксельный аватар: квадратная рамка с засечками по углам вместо гладкого
-/// круга. Содержимое (инициалы/иконка/картинка) остаётся настраиваемым.
-class PixelAvatar extends StatelessWidget {
-  final Widget? child;
-  final ImageProvider? image;
-  final Color? background;
-  final Color? borderColor;
-  final double size;
-
-  const PixelAvatar({
+/// Строка настройки: слева пиксельная иконка и читаемые тексты, справа
+/// контрол. Заголовок и подпись набираются гротеском — это текст, который
+/// читают, а не акцентная метка.
+class PixelTile extends StatelessWidget {
+  const PixelTile({
     super.key,
-    this.child,
-    this.image,
-    this.background,
-    this.borderColor,
-    this.size = 40,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: background ?? cs.primaryContainer,
-        image: image != null ? DecorationImage(image: image!, fit: BoxFit.cover) : null,
-        border: Border.all(
-          color: borderColor ?? cs.primary,
-          width: PixelTheme.borderWidth,
-        ),
-      ),
-      child: image != null
-          ? null
-          : DefaultTextStyle.merge(
-              style: TextStyle(fontWeight: FontWeight.w700, color: cs.onPrimaryContainer),
-              child: child ?? const SizedBox.shrink(),
-            ),
-    );
-  }
-}
-
-/// Карточка пиксель-арт языка: умеренно скруглена (10), 2px обводка,
-/// сплошная офсетная тень (без blur). Универсальная замена Material Card
-/// в местах, где не нужна врезанная подпись TerminalBox.
-class PixelCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry? margin;
-  final Color? fill;
-  final Color? borderColor;
-  final VoidCallback? onTap;
-  final bool raised;
-
-  const PixelCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(12),
-    this.margin,
-    this.fill,
-    this.borderColor,
+    this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
     this.onTap,
-    this.raised = true,
   });
+
+  final String? icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    Widget content = Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: fill ?? cs.surface,
-        borderRadius: PixelTheme.cardRadiusAll,
-        border: Border.all(
-          color: borderColor ?? cs.outlineVariant,
-          width: PixelTheme.borderWidth,
-        ),
-        boxShadow: raised ? PixelTheme.hardShadow() : null,
+    final colors = context.colors;
+    return PixelCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
       ),
-      child: Material(type: MaterialType.transparency, child: child),
-    );
-    if (onTap != null) {
-      content = InkWell(
-        onTap: onTap,
-        borderRadius: PixelTheme.cardRadiusAll,
-        child: content,
-      );
-    }
-    return Padding(padding: margin ?? EdgeInsets.zero, child: content);
-  }
-}
-
-/// Кнопка пиксель-арт языка: почти квадратная (2px радиус), с офсетной
-/// тенью и тактильным откликом — при нажатии кнопка «утапливается» ровно
-/// на высоту собственной тени, а тень на столько же укорачивается. Общий
-/// размер при этом не меняется, поэтому соседние элементы не дёргаются.
-class PixelButton extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onPressed;
-  final Color? color;
-  final EdgeInsetsGeometry padding;
-
-  const PixelButton({
-    super.key,
-    required this.child,
-    required this.onPressed,
-    this.color,
-    this.padding = const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-  });
-
-  @override
-  State<PixelButton> createState() => _PixelButtonState();
-}
-
-class _PixelButtonState extends State<PixelButton> {
-  bool _down = false;
-
-  void _set(bool v) {
-    if (_down != v) setState(() => _down = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bg = widget.color ?? cs.primary;
-    final enabled = widget.onPressed != null;
-    final pressed = _down && enabled;
-    const off = PixelTheme.shadowOffset;
-    final shift = pressed ? off : 0.0;
-
-    return GestureDetector(
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      onTap: widget.onPressed,
-      // Резервируем место под тень, чтобы утапливание не меняло габарит.
-      child: Padding(
-        padding: const EdgeInsets.only(right: off, bottom: off),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          curve: Curves.easeOut,
-          transform: Matrix4.translationValues(shift, shift, 0),
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            color: enabled ? bg : bg.withValues(alpha: 0.4),
-            borderRadius: PixelTheme.controlRadiusAll,
-            border: Border.all(
-              color: Colors.black,
-              width: PixelTheme.borderWidth,
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            PixelIcon(icon!, size: 20, color: colors.accent),
+            AppSpacing.wGapMd,
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: context.text.tileTitle),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: context.text.bodySmall),
+                ],
+              ],
             ),
-            boxShadow: pressed
-                ? null
-                : PixelTheme.hardShadow(offset: const Offset(off, off)),
           ),
-          child: DefaultTextStyle.merge(
-            style: const TextStyle(fontWeight: FontWeight.w700),
-            child: widget.child,
-          ),
-        ),
+          if (trailing != null) ...[AppSpacing.wGapMd, trailing!],
+        ],
       ),
     );
   }
