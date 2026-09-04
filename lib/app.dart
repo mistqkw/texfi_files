@@ -5,8 +5,9 @@ import 'core/settings.dart';
 import 'ui/home_page.dart';
 import 'ui/onboarding_screen.dart';
 import 'ui/pin_lock_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/app_typography.dart';
 import 'ui/pixel/pixel_splash.dart';
-import 'ui/pixel/pixel_theme.dart';
 
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
@@ -112,111 +113,13 @@ class _TexfiAppState extends State<TexfiApp> with WidgetsBindingObserver {
     );
   }
 
-  /// Тема строится вокруг пиксельного словаря, а не вокруг ColorScheme
-  /// из seed-цвета: карточки и кнопки рисуют бордер и тень сами, поэтому
-  /// материаловские elevation/surfaceTint здесь только мешают — их
-  /// приходится гасить в каждом компоненте.
-  ThemeData _buildTheme(Brightness brightness, Settings s) {
-    final dark = brightness == Brightness.dark;
-    final bg = dark ? PixelTheme.darkBg : PixelTheme.lightBg;
-    final surface = dark ? PixelTheme.darkSurface : PixelTheme.lightSurface;
-    final fg = dark ? PixelTheme.darkText : PixelTheme.lightText;
-    final dim = dark ? PixelTheme.darkTextDim : PixelTheme.lightTextDim;
-
-    final scheme = ColorScheme(
-      brightness: brightness,
-      primary: PixelTheme.accent,
-      onPrimary: Colors.white,
-      secondary: PixelTheme.accent,
-      onSecondary: Colors.white,
-      error: const Color(0xFFE5484D),
-      onError: Colors.white,
-      surface: surface,
-      onSurface: fg,
-      onSurfaceVariant: dim,
-      outline: PixelTheme.edge2(dark),
-    );
-
-    return ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: bg,
-      // Читаемый текст набирается обычным шрифтом. Пиксельный подключается
-      // точечно через PixelTheme.heading — заголовки и акцентные метки.
-      fontFamily: _bodyFont(s.fontChoice),
-      splashFactory: NoSplash.splashFactory,
-      highlightColor: Colors.transparent,
-      appBarTheme: AppBarTheme(
-        backgroundColor: bg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        iconTheme: IconThemeData(color: fg),
-        titleTextStyle: PixelTheme.heading(size: 12, color: fg),
-      ),
-      cardTheme: CardThemeData(
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        color: surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radius),
-          side: BorderSide(color: PixelTheme.edge2(dark), width: PixelTheme.border),
-        ),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radius),
-          side: BorderSide(color: PixelTheme.edge2(dark), width: PixelTheme.border),
-        ),
-        titleTextStyle: PixelTheme.heading(size: 11, color: fg),
-        contentTextStyle: TextStyle(fontSize: 14, color: fg, height: 1.4),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: dark ? PixelTheme.darkSurfaceAlt : PixelTheme.lightSurfaceAlt,
-        hintStyle: TextStyle(color: dim),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radiusSmall),
-          borderSide: BorderSide(color: PixelTheme.edge2(dark), width: PixelTheme.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radiusSmall),
-          borderSide: BorderSide(color: PixelTheme.edge2(dark), width: PixelTheme.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radiusSmall),
-          borderSide: const BorderSide(color: PixelTheme.accent, width: PixelTheme.border),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: dark ? PixelTheme.darkSurfaceAlt : PixelTheme.lightText,
-        contentTextStyle: TextStyle(
-          color: dark ? PixelTheme.darkText : Colors.white,
-          fontSize: 13.5,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PixelTheme.radiusSmall),
-          side: BorderSide(color: PixelTheme.accent, width: PixelTheme.border),
-        ),
-      ),
-      dividerTheme: DividerThemeData(
-        color: PixelTheme.edge2(dark),
-        thickness: PixelTheme.border,
-        space: PixelTheme.border,
-      ),
-    );
-  }
+  ThemeData _buildTheme(Brightness brightness, Settings s) =>
+      AppTheme.build(brightness: brightness, sansFamily: _bodyFont(s.fontChoice));
 
   /// Шрифт основного текста. Пиксельного варианта здесь намеренно нет:
   /// Press Start 2P нечитаем в именах файлов и текстах сообщений.
-  static String _bodyFont(int choice) => switch (choice) {
-    1 => 'Manrope',
-    2 => 'monospace',
-    _ => 'Roboto',
-  };
+  static String _bodyFont(int choice) =>
+      choice >= 0 && choice < sansFamilyChoices.length
+          ? sansFamilyChoices[choice]
+          : defaultSansFamily;
 }

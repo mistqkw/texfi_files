@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pixel_theme.dart';
+import '../../core/theme/app_colors_ext.dart';
 
 /// Реестр пиксельных глифов и виджет для их отрисовки.
 ///
@@ -627,9 +627,7 @@ class PixelIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c =
-        color ??
-        (PixelTheme.isDark(context) ? PixelTheme.darkText : PixelTheme.lightText);
+    final c = color ?? context.colors.textPrimary;
     final button = GestureDetector(
       onTap: onPressed,
       behavior: HitTestBehavior.opaque,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'pixel_theme.dart';
+import '../../core/theme/app_colors_ext.dart';
+import '../../core/theme/app_motion.dart';
 
 /// Индикатор поиска устройств.
 ///
@@ -22,7 +23,7 @@ class _PixelScannerState extends State<PixelScanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1400),
+    duration: AppMotion.scan,
   )..repeat();
 
   @override
@@ -39,7 +40,7 @@ class _PixelScannerState extends State<PixelScanner>
       child: AnimatedBuilder(
         animation: _c,
         builder: (context, _) => CustomPaint(
-          painter: _ScanPainter(_c.value, widget.color ?? PixelTheme.accent),
+          painter: _ScanPainter(_c.value, widget.color ?? context.colors.accent),
         ),
       ),
     );

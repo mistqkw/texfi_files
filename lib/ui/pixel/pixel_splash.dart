@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'pixel_icons.dart';
-import 'pixel_theme.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_palettes.dart';
 
 /// Входная анимация: символ приложения (P2P-узел) собирается из отдельных
 /// ячеек построчно, затем коротко вспыхивает акцентом.
@@ -20,7 +21,7 @@ class _PixelSplashState extends State<PixelSplash>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1150),
+    duration: AppMotion.boot,
   );
   bool _done = false;
 
@@ -56,7 +57,7 @@ class _PixelSplashState extends State<PixelSplash>
               child: Opacity(
                 opacity: fade,
                 child: ColoredBox(
-                  color: PixelTheme.darkBg,
+                  color: AppPalettes.dark.background,
                   child: Center(
                     child: CustomPaint(
                       size: const Size(168, 168),
@@ -107,7 +108,7 @@ class _AssemblePainter extends CustomPainter {
         paint.color = ch == 0x6F
             ? Colors.white
             : Color.lerp(
-                PixelTheme.accent,
+                AppPalettes.dark.accent,
                 Colors.white,
                 flash * (1 - flash) * 2.4,
               )!;
