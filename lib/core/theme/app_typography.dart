@@ -41,6 +41,12 @@ TextTheme buildAppTextTheme({
   }) {
     return TextStyle(
       fontFamily: pixelFontFamily,
+      // Press Start 2P не содержит кириллицы. Без явного запасного
+      // семейства каждая платформа подставляет своё: на этой машине
+      // подвернулся похожий пиксельный шрифт, на Android будет Roboto, на
+      // Windows — Segoe. Прибиваем к бандловому гротеску, чтобы русские
+      // заголовки выглядели одинаково везде.
+      fontFamilyFallback: [sansFamily],
       fontSize: size,
       color: color,
       height: height,

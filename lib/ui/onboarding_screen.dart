@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_motion.dart';
+import '../core/theme/app_spacing.dart';
+import 'pixel/pixel_button.dart';
+import 'pixel/pixel_card.dart';
+import 'pixel/pixel_icons.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
 import 'terminal.dart';
 
 class _Slide {
-  final IconData icon;
+  /// Имя глифа из [PixelGlyphs].
+  final String icon;
   final String title;
   final String text;
-  final String? image;
-  const _Slide(this.icon, this.title, this.text, {this.image});
+  const _Slide(this.icon, this.title, this.text);
 }
 
 List<_Slide> _buildSlides(AppStrings t) => [
-      _Slide(Icons.bookmark_rounded, t.obTitle1, t.obText1,
-          image: 'assets/logo.png'),
-      _Slide(Icons.send_rounded, t.obTitle2, t.obText2),
-      _Slide(Icons.cloud_done_rounded, t.obTitle3, t.obText3),
-      _Slide(Icons.palette_rounded, t.obTitle4, t.obText4),
+      // Первый слайд — сам знак приложения, тот же, что в лаунчере и на
+      // заставке.
+      _Slide('node', t.obTitle1, t.obText1),
+      _Slide('send', t.obTitle2, t.obText2),
+      _Slide('exchange', t.obTitle3, t.obText3),
+      _Slide('contrast', t.obTitle4, t.obText4),
     ];
 
 /// Приветственный экран с анимациями — при первом запуске.
@@ -87,10 +93,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const Spacer(),
                   AnimatedOpacity(
                     opacity: last ? 0 : 1,
-                    duration: const Duration(milliseconds: 200),
-                    child: TextButton(
+                    duration: AppMotion.normal,
+                    child: PixelButton(
+                      label: t.skip,
+                      expand: false,
+                      compact: true,
+                      primary: false,
                       onPressed: last ? null : _finish,
-                      child: Text(t.skip),
                     ),
                   ),
                 ],
@@ -113,19 +122,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _next,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: terminal ? cs.primary : null,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: Text(
-                    last ? t.start : t.next,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
+              child: PixelButton(
+                label: last ? t.start : t.next,
+                onPressed: _next,
               ),
             ),
           ],
@@ -135,24 +134,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _dots(ColorScheme cs, int count) {
+    final colors = _dotColors(cs);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < count; i++)
           AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: i == _index ? 24 : 8,
+            duration: AppMotion.normal,
+            curve: AppMotion.standard,
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            width: i == _index ? 22 : 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: i == _index ? cs.primary : cs.outlineVariant,
-              borderRadius: BorderRadius.circular(4),
-            ),
+            // Без скругления: капсула здесь была бы единственной мягкой
+            // формой на экране.
+            color: i == _index ? colors.$1 : colors.$2,
           ),
       ],
     );
   }
+
+  (Color, Color) _dotColors(ColorScheme cs) => (cs.primary, cs.outline);
 }
 
 class _SlideView extends StatelessWidget {
@@ -180,7 +181,7 @@ class _SlideView extends StatelessWidget {
             child: AnimatedOpacity(
               opacity: active ? 1 : 0.4,
               duration: const Duration(milliseconds: 300),
-              child: terminal ? _terminalIcon(cs) : _classicIcon(cs),
+              child: _slideIcon(),
             ),
           ),
           const SizedBox(height: 48),
@@ -225,57 +226,13 @@ class _SlideView extends StatelessWidget {
 
   /// Терминальный вид: чёрный квадрат с белой рамкой вместо градиентного
   /// круга — та же врезанная подпись, что и у блоков в ленте.
-  Widget _terminalIcon(ColorScheme cs) {
-    return TerminalBox(
-      label: slide.image != null ? 'texfi' : 'preview',
-      borderColor: Colors.white.withValues(alpha: 0.55),
-      labelColor: cs.primary,
-      radius: 12,
-      padding: const EdgeInsets.all(28),
-      child: SizedBox(
-        width: 96,
-        height: 96,
-        child: slide.image != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(slide.image!, fit: BoxFit.cover),
-              )
-            : Icon(slide.icon, size: 64, color: cs.primary),
+  Widget _slideIcon() {
+    return Builder(
+      builder: (context) => PixelCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: PixelIcon(slide.icon, size: 96, color: context.colors.accent),
       ),
     );
   }
 
-  Widget _classicIcon(ColorScheme cs) {
-    return Container(
-      width: 168,
-      height: 168,
-      decoration: BoxDecoration(
-        // Для картинки-лого — заметная подложка и рамка, чтобы чёрный круг
-        // логотипа был виден на тёмном фоне.
-        color: slide.image != null ? cs.surfaceContainerHighest : null,
-        gradient: slide.image == null
-            ? LinearGradient(
-                colors: [cs.primary, cs.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        shape: BoxShape.circle,
-        border: slide.image != null
-            ? Border.all(color: cs.primary, width: 2)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: cs.primary.withValues(alpha: 0.4),
-            blurRadius: 40,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: slide.image != null
-          ? Image.asset(slide.image!, fit: BoxFit.cover)
-          : Icon(slide.icon, size: 76, color: cs.onPrimary),
-    );
-  }
 }

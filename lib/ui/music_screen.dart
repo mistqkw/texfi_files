@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_text_styles_ext.dart';
 import '../app.dart';
 import '../app_state.dart';
 import '../core/models.dart';
@@ -28,21 +29,12 @@ class _MusicScreenState extends State<MusicScreen> {
     final app = AppScope.of(context);
     final t = tr(context);
     final s = app.settings;
-    // Терминальный вид стал единственным оформлением приложения, но
-    // ветвления по нему в этом экране ещё остались — держим константу,
-    // чтобы не переписывать раскладку целиком в рамках редизайна шапки.
-    const terminal = true;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: context.colors.background,
-        title: terminal
-            ? Text(
-                t.music,
-                style: monoStyle(color: cs.onSurface, size: 18, weight: FontWeight.w700),
-              )
-            : Text(t.music),
+        title: Text(t.music, style: context.text.screenTitle),
         actions: [
           ListenableBuilder(
             listenable: app.player,
@@ -148,23 +140,21 @@ class _MusicScreenState extends State<MusicScreen> {
                     const SizedBox(width: 12),
                     Text(
                       '${tracks.length}',
-                      style: terminal
-                          ? monoStyle(color: cs.onSurfaceVariant, size: 13)
-                          : TextStyle(color: cs.onSurfaceVariant),
+                      style: monoStyle(color: cs.onSurfaceVariant, size: 13),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.only(bottom: 8, top: terminal ? 0 : 4),
+                  padding: const EdgeInsets.only(bottom: 8),
                   itemCount: tracks.length,
                   itemBuilder: (context, i) {
                     final it = tracks[i];
                     final isCur = app.player.current?.id == it.id;
-                    return terminal
-                        ? _terminalTile(context, app, it, tracks, i, isCur, s, cs, t)
-                        : _classicTile(context, app, it, tracks, i, isCur, cs, t);
+                    return _terminalTile(
+                      context, app, it, tracks, i, isCur, s, cs, t,
+                    );
                   },
                 ),
               ),
@@ -243,46 +233,4 @@ class _MusicScreenState extends State<MusicScreen> {
     );
   }
 
-  Widget _classicTile(
-    BuildContext context,
-    AppState app,
-    SavedItem it,
-    List<SavedItem> tracks,
-    int i,
-    bool isCur,
-    ColorScheme cs,
-    AppStrings t,
-  ) {
-    return ListTile(
-      leading: AlbumArtThumb(
-        filePath: it.filePath,
-        size: 44,
-        radius: 12,
-        fallback: CircleAvatar(
-          backgroundColor: isCur ? cs.primary : cs.surfaceContainerHighest,
-          child: Icon(
-            isCur && app.player.playing
-                ? Icons.equalizer_rounded
-                : Icons.music_note_rounded,
-            color: isCur ? cs.onPrimary : cs.onSurfaceVariant,
-          ),
-        ),
-      ),
-      title: Text(
-        it.fileName ?? t.audioWord,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: isCur ? FontWeight.w700 : FontWeight.w400,
-        ),
-      ),
-      subtitle: Text(humanSize(it.fileSize)),
-      onTap: () {
-        app.player.playQueue(tracks, i, volume: app.settings.playerVolume);
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AudioPlayerScreen()),
-        );
-      },
-    );
-  }
 }

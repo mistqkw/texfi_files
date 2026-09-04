@@ -1,5 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_text_styles_ext.dart';
+import 'pixel/pixel_card.dart';
+import 'pixel/pixel_icons.dart';
+import 'pixel/pixel_scanner.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -96,40 +102,62 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _selfCard(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     final port = _app.server.port;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cs.primaryContainer,
-        child: Icon(Icons.laptop_rounded, color: cs.onPrimaryContainer),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.sm,
+        AppSpacing.page,
+        AppSpacing.xs,
       ),
-      title: Text(_app.settings.deviceName,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(_localIp != null
-          ? '${t.thisDevice} · $_localIp:$port'
-          : '${t.thisDevice} · $port'),
-      trailing: const Icon(Icons.circle, size: 10, color: Colors.green),
+      child: PixelCard(
+        accent: true,
+        child: Row(
+          children: [
+            PixelIcon('laptop', size: 26, color: colors.accent),
+            AppSpacing.wGapLg,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_app.settings.deviceName, style: context.text.tileTitle),
+                  const SizedBox(height: 2),
+                  Text(
+                    _localIp != null
+                        ? '${t.thisDevice} · $_localIp:$port'
+                        : '${t.thisDevice} · $port',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            _StatusDot(online: true),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _searching(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-                width: 28, height: 28, child: CircularProgressIndicator()),
-            const SizedBox(height: 16),
-            Text(t.searchingAccount,
-                style: TextStyle(color: cs.onSurfaceVariant)),
-            const SizedBox(height: 4),
+            // Пиксельный сканер вместо CircularProgressIndicator: тот
+            // крутится одинаково и когда идёт опрос сети, и когда всё
+            // зависло. Здесь видно и сам факт опроса, и его темп.
+            const PixelScanner(size: 88),
+            AppSpacing.gapXl,
+            Text(t.searchingAccount, style: context.text.screenTitle),
+            AppSpacing.gapSm,
             Text(
               t.searchingAccountSub,
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+              style: context.text.bodySmall,
             ),
           ],
         ),
@@ -138,23 +166,21 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _needLogin(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_circle_outlined,
-                size: 64, color: cs.onSurfaceVariant),
-            const SizedBox(height: 16),
-            Text(t.needLoginTitle,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
+            PixelIcon('shield', size: 68, color: colors.textTertiary),
+            AppSpacing.gapXl,
+            Text(t.needLoginTitle, style: context.text.screenTitle),
+            AppSpacing.gapSm,
             Text(
               t.needLoginText,
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurfaceVariant),
+              style: context.text.bodySmall,
             ),
           ],
         ),
@@ -163,32 +189,58 @@ class _PeersPageState extends State<PeersPage> {
   }
 
   Widget _peerTile(BuildContext context, Peer p) {
-    final cs = Theme.of(context).colorScheme;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor:
-            p.online ? cs.tertiaryContainer : cs.surfaceContainerHighest,
-        child: Icon(
-          p.platform == 'android'
-              ? Icons.smartphone_rounded
-              : Icons.laptop_rounded,
-          color: p.online ? cs.onTertiaryContainer : cs.onSurfaceVariant,
+    final colors = context.colors;
+    final trusted = _app.isTrusted(p);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.xs,
+        AppSpacing.page,
+        AppSpacing.xs,
+      ),
+      child: PixelCard(
+        child: Row(
+          children: [
+            PixelIcon(
+              p.platform == 'android' ? 'phone' : 'laptop',
+              size: 24,
+              color: p.online ? colors.accent : colors.textTertiary,
+            ),
+            AppSpacing.wGapLg,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          p.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.tileTitle,
+                        ),
+                      ),
+                      if (trusted) ...[
+                        AppSpacing.wGapXs,
+                        PixelIcon('check', size: 13, color: colors.success),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    trusted
+                        ? '${p.address} · ${t.yourAccount}'
+                        : '${p.address} · ${p.online ? t.online : t.offline}',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            _StatusDot(online: p.online),
+          ],
         ),
       ),
-      title: Row(
-        children: [
-          Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
-          if (_app.isTrusted(p)) ...[
-            const SizedBox(width: 6),
-            Icon(Icons.verified_rounded, size: 16, color: cs.primary),
-          ],
-        ],
-      ),
-      subtitle: Text(_app.isTrusted(p)
-          ? '${p.address} · ${t.yourAccount}'
-          : '${p.address} · ${p.online ? t.online : t.offline}'),
-      trailing: Icon(Icons.circle,
-          size: 10, color: p.online ? Colors.green : cs.outline),
     );
   }
 
@@ -429,6 +481,30 @@ class _ScanFrame extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Индикатор состояния устройства.
+///
+/// Квадрат, а не круг: круглая точка в 8px на пиксельной сетке всегда
+/// выходит кривой — сглаживание размывает её в пятно.
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.online});
+
+  final bool online;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: online ? colors.success : colors.textTertiary,
+        border: Border.all(color: colors.divider, width: 1),
       ),
     );
   }
