@@ -32,8 +32,34 @@ String _fmt(Duration d) {
 }
 
 /// Полноэкранный аудио-плеер, привязанный к глобальному PlayerService.
-class AudioPlayerScreen extends StatelessWidget {
+class AudioPlayerScreen extends StatefulWidget {
   const AudioPlayerScreen({super.key});
+
+  @override
+  State<AudioPlayerScreen> createState() => _AudioPlayerScreenState();
+}
+
+class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
+  final _focusNode = FocusNode(debugLabel: 'AudioPlayerScreen space bar');
+
+  @override
+  void initState() {
+    super.initState();
+    // requestFocus() после первого кадра, а не `Focus(autofocus: true)`.
+    // Autofocus запрашивает фокус в момент вставки в дерево — сразу после
+    // push() нового роута это иногда проигрывает гонку за фокус (переход
+    // ещё не завершён/окно ещё не отдало фокус нативному виджету), и тогда
+    // пробел молча не срабатывает. Явный запрос постфреймом надёжнее.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +69,7 @@ class AudioPlayerScreen extends StatelessWidget {
     // бы только пока в фокусе именно кнопка play, что на практике никогда
     // не так — пользователь просто смотрит на экран.
     return Focus(
-      autofocus: true,
+      focusNode: _focusNode,
       onKeyEvent: (node, event) {
         if (!isPlayPauseKey(event)) return KeyEventResult.ignored;
         if (player.current != null) {
