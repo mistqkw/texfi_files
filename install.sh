@@ -97,3 +97,18 @@ case ":$PATH:" in
   *":$BIN_DIR:"*) echo "Run it: texfi-files" ;;
   *) echo "Add $BIN_DIR to your PATH, or launch \"TexFi files\" from your app menu." ;;
 esac
+
+# The built-in player links against libmpv, which is a system library on
+# Linux rather than something bundled into the release archive. Most
+# desktop distros already have it (it's a dependency of mpv/VLC-adjacent
+# tooling), but not all — check and say so plainly instead of letting the
+# player fail silently later.
+if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p 2>/dev/null | grep -q "libmpv\.so"; then
+  echo
+  echo "Note: libmpv was not found — the built-in audio/video player needs it."
+  echo "Everything else (transfers, text, files) works without it. Install with:"
+  echo "  Debian/Ubuntu:  sudo apt install libmpv2"
+  echo "  Fedora:         sudo dnf install mpv-libs"
+  echo "  Arch:           sudo pacman -S mpv"
+  echo "  openSUSE:       sudo zypper install libmpv2"
+fi

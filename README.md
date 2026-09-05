@@ -33,7 +33,10 @@ Downloads the latest release, installs under `~/.local` (no root, nothing touche
 outside your home directory) and adds it to your app menu. Works on any mainstream
 glibc desktop distro — Ubuntu/Debian/Mint, Fedora, Arch, openSUSE and derivatives.
 Not for musl‑based distros (Alpine, postmarketOS) or non‑x86_64 machines — build
-from source instead (see [below](#-build-from-source)).
+from source instead (see [below](#-build-from-source)). The built‑in player needs
+`libmpv` (a system library, not bundled) — the installer checks for it and tells
+you the package name for your distro if it's missing; everything else works
+without it.
 
 All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistqkw/texfi_files/releases)
 
