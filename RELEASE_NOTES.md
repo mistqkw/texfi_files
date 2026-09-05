@@ -1,5 +1,13 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.4
+
+- 🎛 **MPRIS on Linux.** The built-in player now shows up to GNOME Shell/KDE Plasma
+  media widgets, media keys and `playerctl` like any native desktop player — play/pause,
+  next/previous, seeking, volume, shuffle and repeat all work both ways, with cover art
+  and track info kept in sync. Verified against a live session bus with real playback,
+  not just by reading the D-Bus introspection.
+
 ## What's new in 1.5.3
 
 - 🐧 **Linux now has a real release build and a one-command installer.**
