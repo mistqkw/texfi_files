@@ -1,5 +1,24 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.6
+
+- ✅ **Transfer complete now assembles a checkmark pixel by pixel** instead of
+  fading/scaling one in, matching the rest of the pixel-art motion language.
+- 📶 **New devices animate into the list** instead of popping in instantly, and
+  the "nobody around" hint fades and scales in rather than appearing abruptly.
+- 🔲 **Device icon unified everywhere it appears** — the "this device" card and
+  Settings' device row could previously show different icons for the same
+  device; both now match the devices list.
+- ⬜ **Last remaining Material control replaced** — the composer's
+  send-to-device picker was still a Material chip; it's a pixel chip now like
+  the rest of the app.
+- ⚡ **Keyboard open/close no longer redraws the whole screen.** Every frame of
+  the keyboard's show/hide animation was rebuilding the background, snow,
+  header and feed along with the input bar — now only the input bar rebuilds.
+- ⚡ **Lighter message list.** Each text message carried its own selectable-text
+  gesture handling, real per-row cost when scrolling a long feed; switched to
+  plain text (copying a whole message still works the same way).
+
 ## What's new in 1.5.5
 
 - ⌨️ **Space bar to play/pause, take two.** The first attempt used
