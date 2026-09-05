@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/haptics.dart';
 import '../core/theme/app_colors_ext.dart';
+import '../core/theme/app_motion.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
 import 'pixel/pixel_button.dart';
 import 'pixel/pixel_card.dart';
+import 'pixel/pixel_entrance.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_scanner.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -37,6 +39,15 @@ class _PeersPageState extends State<PeersPage> {
   /// циклы, в которых ничего не изменилось.
   final Set<String> _announced = {};
   bool _primed = false;
+
+  /// Отдельно от [_announced]: тот в момент срабатывания слушателя УЖЕ
+  /// помечает id как известный (нужно для тайминга вибро+подсказки), так
+  /// что к моменту построения этой же карточки в билде он всегда «уже
+  /// объявлен» — анимация появления по нему никогда бы не сработала.
+  /// Здесь — то же самое, что `_seen` в ленте home_page.dart: множество,
+  /// которое заполняется прямо во время построения списка карточек, а не
+  /// слушателем.
+  final Set<String> _seenTileIds = {};
 
   /// Сколько ждать, прежде чем сменить «идёт поиск» на подсказку.
   ///
@@ -94,10 +105,7 @@ class _PeersPageState extends State<PeersPage> {
     // если в этот момент смотрел на экран.
     if (!mounted) return;
     final name = _app.peers
-        .firstWhere(
-          (p) => p.id == fresh.first,
-          orElse: () => _app.peers.first,
-        )
+        .firstWhere((p) => p.id == fresh.first, orElse: () => _app.peers.first)
         .name;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -164,8 +172,11 @@ class _PeersPageState extends State<PeersPage> {
         ),
       ),
       body: ListenableBuilder(
-        listenable:
-            Listenable.merge([_app.discovery, _app.settings, _app.auth]),
+        listenable: Listenable.merge([
+          _app.discovery,
+          _app.settings,
+          _app.auth,
+        ]),
         builder: (context, _) {
           final peers = _app.peers;
           return Column(
@@ -176,12 +187,12 @@ class _PeersPageState extends State<PeersPage> {
                 child: !_app.auth.isLoggedIn
                     ? _needLogin(context)
                     : peers.isEmpty
-                        ? _searching(context)
-                        : ListView(
-                            children: [
-                              for (final p in peers) _peerTile(context, p),
-                            ],
-                          ),
+                    ? _searching(context)
+                    : ListView(
+                        children: [
+                          for (final p in peers) _peerEntry(context, p),
+                        ],
+                      ),
               ),
             ],
           );
@@ -204,7 +215,14 @@ class _PeersPageState extends State<PeersPage> {
         accent: true,
         child: Row(
           children: [
-            PixelIcon('laptop', size: 26, color: colors.accent),
+            // Платформо-зависимая иконка, как у остальных карточек ниже —
+            // раньше здесь был жёстко зашит 'laptop', и на Android
+            // карточка «это устройство» показывала бы ноутбук.
+            PixelIcon(
+              Platform.isAndroid ? 'phone' : 'laptop',
+              size: 26,
+              color: colors.accent,
+            ),
             AppSpacing.wGapLg,
             Expanded(
               child: Column(
@@ -237,29 +255,45 @@ class _PeersPageState extends State<PeersPage> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Пиксельный сканер вместо CircularProgressIndicator: тот
-            // крутится одинаково и когда идёт опрос сети, и когда всё
-            // зависло. Здесь видно и сам факт опроса, и его темп.
-            if (waiting)
-              const PixelScanner(size: 88)
-            else
-              PixelIcon('wifi', size: 72, color: context.colors.textTertiary),
-            AppSpacing.gapXl,
-            Text(
-              waiting ? t.searchingAccount : t.nobodyAroundTitle,
-              textAlign: TextAlign.center,
-              style: context.text.screenTitle,
+        // Та же связка fade+scale, что у переходов между экранами
+        // (pixel_route.dart) — раньше подсказка после ожидания просто
+        // мгновенно подменяла сканер, без единого кадра перехода.
+        child: AnimatedSwitcher(
+          duration: AppMotion.route,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.96, end: 1).animate(animation),
+              child: child,
             ),
-            AppSpacing.gapSm,
-            Text(
-              waiting ? t.searchingAccountSub : t.nobodyAroundText,
-              textAlign: TextAlign.center,
-              style: context.text.bodySmall,
-            ),
-          ],
+          ),
+          child: Column(
+            key: ValueKey(waiting),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Пиксельный сканер вместо CircularProgressIndicator: тот
+              // крутится одинаково и когда идёт опрос сети, и когда всё
+              // зависло. Здесь видно и сам факт опроса, и его темп.
+              if (waiting)
+                const PixelScanner(size: 88)
+              else
+                PixelIcon('wifi', size: 72, color: context.colors.textTertiary),
+              AppSpacing.gapXl,
+              Text(
+                waiting ? t.searchingAccount : t.nobodyAroundTitle,
+                textAlign: TextAlign.center,
+                style: context.text.screenTitle,
+              ),
+              AppSpacing.gapSm,
+              Text(
+                waiting ? t.searchingAccountSub : t.nobodyAroundText,
+                textAlign: TextAlign.center,
+                style: context.text.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -285,6 +319,23 @@ class _PeersPageState extends State<PeersPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Карточка устройства с ключом по id и анимацией появления для новых.
+  ///
+  /// Список сортируется по имени (см. Discovery.peers), поэтому позиции
+  /// сдвигаются, когда появляется устройство, которое по алфавиту встаёт
+  /// раньше уже показанных — без ValueKey Flutter сверял бы карточки по
+  /// ПОЗИЦИИ в списке, а не по устройству, которое они показывают, и
+  /// путал бы, какая карточка новая, а какая просто сдвинулась.
+  Widget _peerEntry(BuildContext context, Peer p) {
+    final isNew = !_seenTileIds.contains(p.id);
+    _seenTileIds.add(p.id);
+    final tile = _peerTile(context, p);
+    return KeyedSubtree(
+      key: ValueKey(p.id),
+      child: isNew ? PixelEntrance(child: tile) : tile,
     );
   }
 
@@ -346,9 +397,10 @@ class _PeersPageState extends State<PeersPage> {
 
   void _addByIp() {
     final ipC = TextEditingController(
-        text: _localIp != null
-            ? '${_localIp!.substring(0, _localIp!.lastIndexOf('.') + 1)}'
-            : '');
+      text: _localIp != null
+          ? '${_localIp!.substring(0, _localIp!.lastIndexOf('.') + 1)}'
+          : '',
+    );
     final portC = TextEditingController();
     showDialog(
       context: context,
@@ -362,21 +414,23 @@ class _PeersPageState extends State<PeersPage> {
               autofocus: true,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                  labelText: t.ipAddress, hintText: '192.168.0.50'),
+                labelText: t.ipAddress,
+                hintText: '192.168.0.50',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: portC,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                  labelText: t.port, hintText: '…'),
+              decoration: InputDecoration(labelText: t.port, hintText: '…'),
             ),
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(t.cancel)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(t.cancel),
+          ),
           FilledButton(
             onPressed: () async {
               final ip = ipC.text.trim();
@@ -385,11 +439,15 @@ class _PeersPageState extends State<PeersPage> {
               if (ip.isEmpty || port == null) return;
               final name = await _app.discovery.addManual(ip, port);
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(name != null
-                    ? t.connectedTo(name)
-                    : t.connectFail('$ip:$port')),
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    name != null
+                        ? t.connectedTo(name)
+                        : t.connectFail('$ip:$port'),
+                  ),
+                ),
+              );
             },
             child: Text(t.connect),
           ),
@@ -417,7 +475,9 @@ class _PeersPageState extends State<PeersPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), child: Text(t.close)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(t.close),
+          ),
         ],
       ),
     );
@@ -435,19 +495,16 @@ class _PeersPageState extends State<PeersPage> {
           SnackBar(
             content: Text(t.cameraPermissionDenied),
             action: status.isPermanentlyDenied
-                ? SnackBarAction(
-                    label: t.settings,
-                    onPressed: openAppSettings,
-                  )
+                ? SnackBarAction(label: t.settings, onPressed: openAppSettings)
                 : null,
           ),
         );
         return;
       }
     }
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const _QrScannerPage()),
-    );
+    final result = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const _QrScannerPage()));
     if (result == null || !result.startsWith('$_qrScheme:')) return;
     final parts = result.split(':');
     if (parts.length != 3) return;
@@ -456,10 +513,13 @@ class _PeersPageState extends State<PeersPage> {
     if (port == null) return;
     final name = await _app.discovery.addManual(ip, port);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          name != null ? t.connectedTo(name) : t.connectFail('$ip:$port')),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          name != null ? t.connectedTo(name) : t.connectFail('$ip:$port'),
+        ),
+      ),
+    );
   }
 }
 
@@ -506,7 +566,9 @@ class _QrScannerPageState extends State<_QrScannerPage> {
         title: Text(t.scanQr),
         actions: [
           IconButton(
-            icon: Icon(_torch ? Icons.flash_on_rounded : Icons.flash_off_rounded),
+            icon: Icon(
+              _torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+            ),
             onPressed: () {
               _controller.toggleTorch();
               setState(() => _torch = !_torch);
@@ -585,7 +647,6 @@ class _ScanFrame extends StatelessWidget {
     );
   }
 }
-
 
 /// Индикатор состояния устройства.
 ///

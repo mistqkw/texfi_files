@@ -6,8 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/services.dart'
-    show SystemUiOverlayStyle;
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -30,6 +29,7 @@ import 'pixel/pixel_card.dart';
 import 'pixel/pixel_controls.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_burst.dart';
+import 'pixel/pixel_entrance.dart';
 import 'pixel/pixel_button.dart';
 import 'selection_paint.dart';
 import 'pixel/pixel_route.dart';
@@ -333,10 +333,8 @@ class _HomePageState extends State<HomePage> {
             // сглаживания полоса прыгает через несколько ячеек разом.
             tween: Tween<double>(end: v),
             duration: kProgressCatchUp,
-            builder: (_, shown, _) => PixelTransferRow(
-              title: name,
-              value: v == 0 ? null : shown,
-            ),
+            builder: (_, shown, _) =>
+                PixelTransferRow(title: name, value: v == 0 ? null : shown),
           ),
         ),
       ),
@@ -412,7 +410,6 @@ class _HomePageState extends State<HomePage> {
     return ListenableBuilder(
       listenable: Listenable.merge([_app, _app.discovery, _app.auth]),
       builder: (context, _) {
-        _keepBottomOnKeyboard(context);
         // авто-выбор адресата
         _target ??= _app.preferredPeer;
         if (_target != null &&
@@ -489,7 +486,22 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  _inputBar(context),
+                  // Builder — не косметика: MediaQuery.viewInsetsOf внутри
+                  // _keepBottomOnKeyboard/_inputBar читался раньше через
+                  // context самого внешнего ListenableBuilder. Любое чтение
+                  // MediaQuery в build() подписывает НА ЭТОТ Element, а не
+                  // на конкретный виджет — и клавиатура анимируется по
+                  // высоте несколько кадров подряд, значит несколько
+                  // кадров подряд перестраивался весь экран целиком: фон,
+                  // снег, шапка, вся лента. Builder даёт этому чтению
+                  // собственный, маленький Element — перестраивается
+                  // только поле ввода, а не всё вокруг него.
+                  Builder(
+                    builder: (context) {
+                      _keepBottomOnKeyboard(context);
+                      return _inputBar(context);
+                    },
+                  ),
                 ],
               ),
               // Плавающий квадратик плеера — поверх всего, можно перетащить.
@@ -520,8 +532,8 @@ class _HomePageState extends State<HomePage> {
   // SizedBox-спейсере тела, чтобы они не расходились.
   // Метрики шапки. Размеры именно те, которыми набирается текст, — высота
   // капсулы считается из них, а не задаётся отдельной константой.
-  static const double _kTitleSize = 12;   // пиксельный шрифт
-  static const double _kStatusSize = 10;  // гротеск
+  static const double _kTitleSize = 12; // пиксельный шрифт
+  static const double _kStatusSize = 10; // гротеск
   static const double _kTitleLeading = 1.25;
   static const double _kTitleGap = 3;
   static const double _kBarVPad = 9;
@@ -621,10 +633,7 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  PixelWordmark(
-                    size: _kTitleSize,
-                    leading: _kTitleLeading,
-                  ),
+                  PixelWordmark(size: _kTitleSize, leading: _kTitleLeading),
                   const SizedBox(height: _kTitleGap),
                   Text(
                     status,
@@ -669,7 +678,10 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: AppRadius.cardMediumAll,
-          border: Border.all(color: colors.accent, width: AppRadius.pixelBorder),
+          border: Border.all(
+            color: colors.accent,
+            width: AppRadius.pixelBorder,
+          ),
         ),
         child: Row(
           children: [
@@ -960,7 +972,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   /// Префикс значения фильтра для метки.
   static const _labelFilter = 'label:';
 
@@ -1108,11 +1119,7 @@ class _HomePageState extends State<HomePage> {
           for (final g in groups)
             _filterChip(label: g, value: g, icon: 'folder'),
           for (final l in labels)
-            _filterChip(
-              label: l,
-              value: '$_labelFilter$l',
-              icon: 'label',
-            ),
+            _filterChip(label: l, value: '$_labelFilter$l', icon: 'label'),
         ],
       ),
     );
@@ -1327,7 +1334,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           );
-          return animate ? _Entrance(child: row) : row;
+          return animate ? PixelEntrance(child: row) : row;
         },
       ),
     );
@@ -1461,8 +1468,10 @@ class _HomePageState extends State<HomePage> {
     _edgeScroll ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
       if (!_scroll.hasClients) return;
       final pos = _scroll.position;
-      final target = (pos.pixels + _edgeStep)
-          .clamp(pos.minScrollExtent, pos.maxScrollExtent);
+      final target = (pos.pixels + _edgeStep).clamp(
+        pos.minScrollExtent,
+        pos.maxScrollExtent,
+      );
       if (target == pos.pixels) return;
       _scroll.jumpTo(target);
       // После прокрутки под пальцем уже другая строка — дорисовываем.
@@ -1585,7 +1594,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                           if (_ttlSeconds != null)
                             Padding(
-                              padding: const EdgeInsets.only(right: AppSpacing.xs),
+                              padding: const EdgeInsets.only(
+                                right: AppSpacing.xs,
+                              ),
                               child: PixelIcon(
                                 'clock',
                                 size: 14,
@@ -1685,35 +1696,35 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _targetSelector(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final peers = _app.peers.where((p) => p.online).toList();
     // Выбирать не из чего — не занимаем место строкой с единственным чипом.
     if (peers.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: SizedBox(
         height: 34,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
+            // 'star' — та же иконка, что у «Избранного» в пустом состоянии
+            // ленты: обе означают «сохранено локально», а не отправлено
+            // конкретному устройству.
             _targetChip(
-              context,
               label: t.saveHere,
-              icon: Icons.bookmark_border_rounded,
+              icon: 'star',
               selected: _target == null,
               onTap: () => setState(() => _target = null),
-              color: cs,
             ),
             for (final p in peers)
               _targetChip(
-                context,
                 label: p.name,
-                icon: p.platform == 'android'
-                    ? Icons.smartphone_rounded
-                    : Icons.laptop_rounded,
+                // Та же иконка по платформе, что на экране устройств и в
+                // Настройках — раньше здесь стояли материаловские
+                // Icons.smartphone/laptop, единственный оставшийся
+                // material-чип во всём приложении.
+                icon: p.platform == 'android' ? 'phone' : 'laptop',
                 selected: _target?.id == p.id,
                 onTap: () => setState(() => _target = p),
-                color: cs,
               ),
           ],
         ),
@@ -1721,26 +1732,47 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _targetChip(
-    BuildContext context, {
+  /// Тот же рецепт пиксельного чипа, что у фильтров ленты (_filterChip) —
+  /// один визуальный язык для «выбери одно из» по всему приложению.
+  Widget _targetChip({
     required String label,
-    required IconData icon,
+    required String icon,
     required bool selected,
     required VoidCallback onTap,
-    required ColorScheme color,
   }) {
+    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: ChoiceChip(
-        avatar: Icon(
-          icon,
-          size: 16,
-          color: selected ? color.onSecondaryContainer : color.onSurface,
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: PixelCard(
+        accent: selected,
+        background: selected ? colors.accent : null,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        visualDensity: VisualDensity.compact,
+        onTap: () {
+          Haptics.tap();
+          onTap();
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PixelIcon(
+              icon,
+              size: 13,
+              color: selected ? colors.onAccent : colors.accent,
+            ),
+            AppSpacing.wGapSm,
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.tileTitleSmall.copyWith(
+                color: selected ? colors.onAccent : colors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1771,50 +1803,6 @@ class _PulsingMicState extends State<_PulsingMic>
     return FadeTransition(
       opacity: Tween(begin: 0.4, end: 1.0).animate(_c),
       child: const Icon(Icons.mic_rounded, color: Colors.red),
-    );
-  }
-}
-
-/// Плавное появление нового элемента ленты. Стиль и скорость — из настроек.
-/// Появление нового элемента ленты: короткий подъём с проявлением.
-///
-/// Стиль и скорость были настройками (четыре варианта × три скорости) —
-/// двенадцать сочетаний одного и того же движения. Осталось одно,
-/// согласованное с длительностями остальной экосистемы.
-class _Entrance extends StatefulWidget {
-  const _Entrance({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_Entrance> createState() => _EntranceState();
-}
-
-class _EntranceState extends State<_Entrance>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: AppMotion.normal,
-  )..forward();
-  late final Animation<double> _curve = CurvedAnimation(
-    parent: _c,
-    curve: AppMotion.standard,
-  );
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: Tween(
-        begin: const Offset(0, 0.12),
-        end: Offset.zero,
-      ).animate(_curve),
-      child: FadeTransition(opacity: _curve, child: widget.child),
     );
   }
 }
@@ -1924,7 +1912,6 @@ class _SwipeRowState extends State<_SwipeRow> {
   }
 }
 
-
 /// Кнопка отправки с моментом подтверждения.
 ///
 /// Раньше отправка проходила беззвучно: текст исчезал из поля, и всё —
@@ -2004,7 +1991,6 @@ class _SendButtonState extends State<_SendButton>
     );
   }
 }
-
 
 /// Фоновый слой: фото, размытие, затемнение, снег.
 ///
@@ -2093,7 +2079,9 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
       if (widget.dim > 0) {
         layers.add(
           Positioned.fill(
-            child: ColoredBox(color: Colors.black.withValues(alpha: widget.dim)),
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: widget.dim),
+            ),
           ),
         );
       }
@@ -2102,10 +2090,11 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
       layers.add(Positioned.fill(child: PixelSnow(speed: widget.snowSpeed)));
     }
     if (layers.isEmpty) return const SizedBox.shrink();
-    return RepaintBoundary(child: Stack(fit: StackFit.expand, children: layers));
+    return RepaintBoundary(
+      child: Stack(fit: StackFit.expand, children: layers),
+    );
   }
 }
-
 
 /// Строка ленты в режиме выделения.
 ///
@@ -2151,7 +2140,6 @@ class _SelectableRow extends StatelessWidget {
     );
   }
 }
-
 
 /// Поле «создать новое» с кнопкой подтверждения.
 ///

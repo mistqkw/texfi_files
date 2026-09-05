@@ -175,7 +175,9 @@ class _SettingsPageState extends State<SettingsPage> {
     'security' => 'shield',
     'remote' => 'laptop',
     'player' => 'note',
-    'device' => 'device',
+    // Та же сущность, что карточка «это устройство» на экране устройств —
+    // должна быть та же иконка, а не отдельный обобщённый глиф.
+    'device' => Platform.isAndroid ? 'phone' : 'laptop',
     // Треугольник с восклицательным знаком означает предупреждение —
     // в разделе «О приложении» предупреждать не о чем.
     'about' => 'info',

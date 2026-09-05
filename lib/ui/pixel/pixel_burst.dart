@@ -77,9 +77,6 @@ class _BurstLayerState extends State<_BurstLayer>
             animation: _c,
             builder: (context, _) {
               final t = _c.value;
-              // Галочка появляется, когда частицы уже разлетелись, и
-              // затухает вместе с ними.
-              final markIn = ((t - 0.25) / 0.25).clamp(0.0, 1.0);
               final fade = t < 0.7 ? 1.0 : (1 - (t - 0.7) / 0.3);
               return Opacity(
                 opacity: fade.clamp(0.0, 1.0),
@@ -88,19 +85,6 @@ class _BurstLayerState extends State<_BurstLayer>
                   height: 160,
                   child: CustomPaint(
                     painter: _ParticlePainter(t, widget.color),
-                    child: Center(
-                      child: Transform.scale(
-                        scale: 0.6 + markIn * 0.4,
-                        child: Opacity(
-                          opacity: markIn,
-                          child: PixelIcon(
-                            'check',
-                            size: 44,
-                            color: widget.color,
-                          ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               );
@@ -122,6 +106,8 @@ class _ParticlePainter extends CustomPainter {
   /// пересчитывают радиус — списка объектов здесь нет вовсе.
   static const int _count = 12;
 
+  static final List<String> _check = PixelGlyphs.all['check']!;
+
   @override
   void paint(Canvas canvas, Size size) {
     final centre = Offset(size.width / 2, size.height / 2);
@@ -141,6 +127,49 @@ class _ParticlePainter extends CustomPainter {
         Rect.fromLTWH(dx.floorToDouble(), dy.floorToDouble(), side, side),
         paint,
       );
+    }
+
+    _paintCheck(canvas, size);
+  }
+
+  /// Галочка «собирается» построчно сверху вниз (слева направо внутри
+  /// строки) — та же техника, что у сборки знака на заставке
+  /// (pixel_splash.dart), а не плавные Opacity+Transform.scale, как было
+  /// раньше. Плавное масштабирование растрового виджета — ровно тот
+  /// материаловский приём, которого пиксельная стилистика избегает везде
+  /// остальных местах; здесь он был единственным исключением.
+  void _paintCheck(Canvas canvas, Size size) {
+    // Собирается с 0.25 по 0.62 (та же вторая четверть, что раньше), затем
+    // держится и гаснет вместе с частицами.
+    final build = ((t - 0.25) / 0.37).clamp(0.0, 1.0);
+    if (build <= 0) return;
+
+    final rows = _check.length;
+    final cols = _check.first.length;
+    const glyphSize = 56.0;
+    final cell = (glyphSize / cols).floorToDouble().clamp(1.0, 1e9);
+    final dx = (size.width - cell * cols) / 2;
+    final dy = (size.height - cell * rows) / 2;
+    // Своя, непрозрачная заливка — а не paint частиц: у того альфа
+    // непрерывно убывает вместе с их разлётом (color.withValues(alpha:
+    // 1-t)), и переиспользование того же Paint погасило бы галочку задолго
+    // до её полной сборки. Общее затухание в конце даёт внешний Opacity
+    // вокруг всего CustomPaint — на неё это не влияет.
+    final paint = Paint()..color = color;
+
+    for (var r = 0; r < rows; r++) {
+      final rowStart = r / rows * 0.7;
+      final rowProgress = ((build - rowStart) / 0.3).clamp(0.0, 1.0);
+      if (rowProgress <= 0) continue;
+      final line = _check[r];
+      for (var c = 0; c < cols; c++) {
+        if (line.codeUnitAt(c) == 0x2E) continue; // '.'
+        if (c / cols > rowProgress) continue;
+        canvas.drawRect(
+          Rect.fromLTWH(dx + c * cell, dy + r * cell, cell - 0.5, cell - 0.5),
+          paint,
+        );
+      }
     }
   }
 
