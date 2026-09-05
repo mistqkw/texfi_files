@@ -1,5 +1,17 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.2
+
+- 🎛 **Player icons that read.** Shuffle looked like a close cross and repeat like
+  an empty square; the ±10s buttons borrowed plain navigation arrows. All redrawn.
+- ⚙️ **Settings icons now match their sections** — "About" no longer carries a
+  warning triangle, "Files & sync" no longer borrows the app's own mark.
+- 🔲 **The last round Material parts are gone** — sliders have square thumbs and a
+  blocky track, and the devices screen lost its Material QR buttons and floating
+  action button.
+- ⌨️ **The keyboard no longer hides the last messages.** The feed follows it up —
+  but only if you were already at the bottom, not while scrolling back.
+
 ## What's new in 1.5.1
 
 - ☑️ **Selection no longer misses rows.** Dragging quickly across the feed marked
