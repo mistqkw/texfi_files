@@ -1,5 +1,19 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.3
+
+- 🐧 **Linux now has a real release build and a one-command installer.**
+
+      curl -fsSL https://raw.githubusercontent.com/mistqkw/texfi_files/main/install.sh | sh
+
+  Installs under `~/.local` (no root) on any mainstream glibc desktop distro —
+  Ubuntu/Debian/Mint, Fedora, Arch, openSUSE and derivatives. The built-in player needs
+  `libmpv`, a system library that isn't bundled in the archive; the installer checks for
+  it and tells you the package name for your distro if it's missing — everything else
+  (transfers, text, files) works without it.
+- 📖 README and banner refreshed to match the current pixel-art redesign, selection mode,
+  folders/labels and the rebuilt music player, instead of describing the pre-redesign UI.
+
 ## What's new in 1.5.2
 
 - 🎛 **Player icons that read.** Shuffle looked like a close cross and repeat like
