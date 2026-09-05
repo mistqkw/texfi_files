@@ -10,6 +10,7 @@ import 'core/audio_handler.dart';
 import 'core/auth_service.dart';
 import 'core/background.dart';
 import 'core/haptics.dart';
+import 'core/linux/mpris_service.dart';
 import 'core/quick_share.dart';
 import 'core/settings.dart';
 import 'l10n/app_strings.dart';
@@ -88,6 +89,12 @@ Future<void> main() async {
       ),
     );
   }
+
+  // Тот же мост между плеером и системой, что AudioService даёт Android —
+  // здесь через MPRIS: медиа-клавиши, GNOME Shell/KDE Plasma, playerctl.
+  // tryStart сам решает, что делать на не-Linux и на машине без session
+  // bus — ошибка там не должна ронять остальное приложение.
+  await MprisService.tryStart(state.player);
 
   runApp(TexfiApp(state: state));
 }

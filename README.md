@@ -56,6 +56,9 @@ All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistq
 - ↪️ **Share / forward** — send any message or file to Telegram or anywhere via the system share sheet.
 - 🎵 **Built‑in player + Music library** — pixel‑art transport controls, block seek bar,
   album art, mini‑player, playlist of all saved audio; video with thumbnails.
+- 🎛 **MPRIS on Linux** — the player shows up to GNOME Shell/KDE Plasma media widgets,
+  media keys and `playerctl` like any native desktop player, with cover art, position
+  and shuffle/repeat kept in sync both ways.
 - 🖼 **Media** — swipeable, zoomable image gallery; GIFs are marked as such.
 - ⌨️ **Type from phone to PC** — the phone keyboard types on your computer.
 - 🔎 **Full‑text search** — find any saved message or file name instantly.

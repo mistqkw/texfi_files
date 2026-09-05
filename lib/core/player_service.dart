@@ -50,6 +50,17 @@ class PlayerService extends ChangeNotifier {
 
   Player get raw => _player;
 
+  /// Громкость 0..100. Публичный геттер существует ради MPRIS (там шкала
+  /// 0..1) — внутри плеера всё и так обращается к приватному полю.
+  double get volume => _volume;
+
+  /// Вызывается на каждый явный переход позиции (перемотка слайдером,
+  /// +10/-10, MPRIS Seek/SetPosition) — но не на обычное продвижение
+  /// плеера во время воспроизведения. MPRIS-мост слушает это, чтобы
+  /// отправить сигнал `Seeked`: обычные проигрыватели вроде GNOME Shell
+  /// используют его, чтобы не принять скачок позиции за рассинхронизацию.
+  void Function(Duration)? onSeek;
+
   PlayerService() {
     _subs.add(_player.stream.position.listen((p) {
       pos = p;
@@ -86,6 +97,15 @@ class PlayerService extends ChangeNotifier {
       PlayerRepeatMode.all => PlayerRepeatMode.one,
       PlayerRepeatMode.one => PlayerRepeatMode.off,
     };
+    notifyListeners();
+  }
+
+  /// Задать режим повтора напрямую (а не по циклу) — нужен MPRIS, где
+  /// клиент присылает конкретное значение `LoopStatus`, а не «переключи
+  /// на следующее».
+  void setRepeatMode(PlayerRepeatMode mode) {
+    if (mode == repeatMode) return;
+    repeatMode = mode;
     notifyListeners();
   }
 
@@ -172,9 +192,22 @@ class PlayerService extends ChangeNotifier {
   void toggle() => _player.playOrPause();
   void play() => _player.play();
   void pause() => _player.pause();
-  void seek(Duration d) => _player.seek(d);
-  void nudge(int seconds) => _player.seek(pos + Duration(seconds: seconds));
-  void setVolume(double v) => _player.setVolume(v);
+
+  void seek(Duration d) {
+    _player.seek(d);
+    onSeek?.call(d);
+  }
+
+  void nudge(int seconds) {
+    final d = pos + Duration(seconds: seconds);
+    _player.seek(d);
+    onSeek?.call(d);
+  }
+
+  void setVolume(double v) {
+    _volume = v;
+    _player.setVolume(v);
+  }
 
   Future<void> stop() async {
     await _player.stop();
