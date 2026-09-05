@@ -1,5 +1,14 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.5.5
+
+- ⌨️ **Space bar to play/pause, take two.** The first attempt used
+  `Focus(autofocus: true)`, which requests focus the moment the widget is
+  inserted — right after a route push that can race the transition/window
+  focus handoff and silently lose. Switched to an explicit `FocusNode` with
+  `requestFocus()` called after the first frame, the more reliable pattern
+  for grabbing focus as soon as a screen is up.
+
 ## What's new in 1.5.4
 
 - 🎛 **MPRIS on Linux.** The built-in player now shows up to GNOME Shell/KDE Plasma
