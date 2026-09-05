@@ -1,4 +1,4 @@
-name: Build APK & Windows
+name: Build APK, Windows & Linux
 
 # Сборки собираются на каждый пуш и кладутся в артефакты.
 # Релиз создаётся автоматически при пуше тега vX.Y.Z (например: git tag v1.0.2 && git push origin v1.0.2).
@@ -52,6 +52,46 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.8
+          channel: stable
+          cache: true
+      - name: Install Linux desktop toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev
+      - run: flutter config --enable-linux-desktop
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - name: Package tarball
+        # Layout matches install.sh's expectations exactly: bundle/ and
+        # icons/ sit at the tarball's top level, not nested under another
+        # directory — the installer extracts straight into a temp dir and
+        # looks for them there.
+        run: |
+          set -e
+          rm -rf dist-linux
+          mkdir -p dist-linux/bundle dist-linux/icons
+          cp -r build/linux/x64/release/bundle/. dist-linux/bundle/
+          # Strip the "texfi-files-" prefix so install.sh can derive the
+          # hicolor size directory straight from the filename (16.png -> 16x16).
+          for f in assets/linux/*.png; do
+            base="$(basename "$f")"
+            size="${base#texfi-files-}"
+            cp "$f" "dist-linux/icons/$size"
+          done
+          (cd dist-linux && tar -czf ../TexFi-files-linux-x64.tar.gz bundle icons)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: texfi-files-linux
+          path: TexFi-files-linux-x64.tar.gz
+          if-no-files-found: error
+
   build-windows:
     # windows-latest перешёл на VS2026/MSVC v18, который жёстко запрещает
     # <experimental/coroutine> (используется в local_auth_windows) — держим
@@ -75,7 +115,7 @@ jobs:
 
   # Создаёт GitHub Release только при пуше тега vX.Y.Z.
   release:
-    needs: [build-apk, build-windows]
+    needs: [build-apk, build-windows, build-linux]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -90,6 +130,10 @@ jobs:
         with:
           name: texfi-files-windows
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: texfi-files-linux
+          path: dist
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,6 +141,7 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             dist/app-release.apk \
             dist/TexFi-files-windows-x64.zip \
+            dist/TexFi-files-linux-x64.tar.gz \
             -R "${GITHUB_REPOSITORY}" \
             --title "TexFi files ${GITHUB_REF_NAME}" \
             --notes-file RELEASE_NOTES.md

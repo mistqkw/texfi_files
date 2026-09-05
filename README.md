@@ -8,7 +8,7 @@
 Send text and files between your phone and computer, keep everything in your
 account, and reach it from any network. No third‑party cloud, no size limits on local transfers.
 
-![Platform](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Windows-4C7CFF)
+![Platform](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Windows-4A7DFB)
 ![Release](https://img.shields.io/github/v/release/mistqkw/texfi_files?label=release)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter)
 ![License](https://img.shields.io/badge/license-open%20source-green)
@@ -19,11 +19,21 @@ account, and reach it from any network. No third‑party cloud, no size limits o
 
 ## ⬇️ Download
 
-| Platform | File | Link |
-|----------|------|------|
-| **Android** | `app-release.apk` | [Download APK](https://github.com/mistqkw/texfi_files/releases/latest/download/app-release.apk) |
-| **Windows** | `TexFi-files-windows-x64.zip` | [Download for Windows](https://github.com/mistqkw/texfi_files/releases/latest/download/TexFi-files-windows-x64.zip) |
-| **Linux** | build from source | [See below](#-build-from-source) |
+| Platform | Install |
+|----------|---------|
+| **Android** | [Download APK](https://github.com/mistqkw/texfi_files/releases/latest/download/app-release.apk) |
+| **Windows** | [Download for Windows](https://github.com/mistqkw/texfi_files/releases/latest/download/TexFi-files-windows-x64.zip) |
+| **Linux** (x86_64) | one command — see below |
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mistqkw/texfi_files/main/install.sh | sh
+```
+
+Downloads the latest release, installs under `~/.local` (no root, nothing touched
+outside your home directory) and adds it to your app menu. Works on any mainstream
+glibc desktop distro — Ubuntu/Debian/Mint, Fedora, Arch, openSUSE and derivatives.
+Not for musl‑based distros (Alpine, postmarketOS) or non‑x86_64 machines — build
+from source instead (see [below](#-build-from-source)).
 
 All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistqkw/texfi_files/releases)
 
@@ -34,21 +44,27 @@ All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistq
 - ☁️ **Account cloud (hybrid)** — sign in with GitHub and your text, photos and files
   (up to ~90 MB) live in your account, reachable from **any device and any network**.
 - 📁 **Any‑size local transfer** — bigger files go directly between devices on the same network.
+- ☑️ **Multi‑select** — pick several messages or files at once (tap, or long‑press and
+  drag across rows) and delete, move to a folder, or label them in one action.
+- 🏷 **Labels & folders** — file anything into a folder (it stops cluttering "All" once
+  it's filed) and tag it with as many labels as you like on top — labels are filterable
+  from the top bar.
 - 🎤 **Voice messages** — record and send voice (m4a), kept separate from music.
 - ↪️ **Share / forward** — send any message or file to Telegram or anywhere via the system share sheet.
-- 🎵 **Built‑in player + Music library** — audio with album art, mini‑player, playlist of all chat audio; video with thumbnails.
-- 🖼 **Media** — swipeable, zoomable image gallery.
+- 🎵 **Built‑in player + Music library** — pixel‑art transport controls, block seek bar,
+  album art, mini‑player, playlist of all saved audio; video with thumbnails.
+- 🖼 **Media** — swipeable, zoomable image gallery; GIFs are marked as such.
 - ⌨️ **Type from phone to PC** — the phone keyboard types on your computer.
 - 🔎 **Full‑text search** — find any saved message or file name instantly.
-- 📌 **Pin, group & archive** — pin items, organize into collections, move noise to the
-  archive, filter the timeline.
-- 🖥 **Terminal design** — pure‑black blocks with a thin outline and a label inset into the
-  frame (`❯ device · type`), monospace metadata, full‑width date rules. Tunable outline
-  brightness, ready‑made themes and configurable label content — or switch back to
-  classic bubbles in one tap.
-- 🎨 **Deep customization** — design skins (TexFi / Material / Apple / Samsung / Windows),
-  any accent color, fonts, custom photo chat background (blur / pixelate / dim),
-  snow & rain effects, per‑message colors, changeable animations, OLED theme.
+- 📌 **Pin & archive** — pin items and move noise to the archive, filter the timeline.
+- 🎨 **Pixel‑art design** — the same visual language as the rest of the TexFi
+  ecosystem (f0kus, m0ney): blocky cards with a solid offset shadow, custom
+  checkboxes/switches/radios, a P2P‑node app icon, and short, tactile animations —
+  no Material parts left in the interface.
+- 📳 **Haptics** — a short tactile tick on taps and sends, matching the rest of the
+  ecosystem's patterns; toggle in Settings.
+- 🌨 **Custom background** — your own photo behind the feed, with adjustable blur,
+  dim and an optional pixel snowfall.
 - 🌍 **4 languages** — English, Русский, Deutsch, Polski (switch on the fly).
 - 📥 **Background receive** (Android) & 🖱 **smooth scrolling** (desktop).
 - 👋 **Onboarding** — an animated intro explains the app on first launch.
@@ -86,8 +102,11 @@ flutter build apk     --release   # Android
 flutter build windows --release   # Windows
 ```
 
-Ready‑to‑use APK and Windows builds are produced by **GitHub Actions** on every version
-tag (`git tag v1.2.3 && git push origin v1.2.3`) and attached to the release.
+`packaging/install-linux.sh` installs a locally built Linux bundle the same way
+`install.sh` installs a downloaded release — same layout, same `~/.local` paths, no root.
+
+Ready‑to‑use APK, Windows and Linux builds are produced by **GitHub Actions** on every
+version tag (`git tag v1.2.3 && git push origin v1.2.3`) and attached to the release.
 
 ---
 
