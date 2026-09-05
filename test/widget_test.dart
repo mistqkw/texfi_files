@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:texfi_files/ui/pixel/pixel_icons.dart';
+import 'package:texfi_files/core/theme/app_theme.dart';
 import 'package:texfi_files/ui/selection_paint.dart';
 import 'package:texfi_files/ui/pixel/pixel_progress.dart';
 
@@ -63,6 +64,7 @@ void main() {
         'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',
         'warn', 'exchange', 'node', 'label', 'archive', 'pdf', 'code',
         'play', 'pause', 'next', 'prev', 'shuffle', 'repeat', 'repeatone',
+        'rewind', 'forward', 'info',
       ];
       for (final name in used) {
         expect(
@@ -223,6 +225,52 @@ void main() {
             selected: selected, ids: const [], from: 0, to: 3, value: true),
         isFalse,
       );
+    });
+  });
+
+  group('Пиксельный ползунок', () {
+    // Кастомные SliderTrackShape/ComponentShape падают уже на отрисовке,
+    // а живут они в настройках, куда в тестах не дойти иначе.
+    testWidgets('рисуется в обеих темах и на краях диапазона',
+        (tester) async {
+      for (final brightness in Brightness.values) {
+        for (final value in const [0.0, 0.5, 1.0]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.build(brightness: brightness),
+              home: Scaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 240,
+                    child: Slider(value: value, onChanged: (_) {}),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        }
+      }
+    });
+
+    testWidgets('ползунок нулевой ширины не роняет отрисовку',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(brightness: Brightness.dark),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 0,
+                child: Slider(value: 0.5, onChanged: (_) {}),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
   });
 }

@@ -169,12 +169,16 @@ class _SettingsPageState extends State<SettingsPage> {
     'language' => 'globe',
     'appearance' => 'contrast',
     'network' => 'wifi',
-    'sync' => 'node',
+    // Обмен, а не знак приложения: раздел про то, как файлы ходят между
+    // устройствами и облаком.
+    'sync' => 'exchange',
     'security' => 'shield',
-    'remote' => 'text',
+    'remote' => 'laptop',
     'player' => 'note',
     'device' => 'device',
-    'about' => 'warn',
+    // Треугольник с восклицательным знаком означает предупреждение —
+    // в разделе «О приложении» предупреждать не о чем.
+    'about' => 'info',
     _ => 'gear',
   };
 

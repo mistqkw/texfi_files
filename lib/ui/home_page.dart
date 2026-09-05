@@ -83,6 +83,9 @@ class _HomePageState extends State<HomePage> {
 
   /// Автопрокрутка, пока палец держат у края списка.
   Timer? _edgeScroll;
+
+  /// Высота клавиатуры на прошлом кадре — чтобы заметить её появление.
+  double _lastInset = 0;
   final _search = TextEditingController();
   String _query = '';
 
@@ -409,6 +412,7 @@ class _HomePageState extends State<HomePage> {
     return ListenableBuilder(
       listenable: Listenable.merge([_app, _app.discovery, _app.auth]),
       builder: (context, _) {
+        _keepBottomOnKeyboard(context);
         // авто-выбор адресата
         _target ??= _app.preferredPeer;
         if (_target != null &&
@@ -908,7 +912,7 @@ class _HomePageState extends State<HomePage> {
               ),
               for (final e in [
                 ('note', t.music, const MusicScreen()),
-                ('text', t.ttKeyboard, const RemoteKeyboardPage()),
+                ('laptop', t.ttKeyboard, const RemoteKeyboardPage()),
                 ('gear', t.ttSettings, const SettingsPage()),
               ])
                 Padding(
@@ -1201,6 +1205,35 @@ class _HomePageState extends State<HomePage> {
           _pendingDelete.remove(item.id);
           _app.store.remove(item);
         });
+  }
+
+  /// Держит ленту у нижнего края, когда выезжает клавиатура.
+  ///
+  /// Тело экрана больше не сжимается под клавиатуру, но поле ввода
+  /// приподнимается и закрывает нижнюю часть ленты. Позиция прокрутки при
+  /// этом не менялась — последние сообщения уходили под поле ввода.
+  ///
+  /// Догоняем только если пользователь и так стоял внизу: если он листает
+  /// историю, дёргать его к последнему сообщению нельзя.
+  void _keepBottomOnKeyboard(BuildContext context) {
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    if (inset <= _lastInset) {
+      _lastInset = inset;
+      return;
+    }
+    final grew = inset - _lastInset;
+    _lastInset = inset;
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    // «Внизу» — с запасом на высоту одного сообщения.
+    if (pos.maxScrollExtent - pos.pixels > 160) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final p = _scroll.position;
+      _scroll.jumpTo(
+        (p.pixels + grew).clamp(p.minScrollExtent, p.maxScrollExtent),
+      );
+    });
   }
 
   /// Лента вместе с панелью фильтров — единственная часть экрана,

@@ -5,6 +5,7 @@ import '../core/haptics.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
+import 'pixel/pixel_button.dart';
 import 'pixel/pixel_card.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_scanner.dart';
@@ -135,23 +136,32 @@ class _PeersPageState extends State<PeersPage> {
       appBar: AppBar(
         title: Text(t.devicesTitle),
         actions: [
-          IconButton(
+          PixelIconButton(
+            icon: 'qr',
+            size: 18,
             tooltip: t.showQr,
-            icon: const Icon(Icons.qr_code_rounded),
             onPressed: _showMyQr,
           ),
           if (mobile)
-            IconButton(
+            PixelIconButton(
+              icon: 'search',
+              size: 18,
               tooltip: t.scanQr,
-              icon: const Icon(Icons.qr_code_scanner_rounded),
               onPressed: _scanQr,
             ),
+          AppSpacing.wGapXs,
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addByIp,
-        icon: const Icon(Icons.add_link_rounded),
-        label: Text(t.byIp),
+      // Обычная кнопка вместо FloatingActionButton: тот круглый и с мягкой
+      // тенью — последняя материаловская форма на экране.
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: AppSpacing.xs),
+        child: PixelButton(
+          label: t.byIp,
+          icon: 'plus',
+          expand: false,
+          onPressed: _addByIp,
+        ),
       ),
       body: ListenableBuilder(
         listenable:

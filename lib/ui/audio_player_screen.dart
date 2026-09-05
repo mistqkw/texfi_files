@@ -147,7 +147,7 @@ class AudioPlayerScreen extends StatelessWidget {
               if (p.queue.isNotEmpty)
                 PixelIconButton(icon: 'prev', size: 20, onPressed: p.previous),
               PixelIconButton(
-                icon: 'back',
+                icon: 'rewind',
                 size: 18,
                 tooltip: '-10s',
                 onPressed: () => p.nudge(-10),
@@ -156,7 +156,7 @@ class AudioPlayerScreen extends StatelessWidget {
               _PlayButton(playing: p.playing, onTap: p.toggle),
               AppSpacing.wGapSm,
               PixelIconButton(
-                icon: 'send',
+                icon: 'forward',
                 size: 18,
                 tooltip: '+10s',
                 onPressed: () => p.nudge(10),

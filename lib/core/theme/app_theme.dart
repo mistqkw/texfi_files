@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_colors_ext.dart';
 import 'app_palettes.dart';
 import 'app_radius.dart';
+import 'app_slider_shapes.dart';
 import 'app_typography.dart';
 
 /// Сборка ThemeData поверх палитры.
@@ -95,6 +96,21 @@ abstract final class AppTheme {
           borderRadius: AppRadius.controlSmallAll,
           side: BorderSide(color: colors.accent, width: AppRadius.pixelBorder),
         ),
+      ),
+      sliderTheme: SliderThemeData(
+        trackHeight: 8,
+        activeTrackColor: colors.accent,
+        inactiveTrackColor: colors.surfaceVariant,
+        thumbColor: colors.textPrimary,
+        // overlayColor переиспользуется как цвет рамки ручки: у
+        // SliderThemeData нет отдельного поля под обводку, а «клякса» под
+        // пальцем здесь всё равно отключена.
+        overlayColor: colors.divider,
+        overlayShape: SliderComponentShape.noOverlay,
+        thumbShape: const PixelSliderThumb(),
+        trackShape: const PixelSliderTrack(),
+        tickMarkShape: SliderTickMarkShape.noTickMark,
+        showValueIndicator: ShowValueIndicator.never,
       ),
       dividerTheme: DividerThemeData(
         color: colors.divider,
