@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:texfi_files/ui/pixel/pixel_icons.dart';
 import 'package:texfi_files/core/theme/app_theme.dart';
+import 'package:texfi_files/ui/audio_player_screen.dart' show isPlayPauseKey;
 import 'package:texfi_files/ui/selection_paint.dart';
 import 'package:texfi_files/ui/pixel/pixel_progress.dart';
 
@@ -271,6 +273,58 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Пробел = пуск/пауза плеера', () {
+    KeyDownEvent down(LogicalKeyboardKey key, {String? character}) =>
+        KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.space,
+          logicalKey: key,
+          character: character,
+          timeStamp: Duration.zero,
+        );
+
+    test('срабатывает на нажатие пробела', () {
+      expect(isPlayPauseKey(down(LogicalKeyboardKey.space)), isTrue);
+    });
+
+    test('не срабатывает на отпускание или автоповтор', () {
+      expect(
+        isPlayPauseKey(
+          KeyUpEvent(
+            physicalKey: PhysicalKeyboardKey.space,
+            logicalKey: LogicalKeyboardKey.space,
+            timeStamp: Duration.zero,
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        isPlayPauseKey(
+          KeyRepeatEvent(
+            physicalKey: PhysicalKeyboardKey.space,
+            logicalKey: LogicalKeyboardKey.space,
+            timeStamp: Duration.zero,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('не срабатывает на другие клавиши', () {
+      expect(isPlayPauseKey(down(LogicalKeyboardKey.enter)), isFalse);
+      expect(isPlayPauseKey(down(LogicalKeyboardKey.keyP)), isFalse);
+    });
+
+    test('решает по логической клавише, а не по символу раскладки', () {
+      // На части раскладок с модификатором пробел может прийти с иным
+      // символом (или без него) — засчитываться должна именно логическая
+      // клавиша Space, а не совпадение по character.
+      expect(
+        isPlayPauseKey(down(LogicalKeyboardKey.space, character: null)),
+        isTrue,
+      );
     });
   });
 }

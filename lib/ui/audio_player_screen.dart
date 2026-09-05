@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app.dart';
 import '../core/haptics.dart';
@@ -11,6 +12,17 @@ import '../l10n/app_strings.dart';
 import 'pixel/pixel_card.dart';
 import 'pixel/pixel_icons.dart';
 import 'pixel/pixel_seekbar.dart';
+
+/// true, если событие — это именно нажатие (не отпускание и не автоповтор)
+/// клавиши Пробел.
+///
+/// Отдельная функция, а не встроенное условие в `onKeyEvent`: проверка
+/// логической клавиши, а не `event.character == ' '`, принципиальна —
+/// символ пробела зависит от раскладки и модификаторов, а логическая
+/// клавиша нет. Это тот класс мелких ошибок, который легко воспроизвести
+/// заново при следующей правке, если условие не закреплено тестом.
+bool isPlayPauseKey(KeyEvent event) =>
+    event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.space;
 
 String _fmt(Duration d) {
   final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -26,29 +38,44 @@ class AudioPlayerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final player = AppScope.of(context).player;
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      appBar: AppBar(
-        title: Text(tr(context).nowPlaying, style: context.text.screenTitle),
-      ),
-      body: ListenableBuilder(
-        listenable: player,
-        builder: (context, _) {
-          if (player.current == null) {
-            return Center(
-              child: Text(
-                tr(context).nothingPlaying,
-                style: context.text.bodySmall,
-              ),
+    // Пробел — пуск/пауза, как в любом настольном плеере (VLC, Spotify).
+    // Фокус берёт весь экран, а не отдельная кнопка: иначе пробел работал
+    // бы только пока в фокусе именно кнопка play, что на практике никогда
+    // не так — пользователь просто смотрит на экран.
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (!isPlayPauseKey(event)) return KeyEventResult.ignored;
+        if (player.current != null) {
+          Haptics.tap();
+          player.toggle();
+        }
+        return KeyEventResult.handled;
+      },
+      child: Scaffold(
+        backgroundColor: context.colors.background,
+        appBar: AppBar(
+          title: Text(tr(context).nowPlaying, style: context.text.screenTitle),
+        ),
+        body: ListenableBuilder(
+          listenable: player,
+          builder: (context, _) {
+            if (player.current == null) {
+              return Center(
+                child: Text(
+                  tr(context).nothingPlaying,
+                  style: context.text.bodySmall,
+                ),
+              );
+            }
+            return Column(
+              children: [
+                Expanded(child: Center(child: _art(context, player))),
+                _controls(context, player),
+              ],
             );
-          }
-          return Column(
-            children: [
-              Expanded(child: Center(child: _art(context, player))),
-              _controls(context, player),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -125,11 +152,7 @@ class AudioPlayerScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelSeekBar(
-            position: p.pos,
-            duration: p.dur,
-            onSeek: p.seek,
-          ),
+          PixelSeekBar(position: p.pos, duration: p.dur, onSeek: p.seek),
           AppSpacing.gapSm,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
