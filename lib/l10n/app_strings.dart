@@ -224,6 +224,39 @@ class AppStrings {
   String get catSecuritySub => _('Шифрование, PIN, биометрия',
       'Encryption, PIN, biometrics', 'Verschlüsselung, PIN, Biometrie',
       'Szyfrowanie, PIN, biometria');
+  // Аккаунт TexFi — единый вход с сайтом и веб-версиями.
+  String get texfiAccount =>
+      _('Аккаунт TexFi', 'TexFi account', 'TexFi-Konto', 'Konto TexFi');
+  String get texfiSync => _('Мгновенная синхронизация', 'Instant sync',
+      'Sofortige Synchronisierung', 'Synchronizacja natychmiastowa');
+  String get texfiSyncSub => _(
+      'Лента приходит на все устройства за секунды',
+      'Your feed reaches every device in seconds',
+      'Deine Liste erreicht alle Geräte in Sekunden',
+      'Twoja lista dociera na wszystkie urządzenia w kilka sekund');
+  String get texfiSignIn => _('Войти', 'Sign in', 'Anmelden', 'Zaloguj się');
+  String get texfiSignOut =>
+      _('Выйти', 'Sign out', 'Abmelden', 'Wyloguj się');
+  String get texfiSignedOut => _('Вход не выполнен', 'Not signed in',
+      'Nicht angemeldet', 'Niezalogowano');
+  String get texfiEmail => _('Почта', 'Email', 'E-Mail', 'E-mail');
+  String get texfiPassword => _('Пароль', 'Password', 'Passwort', 'Hasło');
+  String get texfiSignUp => _('Создать аккаунт', 'Create account',
+      'Konto erstellen', 'Utwórz konto');
+  String get texfiCheckEmail => _(
+      'Проверьте почту — нужно подтвердить адрес',
+      'Check your email to confirm the address',
+      'Prüfe deine E-Mail, um die Adresse zu bestätigen',
+      'Sprawdź pocztę, aby potwierdzić adres');
+  String get texfiPrivacyNote => _(
+      'Пока выключено, всё остаётся на устройстве. Включите — и лента будет храниться на сервере TexFi.',
+      'While this is off, everything stays on your device. Turn it on and your feed is stored on the TexFi server.',
+      'Solange dies aus ist, bleibt alles auf deinem Gerät. Schalte es ein, und deine Liste liegt auf dem TexFi-Server.',
+      'Dopóki to wyłączone, wszystko zostaje na urządzeniu. Włącz, a lista będzie przechowywana na serwerze TexFi.');
+  String get texfiUnavailable => _('Сервер аккаунтов недоступен',
+      'Account server unavailable', 'Kontoserver nicht erreichbar',
+      'Serwer kont niedostępny');
+
   String get cloudRouting => _('Маршрутизация', 'Routing', 'Routing',
       'Trasowanie');
   String get cloudModeAuto => _('Авто (по размеру)', 'Auto (by size)',

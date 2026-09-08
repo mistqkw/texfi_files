@@ -11,6 +11,7 @@ import '../core/background.dart';
 import '../core/crypto_util.dart';
 import '../core/device_history.dart';
 import '../core/settings.dart';
+import '../core/texfi_account.dart';
 import '../core/version.dart';
 import '../l10n/app_strings.dart';
 import '../net/remote_input.dart';
@@ -471,6 +472,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final app = AppScope.of(context);
     final s = app.settings;
     return [
+      _sub(t.texfiAccount),
+      ..._texfiTiles(context, app),
       _sub(t.cloudRouting),
       for (final e in {
         0: t.cloudModeAuto,
@@ -508,6 +511,77 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     ];
   }
+
+  /// Аккаунт TexFi: единый вход с сайтом и веб-версиями.
+  ///
+  /// Переключатель мгновенной синхронизации намеренно недоступен, пока
+  /// вход не выполнен: включать отправку на сервер, не зная, в чей аккаунт
+  /// она пойдёт, — бессмысленно.
+  List<Widget> _texfiTiles(BuildContext context, AppState app) {
+    final acc = app.texfi;
+    if (acc == null) {
+      return [_plainTile(title: t.texfiUnavailable)];
+    }
+    return [
+      ListenableBuilder(
+        listenable: acc,
+        builder: (context, _) {
+          final s = app.settings;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (acc.isSignedIn)
+                _plainTile(
+                  title: acc.email ?? t.texfiAccount,
+                  subtitle: t.texfiSignOut,
+                  onTap: () async {
+                    await acc.signOut();
+                    s.texfiSyncEnabled = false;
+                  },
+                )
+              else
+                _plainTile(
+                  title: t.texfiSignIn,
+                  subtitle: t.texfiSignedOut,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _TexfiSignInPage(account: acc, t: t),
+                    ),
+                  ),
+                ),
+              _switchTile(
+                title: t.texfiSync,
+                subtitle: t.texfiSyncSub,
+                value: s.texfiSyncEnabled,
+                onChanged: acc.isSignedIn
+                    ? (v) {
+                        s.texfiSyncEnabled = v;
+                        if (v) {
+                          app.realtime?.start();
+                        } else {
+                          app.realtime?.stop();
+                        }
+                      }
+                    : null,
+              ),
+              _sub2(t.texfiPrivacyNote),
+            ],
+          );
+        },
+      ),
+    ];
+  }
+
+  /// Пояснение под строкой — обычным текстом, не заголовком секции.
+  Widget _sub2(String text) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.page,
+      AppSpacing.xs,
+      AppSpacing.page,
+      AppSpacing.md,
+    ),
+    child: Text(text, style: context.text.bodySmall),
+  );
 
   List<Widget> _sectionSecurity(BuildContext context) {
     final s = AppScope.of(context).settings;
@@ -1189,6 +1263,109 @@ class _DeviceHistoryPage extends StatelessWidget {
           Text('↑ ${humanSize(d.bytesSent)}', style: const TextStyle(fontSize: 11)),
           Text('↓ ${humanSize(d.bytesReceived)}', style: const TextStyle(fontSize: 11)),
         ],
+      ),
+    );
+  }
+}
+
+/// Вход в аккаунт TexFi — тот же аккаунт, что на сайте и в веб-версиях.
+///
+/// Одна форма на вход и на регистрацию: разница между ними здесь ровно в
+/// том, какую кнопку нажали, и разводить это по двум экранам значило бы
+/// заставлять человека возвращаться, если он ошибся дверью.
+class _TexfiSignInPage extends StatefulWidget {
+  const _TexfiSignInPage({required this.account, required this.t});
+
+  final TexfiAccount account;
+  final AppStrings t;
+
+  @override
+  State<_TexfiSignInPage> createState() => _TexfiSignInPageState();
+}
+
+class _TexfiSignInPageState extends State<_TexfiSignInPage> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run(Future<bool> Function() action) async {
+    setState(() => _busy = true);
+    final ok = await action();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    // Закрываем экран только при настоящем входе. Регистрация с
+    // подтверждением почты входом ещё не является, и делать вид, что
+    // является, — обманывать.
+    if (ok && widget.account.isSignedIn) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    final acc = widget.account;
+    return Scaffold(
+      appBar: AppBar(title: Text(t.texfiAccount)),
+      body: ListenableBuilder(
+        listenable: acc,
+        builder: (context, _) => ListView(
+          padding: const EdgeInsets.all(AppSpacing.page),
+          children: [
+            PixelCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    decoration: InputDecoration(labelText: t.texfiEmail),
+                  ),
+                  AppSpacing.gapMd,
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: t.texfiPassword),
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.gapLg,
+            PixelButton(
+              label: t.texfiSignIn,
+              onPressed: _busy
+                  ? null
+                  : () => _run(() => acc.signIn(_email.text, _password.text)),
+            ),
+            AppSpacing.gapMd,
+            PixelButton(
+              label: t.texfiSignUp,
+              primary: false,
+              onPressed: _busy
+                  ? null
+                  : () => _run(() => acc.signUp(_email.text, _password.text)),
+            ),
+            if (acc.needsEmailConfirmation) ...[
+              AppSpacing.gapLg,
+              Text(t.texfiCheckEmail, style: context.text.bodySmall),
+            ],
+            if (acc.error != null) ...[
+              AppSpacing.gapLg,
+              Text(
+                acc.error!,
+                style: context.text.bodySmall
+                    .copyWith(color: context.colors.danger),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

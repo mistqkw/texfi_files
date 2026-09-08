@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'app_state.dart';
 import 'core/audio_handler.dart';
@@ -13,6 +14,8 @@ import 'core/haptics.dart';
 import 'core/linux/mpris_service.dart';
 import 'core/quick_share.dart';
 import 'core/settings.dart';
+import 'core/texfi_account.dart';
+import 'core/texfi_config.dart';
 import 'l10n/app_strings.dart';
 import 'store/store.dart';
 
@@ -38,7 +41,22 @@ Future<void> main() async {
   await store.init();
   final auth = await AuthService.load();
 
-  final state = AppState(settings, store, auth);
+  // Аккаунт TexFi. Инициализация обязательна до создания AppState, иначе
+  // клиент недоступен. Падение здесь не должно ронять приложение целиком:
+  // без сети или без доступа к серверу всё остальное — приём по Wi-Fi,
+  // локальная лента, плеер — обязано работать как обычно.
+  TexfiAccount? texfiAccount;
+  try {
+    await Supabase.initialize(
+      url: TexfiConfig.supabaseUrl,
+      publishableKey: TexfiConfig.supabaseAnonKey,
+    );
+    texfiAccount = TexfiAccount(Supabase.instance.client);
+  } catch (e) {
+    debugPrint('TexFi account unavailable: $e');
+  }
+
+  final state = AppState(settings, store, auth, texfiAccount);
   await state.startNetwork();
 
   // Фоновый приём на Android — foreground service.

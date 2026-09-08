@@ -8,7 +8,9 @@ import 'core/device_history.dart';
 import 'core/models.dart';
 import 'core/offline_queue.dart';
 import 'core/player_service.dart';
+import 'core/realtime_sync.dart';
 import 'core/settings.dart';
+import 'core/texfi_account.dart';
 import 'net/client.dart';
 import 'net/discovery.dart';
 import 'net/server.dart';
@@ -20,10 +22,14 @@ class AppState extends ChangeNotifier {
   final Settings settings;
   final Store store;
   final AuthService auth;
+  /// Может отсутствовать: если сервер аккаунтов недоступен, всё
+  /// остальное — приём по Wi-Fi, лента, плеер — обязано работать.
+  final TexfiAccount? texfi;
   late final ReceiveServer server;
   late final Discovery discovery;
   late final SendClient client;
   late final CloudSync cloud;
+  RealtimeSync? realtime;
   late final OfflineQueue queue;
   late final DeviceHistory deviceHistory;
   final PlayerService player = PlayerService();
@@ -32,16 +38,41 @@ class AppState extends ChangeNotifier {
   SavedItem? lastReceived;
   Timer? _purgeTimer;
 
-  AppState(this.settings, this.store, this.auth) {
+  AppState(this.settings, this.store, this.auth, this.texfi) {
     server = ReceiveServer(settings, store);
     discovery = Discovery(settings, () => server.port, auth);
     client = SendClient(settings.deviceName, settings.deviceId);
     cloud = CloudSync(auth, store, settings);
+    final acc = texfi;
+    if (acc != null) {
+      final rt = RealtimeSync(acc, store, settings);
+      realtime = rt;
+      // Вход/выход из аккаунта TexFi поднимает и роняет мгновенную
+      // синхронизацию. Слушатель, а не разовый вызов при старте: войти
+      // можно и позже, уже из настроек.
+      acc.addListener(() {
+        if (acc.isSignedIn && settings.texfiSyncEnabled) {
+          rt.start();
+        } else {
+          rt.stop();
+        }
+      });
+      if (acc.isSignedIn && settings.texfiSyncEnabled) rt.start();
+    }
     // Локально добавленный элемент → отправить в облако аккаунта.
-    store.onItemAdded = (item) => cloud.maybePush(item);
+    store.onItemAdded = (item) {
+      cloud.maybePush(item);
+      // Второй адресат того же события: аккаунт TexFi. Два транспорта
+      // работают независимо — GitHub остаётся для тех, кто им пользуется,
+      // а Realtime включается отдельным согласием.
+      realtime?.push(item);
+    };
     // Локальное удаление облачного элемента → удалить и из общего индекса
     // аккаунта, чтобы сообщение исчезло на всех устройствах.
-    store.onItemRemoved = (item) => cloud.remove(item);
+    store.onItemRemoved = (item) {
+      cloud.remove(item);
+      realtime?.removeRemote(item);
+    };
     // Пин/архив/группа изменились локально → обновить запись в общем
     // индексе, иначе изменение не долетало бы до других устройств.
     store.onItemChanged = (item) => cloud.updateMeta(item);

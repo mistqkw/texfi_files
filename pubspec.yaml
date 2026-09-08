@@ -69,6 +69,10 @@ dependencies:
   record: ^6.1.1
   share_plus: ^10.1.4
 
+  # Аккаунт TexFi: тот же вход, что на сайте и в веб-версиях, и мгновенная
+  # доставка «Избранного» по websocket вместо опроса GitHub.
+  supabase_flutter: ^2.8.0
+
   # Безопасность: шифрование, PIN
   cryptography: ^2.7.0
   crypto: ^3.0.6

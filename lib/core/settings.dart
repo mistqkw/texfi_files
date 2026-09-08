@@ -250,6 +250,17 @@ class Settings extends ChangeNotifier {
 
   // --- Файлы и синхронизация ---
   // Маршрутизация: 0=авто (по размеру), 1=всегда облако (если влезает), 2=только P2P (никогда не в облако).
+  /// Синхронизация через аккаунт TexFi (мгновенная, по websocket).
+  ///
+  /// По умолчанию выключена намеренно. Приложение офлайновое, и данные
+  /// лежат на устройстве; отправлять их на сервер — отдельное решение
+  /// человека, а не умолчание.
+  bool get texfiSyncEnabled => _p.getBool('texfiSyncEnabled') ?? false;
+  set texfiSyncEnabled(bool v) {
+    _p.setBool('texfiSyncEnabled', v);
+    notifyListeners();
+  }
+
   int get cloudMode => _p.getInt('cloudMode') ?? 0;
   set cloudMode(int v) {
     _p.setInt('cloudMode', v.clamp(0, 2));
