@@ -1,0 +1,5 @@
+Release 1.5.6
+
+* Pixel animations across the interface
+* Icon and chip inconsistencies fixed
+* Keyboard rebuild isolated — no more lag when typing

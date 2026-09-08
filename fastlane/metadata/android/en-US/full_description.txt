@@ -1,0 +1,19 @@
+Your own local "Saved Messages". Send text and files between your phone and your computer over the local network — device to device, with no server in between that could keep them.
+
+WHAT IT DOES
+
+* Files and text of any size, straight between your devices over Wi-Fi
+* Devices find each other through your own GitHub account, or by IP
+* A feed of everything you sent yourself, with folders and an archive
+* A built-in player for audio and video you sent over
+* Voice messages, QR pairing, drag and drop on desktop
+* PIN and biometric lock, local encryption
+* Android, Windows and Linux
+
+WHAT IT DOES NOT DO
+
+* No file goes through a stranger's server on the way between your own devices.
+* No analytics, no ad SDKs.
+* No subscription, no size limit imposed to sell you a bigger one.
+
+Free software under the GNU AGPL v3. The source is open, and the builds come from public CI on that same code.
