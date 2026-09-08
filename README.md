@@ -12,7 +12,7 @@ limit on local transfers.
 ![Platform](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Windows-4A7DFB)
 ![Release](https://img.shields.io/github/v/release/mistqkw/texfi_files?label=release)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter)
-![License](https://img.shields.io/badge/license-open%20source-green)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green)](LICENSE)
 
 </div>
 
@@ -41,6 +41,9 @@ package to grab for your distro if it's missing. Everything else works fine
 without it.
 
 All releases: [github.com/mistqkw/texfi_files/releases](https://github.com/mistqkw/texfi_files/releases)
+
+Or let the site pick the file for your machine:
+**[texfi-hub.vercel.app/download/files](https://texfi-hub.vercel.app/download/files)**
 
 ---
 
