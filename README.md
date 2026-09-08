@@ -50,9 +50,10 @@ Or let the site pick the file for your machine:
 ## Screenshots
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="180" alt="Your saved messages">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="180" alt="Devices on the network">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="180" alt="Settings">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="180" alt="Your feed">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="180" alt="Saved messages">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="180" alt="Devices on the network">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="180" alt="Settings">
 </p>
 
 <p align="center"><i>More on the <a href="https://texfi-hub.vercel.app/download/files">download page</a>.</i></p>
