@@ -1,5 +1,30 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.6.0
+
+- ⚡ **Sending from your phone now reaches your PC in seconds, not minutes.**
+  The old account sync polled the GitHub Contents API, which answers with
+  `Cache-Control: private, max-age=60, s-maxage=60`. On top of that sat a
+  20-second timer that Android stops entirely while the app is in the
+  background. Polling faster would not have helped: the 60-second server-side
+  cache is a hard floor. The new transport uses a websocket — the server
+  pushes the change the moment the transaction commits.
+- 👤 **TexFi account.** The same account as the website and the web versions,
+  so your phone, your PC and your browser look at one feed. Sign in with
+  email; if you created the account on the site through GitHub, set a password
+  via "forgot password" — it is the same account, not a second one.
+- 🔒 **Off by default, and it stays off until you say otherwise.** This app is
+  offline-first and your data lives on your device. Turning this on means
+  storing your feed on the TexFi server, so it is your decision, not a
+  default. The old GitHub sync is untouched and still works as before.
+- 📥 **Files arrive as entries, not downloads.** A new device shows the whole
+  feed immediately but pulls file contents only when you open them, instead of
+  dragging your entire history down on first sign-in.
+
+Setup note: instant sync needs `supabase/realtime.sql` and
+`supabase/files-storage.sql` applied to the Supabase project. Without them
+sign-in works but nothing syncs.
+
 ## What's new in 1.5.6
 
 - ✅ **Transfer complete now assembles a checkmark pixel by pixel** instead of
