@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -41,22 +42,16 @@ Future<void> main() async {
   await store.init();
   final auth = await AuthService.load();
 
-  // Аккаунт TexFi. Инициализация обязательна до создания AppState, иначе
-  // клиент недоступен. Падение здесь не должно ронять приложение целиком:
-  // без сети или без доступа к серверу всё остальное — приём по Wi-Fi,
-  // локальная лента, плеер — обязано работать как обычно.
-  TexfiAccount? texfiAccount;
-  try {
-    await Supabase.initialize(
-      url: TexfiConfig.supabaseUrl,
-      publishableKey: TexfiConfig.supabaseAnonKey,
-    );
-    texfiAccount = TexfiAccount(Supabase.instance.client);
-  } catch (e) {
-    debugPrint('TexFi account unavailable: $e');
-  }
-
-  final state = AppState(settings, store, auth, texfiAccount);
+  final state = AppState(settings, store, auth);
+  // Аккаунт TexFi поднимается в фоне и НЕ на пути запуска.
+  //
+  // Раньше здесь стоял `await Supabase.initialize(...)`. `try/catch`
+  // ловит исключение, но не зависание: в сети с перехватом TLS или за
+  // captive-порталом вызов может не вернуться вовсе — и тогда приложение
+  // не доходило ни до сети, ни до ленты, и не работало вообще ничего.
+  // Приём по Wi-Fi не должен зависеть от того, ответил ли сервер
+  // аккаунтов.
+  unawaited(_initTexfiAccount(state));
   await state.startNetwork();
 
   // Фоновый приём на Android — foreground service.
@@ -115,4 +110,23 @@ Future<void> main() async {
   await MprisService.tryStart(state.player);
 
   runApp(TexfiApp(state: state));
+}
+
+
+/// Поднять аккаунт TexFi в фоне.
+///
+/// Тайм-аут стоит поверх развязки, а не вместо неё: даже вне пути запуска
+/// висящий вызов держал бы соединение и таймеры без всякой пользы.
+Future<void> _initTexfiAccount(AppState state) async {
+  try {
+    await Supabase.initialize(
+      url: TexfiConfig.supabaseUrl,
+      publishableKey: TexfiConfig.supabaseAnonKey,
+    ).timeout(const Duration(seconds: 15));
+    state.attachTexfi(TexfiAccount(Supabase.instance.client));
+  } catch (e) {
+    // Не ошибка приложения: без сети или без доступа к серверу аккаунт
+    // просто недоступен, а всё остальное работает.
+    debugPrint('TexFi account unavailable: $e');
+  }
 }

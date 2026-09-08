@@ -1,5 +1,17 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.6.1
+
+- 🐛 **Fixes 1.6.0 breaking everything on some networks.** Setting up the TexFi
+  account was awaited on the startup path. A `try/catch` guards against an
+  error, but not against a call that never returns — and on a network with TLS
+  interception or behind a captive portal it can hang. When it did, startup
+  never reached the network layer or the feed: no device discovery, no GitHub
+  sync, nothing. Account setup now runs in the background after the app is
+  already up, so Wi-Fi transfers no longer depend on whether the account
+  server answers. A 15-second timeout sits on top of that, so a hanging call
+  cannot hold a connection open for nothing either.
+
 ## What's new in 1.6.0
 
 - ⚡ **Sending from your phone now reaches your PC in seconds, not minutes.**

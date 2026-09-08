@@ -24,7 +24,13 @@ class AppState extends ChangeNotifier {
   final AuthService auth;
   /// Может отсутствовать: если сервер аккаунтов недоступен, всё
   /// остальное — приём по Wi-Fi, лента, плеер — обязано работать.
-  final TexfiAccount? texfi;
+  ///
+  /// Подключается через [attachTexfi] уже после запуска, а не в
+  /// конструкторе: инициализация клиента ходит в сеть, и ставить её на
+  /// путь старта значит поставить всё приложение в зависимость от того,
+  /// ответит ли сервер. В сети с перехватом или за порталом это
+  /// оборачивалось тем, что не работало вообще ничего.
+  TexfiAccount? texfi;
   late final ReceiveServer server;
   late final Discovery discovery;
   late final SendClient client;
@@ -38,27 +44,11 @@ class AppState extends ChangeNotifier {
   SavedItem? lastReceived;
   Timer? _purgeTimer;
 
-  AppState(this.settings, this.store, this.auth, this.texfi) {
+  AppState(this.settings, this.store, this.auth) {
     server = ReceiveServer(settings, store);
     discovery = Discovery(settings, () => server.port, auth);
     client = SendClient(settings.deviceName, settings.deviceId);
     cloud = CloudSync(auth, store, settings);
-    final acc = texfi;
-    if (acc != null) {
-      final rt = RealtimeSync(acc, store, settings);
-      realtime = rt;
-      // Вход/выход из аккаунта TexFi поднимает и роняет мгновенную
-      // синхронизацию. Слушатель, а не разовый вызов при старте: войти
-      // можно и позже, уже из настроек.
-      acc.addListener(() {
-        if (acc.isSignedIn && settings.texfiSyncEnabled) {
-          rt.start();
-        } else {
-          rt.stop();
-        }
-      });
-      if (acc.isSignedIn && settings.texfiSyncEnabled) rt.start();
-    }
     // Локально добавленный элемент → отправить в облако аккаунта.
     store.onItemAdded = (item) {
       cloud.maybePush(item);
@@ -86,6 +76,29 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     };
     settings.addListener(_onSettingsChanged);
+  }
+
+  /// Подключить аккаунт TexFi, когда он стал доступен.
+  ///
+  /// Вызывается из фоновой инициализации уже после того, как приложение
+  /// запустилось и работает. Если сервер не ответил — метод просто не
+  /// будет вызван, и всё остальное продолжит работать как обычно.
+  void attachTexfi(TexfiAccount account) {
+    if (texfi != null) return;
+    texfi = account;
+    final rt = RealtimeSync(account, store, settings);
+    realtime = rt;
+    // Вход/выход из аккаунта поднимает и роняет мгновенную синхронизацию.
+    // Слушатель, а не разовый вызов: войти можно и позже, из настроек.
+    account.addListener(() {
+      if (account.isSignedIn && settings.texfiSyncEnabled) {
+        rt.start();
+      } else {
+        rt.stop();
+      }
+    });
+    if (account.isSignedIn && settings.texfiSyncEnabled) rt.start();
+    notifyListeners();
   }
 
   Future<void> startNetwork() async {
