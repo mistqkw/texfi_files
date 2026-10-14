@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../core/haptics.dart';
 
+import '../../core/haptics.dart';
 import '../../core/theme/app_colors_ext.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles_ext.dart';
-import 'pixel_card.dart';
-import 'pixel_icons.dart';
+import 'hair_card.dart';
+import 'hair_icons.dart';
 
-/// Пиксельный чекбокс вместо материалового.
-class PixelCheckbox extends StatelessWidget {
-  const PixelCheckbox({
+/// Чекбокс: рамка 1px, радиус 3; при отметке заливка и линейная галочка.
+class HairCheckbox extends StatelessWidget {
+  const HairCheckbox({
     super.key,
     required this.value,
     required this.onChanged,
@@ -35,37 +35,31 @@ class PixelCheckbox extends StatelessWidget {
             }
           : null,
       child: AnimatedContainer(
-        duration: AppMotion.instant,
+        duration: AppMotion.fast,
+        curve: AppMotion.standard,
         width: size,
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: value ? colors.accent : colors.surfaceVariant,
+          color: value ? colors.accent : Colors.transparent,
           borderRadius: AppRadius.controlSmallAll,
           border: Border.all(
             color: value ? colors.accent : colors.divider,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
-        child: value
-            ? PixelIcon('check', size: size - 6, color: colors.onAccent)
-            : null,
+        child: value ? HairIcon('check', size: size - 4, color: colors.onAccent) : null,
       ),
     );
   }
 }
 
-/// Пиксельный переключатель: две позиции, ручка перещёлкивает, а не
-/// перетекает — скользящее скругление здесь единственное место, где
-/// движение было бы «мягким».
-class PixelSwitch extends StatelessWidget {
-  const PixelSwitch({super.key, required this.value, required this.onChanged});
+/// Тумблер: дорожка-капсула 1px и круглый ползунок, плавно едущий вбок.
+class HairSwitch extends StatelessWidget {
+  const HairSwitch({super.key, required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool>? onChanged;
-
-  static const double _w = 46;
-  static const double _h = 24;
 
   @override
   Widget build(BuildContext context) {
@@ -81,30 +75,31 @@ class PixelSwitch extends StatelessWidget {
           : null,
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
-        child: Container(
-          width: _w,
-          height: _h,
+        child: AnimatedContainer(
+          duration: AppMotion.normal,
+          curve: AppMotion.standard,
+          width: 44,
+          height: 24,
           decoration: BoxDecoration(
-            color: value ? colors.accent : colors.surfaceVariant,
-            borderRadius: AppRadius.controlSmallAll,
+            color: value ? colors.accent.withValues(alpha: 0.16) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: value ? colors.accent : colors.divider,
-              width: AppRadius.pixelBorder,
+              width: AppRadius.hairline,
             ),
           ),
           child: AnimatedAlign(
-            duration: AppMotion.instant,
+            duration: AppMotion.normal,
             curve: AppMotion.standard,
             alignment: value ? Alignment.centerRight : Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Container(
-                width: 16,
-                height: 14,
+              padding: const EdgeInsets.all(3),
+              child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: value ? colors.onAccent : colors.textTertiary,
-                  borderRadius: AppRadius.controlTinyAll,
+                  shape: BoxShape.circle,
+                  color: value ? colors.accent : colors.textTertiary,
                 ),
+                child: const SizedBox(width: 16, height: 16),
               ),
             ),
           ),
@@ -114,9 +109,9 @@ class PixelSwitch extends StatelessWidget {
   }
 }
 
-/// Пиксельный radio — квадратный, с залитой сердцевиной.
-class PixelRadio extends StatelessWidget {
-  const PixelRadio({
+/// Радио: кольцо 1px, внутри плавно вырастает точка акцента.
+class HairRadio extends StatelessWidget {
+  const HairRadio({
     super.key,
     required this.selected,
     required this.onTap,
@@ -143,30 +138,27 @@ class PixelRadio extends StatelessWidget {
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: colors.surfaceVariant,
-          borderRadius: AppRadius.controlSmallAll,
+          shape: BoxShape.circle,
           border: Border.all(
             color: selected ? colors.accent : colors.divider,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
-        child: selected
-            ? Container(
-                width: size - 10,
-                height: size - 10,
-                color: colors.accent,
-              )
-            : null,
+        child: AnimatedContainer(
+          duration: AppMotion.normal,
+          curve: AppMotion.standard,
+          width: selected ? size / 2.4 : 0,
+          height: selected ? size / 2.4 : 0,
+          decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
+        ),
       ),
     );
   }
 }
 
-/// Строка настройки: слева пиксельная иконка и читаемые тексты, справа
-/// контрол. Заголовок и подпись набираются гротеском — это текст, который
-/// читают, а не акцентная метка.
-class PixelTile extends StatelessWidget {
-  const PixelTile({
+/// Строка-карточка с иконкой, заголовком, подписью и хвостом.
+class HairTile extends StatelessWidget {
+  const HairTile({
     super.key,
     this.icon,
     required this.title,
@@ -184,7 +176,7 @@ class PixelTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return PixelCard(
+    return HairCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -193,7 +185,7 @@ class PixelTile extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            PixelIcon(icon!, size: 20, color: colors.accent),
+            HairIcon(icon!, size: 20, color: colors.accent),
             AppSpacing.wGapMd,
           ],
           Expanded(

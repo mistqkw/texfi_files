@@ -5,13 +5,12 @@ import '../app.dart';
 import '../core/haptics.dart';
 import '../core/player_service.dart';
 import '../core/theme/app_colors_ext.dart';
-import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
 import '../l10n/app_strings.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_seekbar.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_icons.dart';
+import 'hair/hair_seekbar.dart';
 
 /// true, если событие — это именно нажатие (не отпускание и не автоповтор)
 /// клавиши Пробел.
@@ -116,7 +115,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
         AnimatedScale(
           scale: p.playing ? 1.0 : 0.95,
           duration: const Duration(milliseconds: 220),
-          child: PixelCard(
+          child: HairCard(
             padding: const EdgeInsets.all(AppSpacing.sm),
             accent: p.playing,
             child: SizedBox(
@@ -134,7 +133,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   : ColoredBox(
                       color: colors.surfaceVariant,
                       child: Center(
-                        child: PixelIcon(
+                        child: HairIcon(
                           'note',
                           size: 96,
                           color: colors.accent,
@@ -178,7 +177,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelSeekBar(position: p.pos, duration: p.dur, onSeek: p.seek),
+          HairSeekBar(position: p.pos, duration: p.dur, onSeek: p.seek),
           AppSpacing.gapSm,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -194,8 +193,8 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (p.queue.isNotEmpty)
-                PixelIconButton(icon: 'prev', size: 20, onPressed: p.previous),
-              PixelIconButton(
+                HairIconButton(icon: 'prev', size: 20, onPressed: p.previous),
+              HairIconButton(
                 icon: 'rewind',
                 size: 18,
                 tooltip: '-10s',
@@ -204,21 +203,21 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
               AppSpacing.wGapSm,
               _PlayButton(playing: p.playing, onTap: p.toggle),
               AppSpacing.wGapSm,
-              PixelIconButton(
+              HairIconButton(
                 icon: 'forward',
                 size: 18,
                 tooltip: '+10s',
                 onPressed: () => p.nudge(10),
               ),
               if (p.queue.isNotEmpty)
-                PixelIconButton(icon: 'next', size: 20, onPressed: p.next),
+                HairIconButton(icon: 'next', size: 20, onPressed: p.next),
             ],
           ),
           if (p.queue.length > 1)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                PixelIconButton(
+                HairIconButton(
                   icon: 'shuffle',
                   size: 17,
                   tooltip: tr(context).shuffle,
@@ -226,7 +225,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   onPressed: p.toggleShuffle,
                 ),
                 AppSpacing.wGapMd,
-                PixelIconButton(
+                HairIconButton(
                   icon: p.repeatMode == PlayerRepeatMode.one
                       ? 'repeatone'
                       : 'repeat',
@@ -276,39 +275,20 @@ class _PlayButtonState extends State<_PlayButton> {
         Haptics.tap();
         widget.onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 90),
-        width: 64,
-        height: 64,
-        alignment: Alignment.center,
-        transform: Matrix4.translationValues(
-          _pressed ? AppRadius.pixelShadowOffset : 0,
-          _pressed ? AppRadius.pixelShadowOffset : 0,
-          0,
-        ),
-        decoration: BoxDecoration(
-          color: colors.accent,
-          borderRadius: AppRadius.controlSmallAll,
-          border: Border.all(
-            color: colors.accent,
-            width: AppRadius.pixelBorder,
+      child: AnimatedScale(
+        scale: _pressed ? 0.94 : 1,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: colors.accent),
+          child: HairIcon(
+            widget.playing ? 'pause' : 'play',
+            size: 26,
+            color: colors.onAccent,
           ),
-          boxShadow: _pressed
-              ? const []
-              : [
-                  BoxShadow(
-                    color: colors.accentShadow,
-                    offset: const Offset(
-                      AppRadius.pixelShadowOffset,
-                      AppRadius.pixelShadowOffset,
-                    ),
-                  ),
-                ],
-        ),
-        child: PixelIcon(
-          widget.playing ? 'pause' : 'play',
-          size: 26,
-          color: colors.onAccent,
         ),
       ),
     );

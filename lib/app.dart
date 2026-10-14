@@ -7,7 +7,7 @@ import 'ui/onboarding_screen.dart';
 import 'ui/pin_lock_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_typography.dart';
-import 'ui/pixel/pixel_splash.dart';
+import 'ui/hair/hair_splash.dart';
 
 /// Доступ к AppState из любого места дерева.
 class AppScope extends InheritedNotifier<AppState> {
@@ -98,7 +98,7 @@ class _TexfiAppState extends State<TexfiApp> with WidgetsBindingObserver {
                 child: child!,
               );
             },
-            home: PixelSplash(
+            home: HairSplash(
               child: locked
                   ? PinLockScreen(
                       onUnlocked: () => setState(() => _unlocked = true),

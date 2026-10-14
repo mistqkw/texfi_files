@@ -9,16 +9,16 @@ class AppTextStyles {
   const AppTextStyles(this._t);
   final TextTheme _t;
 
-  /// Пиксельный. Заголовок экрана.
+  /// Unbounded. Заголовок экрана.
   TextStyle get screenTitle => _t.headlineMedium!;
 
-  /// Пиксельный. Заголовок секции.
+  /// Mono. Заголовок секции.
   TextStyle get sectionTitle => _t.headlineSmall!;
 
-  /// Пиксельный. Короткая метка кнопки.
-  TextStyle get pixelLabel => _t.labelLarge!;
+  /// Mono. Короткая метка кнопки.
+  TextStyle get buttonLabel => _t.labelLarge!;
 
-  /// Пиксельный. Крупное акцентное число.
+  /// Unbounded. Крупное число.
   TextStyle get statLarge => _t.displayMedium!;
   TextStyle get statSmall => _t.displaySmall!;
 

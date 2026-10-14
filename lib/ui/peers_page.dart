@@ -6,11 +6,11 @@ import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_motion.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
-import 'pixel/pixel_button.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_entrance.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_scanner.dart';
+import 'hair/hair_button.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_entrance.dart';
+import 'hair/hair_icons.dart';
+import 'hair/hair_scanner.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -114,7 +114,7 @@ class _PeersPageState extends State<PeersPage> {
           duration: const Duration(seconds: 2),
           content: Row(
             children: [
-              PixelIcon('node', size: 16, color: context.colors.accent),
+              HairIcon('node', size: 16, color: context.colors.accent),
               AppSpacing.wGapMd,
               Expanded(child: Text(t.peerAppeared(name))),
             ],
@@ -144,14 +144,14 @@ class _PeersPageState extends State<PeersPage> {
       appBar: AppBar(
         title: Text(t.devicesTitle),
         actions: [
-          PixelIconButton(
+          HairIconButton(
             icon: 'qr',
             size: 18,
             tooltip: t.showQr,
             onPressed: _showMyQr,
           ),
           if (mobile)
-            PixelIconButton(
+            HairIconButton(
               icon: 'search',
               size: 18,
               tooltip: t.scanQr,
@@ -164,7 +164,7 @@ class _PeersPageState extends State<PeersPage> {
       // тенью — последняя материаловская форма на экране.
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: AppSpacing.xs),
-        child: PixelButton(
+        child: HairButton(
           label: t.byIp,
           icon: 'plus',
           expand: false,
@@ -211,14 +211,14 @@ class _PeersPageState extends State<PeersPage> {
         AppSpacing.page,
         AppSpacing.xs,
       ),
-      child: PixelCard(
+      child: HairCard(
         accent: true,
         child: Row(
           children: [
             // Платформо-зависимая иконка, как у остальных карточек ниже —
             // раньше здесь был жёстко зашит 'laptop', и на Android
             // карточка «это устройство» показывала бы ноутбук.
-            PixelIcon(
+            HairIcon(
               Platform.isAndroid ? 'phone' : 'laptop',
               size: 26,
               color: colors.accent,
@@ -256,7 +256,7 @@ class _PeersPageState extends State<PeersPage> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
         // Та же связка fade+scale, что у переходов между экранами
-        // (pixel_route.dart) — раньше подсказка после ожидания просто
+        // (hair_route.dart) — раньше подсказка после ожидания просто
         // мгновенно подменяла сканер, без единого кадра перехода.
         child: AnimatedSwitcher(
           duration: AppMotion.route,
@@ -277,9 +277,9 @@ class _PeersPageState extends State<PeersPage> {
               // крутится одинаково и когда идёт опрос сети, и когда всё
               // зависло. Здесь видно и сам факт опроса, и его темп.
               if (waiting)
-                const PixelScanner(size: 88)
+                const HairScanner(size: 88)
               else
-                PixelIcon('wifi', size: 72, color: context.colors.textTertiary),
+                HairIcon('wifi', size: 72, color: context.colors.textTertiary),
               AppSpacing.gapXl,
               Text(
                 waiting ? t.searchingAccount : t.nobodyAroundTitle,
@@ -307,7 +307,7 @@ class _PeersPageState extends State<PeersPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PixelIcon('shield', size: 68, color: colors.textTertiary),
+            HairIcon('shield', size: 68, color: colors.textTertiary),
             AppSpacing.gapXl,
             Text(t.needLoginTitle, style: context.text.screenTitle),
             AppSpacing.gapSm,
@@ -335,7 +335,7 @@ class _PeersPageState extends State<PeersPage> {
     final tile = _peerTile(context, p);
     return KeyedSubtree(
       key: ValueKey(p.id),
-      child: isNew ? PixelEntrance(child: tile) : tile,
+      child: isNew ? HairEntrance(child: tile) : tile,
     );
   }
 
@@ -349,10 +349,10 @@ class _PeersPageState extends State<PeersPage> {
         AppSpacing.page,
         AppSpacing.xs,
       ),
-      child: PixelCard(
+      child: HairCard(
         child: Row(
           children: [
-            PixelIcon(
+            HairIcon(
               p.platform == 'android' ? 'phone' : 'laptop',
               size: 24,
               color: p.online ? colors.accent : colors.textTertiary,
@@ -374,7 +374,7 @@ class _PeersPageState extends State<PeersPage> {
                       ),
                       if (trusted) ...[
                         AppSpacing.wGapXs,
-                        PixelIcon('check', size: 13, color: colors.success),
+                        HairIcon('check', size: 13, color: colors.success),
                       ],
                     ],
                   ),

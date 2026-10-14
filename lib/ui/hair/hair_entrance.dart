@@ -12,20 +12,20 @@ import '../../core/theme/app_motion.dart';
 /// то есть вместе с конкретным элементом списка, а не живёт всё время
 /// экрана: пока элемент виден на экране без изменений, анимация не
 /// потребляет ни кадра.
-class PixelEntrance extends StatefulWidget {
-  const PixelEntrance({super.key, required this.child});
+class HairEntrance extends StatefulWidget {
+  const HairEntrance({super.key, required this.child});
 
   final Widget child;
 
   @override
-  State<PixelEntrance> createState() => _PixelEntranceState();
+  State<HairEntrance> createState() => _HairEntranceState();
 }
 
-class _PixelEntranceState extends State<PixelEntrance>
+class _HairEntranceState extends State<HairEntrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: AppMotion.normal,
+    duration: AppMotion.slow,
   )..forward();
   late final Animation<double> _curve = CurvedAnimation(
     parent: _c,
@@ -42,7 +42,7 @@ class _PixelEntranceState extends State<PixelEntrance>
   Widget build(BuildContext context) {
     return SlideTransition(
       position: Tween(
-        begin: const Offset(0, 0.12),
+        begin: const Offset(0, 0.05),
         end: Offset.zero,
       ).animate(_curve),
       child: FadeTransition(opacity: _curve, child: widget.child),

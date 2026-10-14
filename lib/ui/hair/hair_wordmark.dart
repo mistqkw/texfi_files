@@ -3,20 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors_ext.dart';
 import '../../core/theme/app_text_styles_ext.dart';
 
-/// Логотип в шапке.
+/// Логотип в шапке: «TexFi» основным цветом, «files» акцентом и точка-
+/// индикатор следом.
 ///
-/// В экосистеме название всегда несёт небольшую графическую идею: у f0kus и
-/// m0ney это подмена буквы цифрой. В «files» подменять нечего, поэтому идея
-/// своя: часть названия набрана акцентом, а следом стоит пиксельный
-/// блок-курсор — отсылка к терминальной строке, из которой приложение
-/// выросло.
-///
-/// Курсор **не мигает постоянно**: это стоило бы перерисовки каждые полсекунды
-/// всё время, пока открыт главный экран. Он отбивает несколько тактов только
-/// в момент успешной передачи — как будто печатает подтверждение. Пасхалка,
-/// которую замечаешь не сразу и только если смотрел в нужную секунду.
-class PixelWordmark extends StatefulWidget {
-  const PixelWordmark({super.key, required this.size, required this.leading});
+/// Точка **не пульсирует постоянно**: это стоило бы перерисовки всё время,
+/// пока открыт главный экран. Она вспыхивает только в момент успешной
+/// передачи — тихое подтверждение, которое замечаешь не сразу.
+class HairWordmark extends StatefulWidget {
+  const HairWordmark({super.key, required this.size, required this.leading});
 
   final double size;
   final double leading;
@@ -32,10 +26,10 @@ class PixelWordmark extends StatefulWidget {
   static void blink() => pulses.value++;
 
   @override
-  State<PixelWordmark> createState() => _PixelWordmarkState();
+  State<HairWordmark> createState() => _HairWordmarkState();
 }
 
-class _PixelWordmarkState extends State<PixelWordmark>
+class _HairWordmarkState extends State<HairWordmark>
     with SingleTickerProviderStateMixin {
   /// Три полных такта «погас-зажёгся» примерно за 700 мс.
   late final AnimationController _blink = AnimationController(
@@ -46,7 +40,7 @@ class _PixelWordmarkState extends State<PixelWordmark>
   @override
   void initState() {
     super.initState();
-    PixelWordmark.pulses.addListener(_onPulse);
+    HairWordmark.pulses.addListener(_onPulse);
   }
 
   void _onPulse() {
@@ -55,7 +49,7 @@ class _PixelWordmarkState extends State<PixelWordmark>
 
   @override
   void dispose() {
-    PixelWordmark.pulses.removeListener(_onPulse);
+    HairWordmark.pulses.removeListener(_onPulse);
     _blink.dispose();
     super.dispose();
   }
@@ -86,23 +80,28 @@ class _PixelWordmarkState extends State<PixelWordmark>
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(width: 3),
+        const SizedBox(width: 4),
         Padding(
-          // Курсор садится на базовую линию текста, а не по центру строки.
-          padding: EdgeInsets.only(bottom: widget.size * 0.12),
+          padding: EdgeInsets.only(bottom: widget.size * 0.2),
           child: RepaintBoundary(
             child: AnimatedBuilder(
               animation: _blink,
               builder: (context, _) {
-                // Вне анимации контроллер стоит на 0 и курсор просто горит:
-                // ни одного лишнего кадра в покое.
-                final on = _blink.isAnimating
-                    ? (_blink.value * 6).floor().isEven
-                    : true;
+                // Точка-индикатор: в покое горит, на событие коротко
+                // вспыхивает и плавно возвращается.
+                final t = _blink.isAnimating ? Curves.easeOutCubic.transform(_blink.value) : 1.0;
+                final pulse = _blink.isAnimating ? (1 - t) : 0.0;
+                final d = widget.size * 0.22;
                 return Container(
-                  width: widget.size * 0.5,
-                  height: widget.size * 0.5,
-                  color: on ? colors.accent : Colors.transparent,
+                  width: d + d * pulse,
+                  height: d + d * pulse,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colors.accent,
+                    boxShadow: pulse > 0
+                        ? [BoxShadow(color: colors.accent.withValues(alpha: 0.5 * pulse), blurRadius: 10 * pulse)]
+                        : null,
+                  ),
                 );
               },
             ),

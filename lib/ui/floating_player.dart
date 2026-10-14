@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_radius.dart';
-import 'pixel/pixel_icons.dart';
+import 'hair/hair_icons.dart';
 import '../core/haptics.dart';
 import '../app.dart';
 import 'album_art.dart';
@@ -81,7 +81,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                 borderRadius: AppRadius.cardMediumAll,
                 border: Border.all(
                   color: context.colors.divider,
-                  width: AppRadius.pixelBorder,
+                  width: AppRadius.hairline,
                 ),
                 boxShadow: const [
                   BoxShadow(
@@ -104,7 +104,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       decoration: BoxDecoration(
                         color: context.colors.surfaceVariant,
                       ),
-                      child: PixelIcon(
+                      child: HairIcon(
                         'note',
                         size: 26,
                         color: context.colors.accent,
@@ -116,7 +116,7 @@ class _FloatingMiniPlayerState extends State<FloatingMiniPlayer> {
                       width: _size,
                       height: _size,
                       color: Colors.black45,
-                      child: const PixelIcon(
+                      child: const HairIcon(
                         'pause',
                         size: 22,
                         color: Colors.white,

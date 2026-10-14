@@ -407,7 +407,6 @@ class AppStrings {
       _('Эффект фона', 'Background effect', 'Hintergrundeffekt', 'Efekt tła');
   String get effectNone => _('Нет', 'None', 'Kein', 'Brak');
   String get effectBlur => _('Блюр', 'Blur', 'Unschärfe', 'Rozmycie');
-  String get effectPixel => _('Пиксели', 'Pixels', 'Pixel', 'Piksele');
   String get dimLabel =>
       _('Затемнение', 'Dim', 'Abdunkeln', 'Przyciemnienie');
   String get weatherLabel =>

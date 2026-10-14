@@ -11,7 +11,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.divider,
     required this.accent,
     required this.onAccent,
-    required this.accentShadow,
     required this.textPrimary,
     required this.textSecondary,
     required this.textTertiary,
@@ -26,10 +25,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color divider;
   final Color accent;
   final Color onAccent;
-
-  /// Тень пиксельной кнопки — сплошной прямоугольник со смещением,
-  /// а не мягкий blur.
-  final Color accentShadow;
 
   final Color textPrimary;
   final Color textSecondary;
@@ -46,7 +41,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     Color? divider,
     Color? accent,
     Color? onAccent,
-    Color? accentShadow,
     Color? textPrimary,
     Color? textSecondary,
     Color? textTertiary,
@@ -61,7 +55,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       divider: divider ?? this.divider,
       accent: accent ?? this.accent,
       onAccent: onAccent ?? this.onAccent,
-      accentShadow: accentShadow ?? this.accentShadow,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
       textTertiary: textTertiary ?? this.textTertiary,
@@ -81,7 +74,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       divider: Color.lerp(divider, other.divider, t)!,
       accent: Color.lerp(accent, other.accent, t)!,
       onAccent: Color.lerp(onAccent, other.onAccent, t)!,
-      accentShadow: Color.lerp(accentShadow, other.accentShadow, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
       textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,

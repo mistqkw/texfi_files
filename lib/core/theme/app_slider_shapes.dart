@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'app_radius.dart';
 
-/// Квадратная ручка ползунка.
-///
-/// Круглая ручка Material — единственная мягкая форма, которая оставалась в
-/// интерфейсе: настройки масштаба, размытия, затемнения и громкости
-/// выглядели чужеродно рядом с блочными карточками и переключателями.
-class PixelSliderThumb extends SliderComponentShape {
-  const PixelSliderThumb({this.size = 16});
+/// Круглая ручка ползунка с рамкой 1px.
+class HairSliderThumb extends SliderComponentShape {
+  const HairSliderThumb({this.size = 16});
 
   final double size;
 
@@ -32,36 +28,26 @@ class PixelSliderThumb extends SliderComponentShape {
     required Size sizeWithOverflow,
   }) {
     final canvas = context.canvas;
-    final half = size / 2;
-    final rect = Rect.fromLTWH(
-      (center.dx - half).floorToDouble(),
-      (center.dy - half).floorToDouble(),
-      size,
-      size,
-    );
-    final rrect = RRect.fromRectAndRadius(
-      rect,
-      const Radius.circular(AppRadius.controlTiny),
-    );
     canvas
-      ..drawRRect(
-        rrect,
+      ..drawCircle(
+        center,
+        size / 2,
         Paint()..color = sliderTheme.thumbColor ?? const Color(0xFFFFFFFF),
       )
-      // Рамка той же толщины, что у кнопок и карточек.
-      ..drawRRect(
-        rrect,
+      ..drawCircle(
+        center,
+        size / 2,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = AppRadius.pixelBorder
+          ..strokeWidth = AppRadius.hairline
           ..color = sliderTheme.overlayColor ?? const Color(0x00000000),
       );
   }
 }
 
-/// Прямоугольная дорожка без скруглённых концов.
-class PixelSliderTrack extends SliderTrackShape with BaseSliderTrackShape {
-  const PixelSliderTrack();
+/// Тонкая дорожка со скруглёнными концами.
+class HairSliderTrack extends SliderTrackShape with BaseSliderTrackShape {
+  const HairSliderTrack();
 
   @override
   void paint(
@@ -92,12 +78,12 @@ class PixelSliderTrack extends SliderTrackShape with BaseSliderTrackShape {
         ? Rect.fromLTRB(thumbCenter.dx, rect.top, rect.right, rect.bottom)
         : Rect.fromLTRB(rect.left, rect.top, thumbCenter.dx, rect.bottom);
     canvas
-      ..drawRect(
-        left,
+      ..drawRRect(
+        RRect.fromRectAndRadius(left, const Radius.circular(2)),
         Paint()..color = sliderTheme.activeTrackColor ?? const Color(0xFF4A7DFB),
       )
-      ..drawRect(
-        right,
+      ..drawRRect(
+        RRect.fromRectAndRadius(right, const Radius.circular(2)),
         Paint()
           ..color = sliderTheme.inactiveTrackColor ?? const Color(0xFF2C2C35),
       );

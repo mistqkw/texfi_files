@@ -6,11 +6,11 @@ import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
 import 'file_check.dart';
-import 'pixel/pixel_button.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_progress.dart';
+import 'hair/hair_button.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_controls.dart';
+import 'hair/hair_icons.dart';
+import 'hair/hair_progress.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
@@ -69,7 +69,7 @@ class ItemBubble extends StatelessWidget {
               child: GestureDetector(
                 onLongPressStart: (d) => _menu(context, d.globalPosition),
                 onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-                child: PixelCard(
+                child: HairCard(
                   // Своё сообщение выделяется акцентной рамкой, чужое —
                   // обычной. Направление читается по рамке, а не по цвету
                   // заливки: заливка мешала бы вложенным превью.
@@ -103,7 +103,7 @@ class ItemBubble extends StatelessWidget {
         color: context.colors.surfaceVariant,
         border: Border.all(
           color: context.colors.accent,
-          width: AppRadius.pixelBorder,
+          width: AppRadius.hairline,
         ),
         borderRadius: AppRadius.controlSmallAll,
       ),
@@ -262,7 +262,7 @@ class ItemBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelIcon('download', size: 22, color: context.colors.accent),
+          HairIcon('download', size: 22, color: context.colors.accent),
           const SizedBox(width: 12),
           Flexible(
             child: Column(
@@ -285,7 +285,7 @@ class ItemBubble extends StatelessWidget {
                 const SizedBox(height: 6),
                 SizedBox(
                   width: 190,
-                  child: PixelProgress(value: progress, height: 8),
+                  child: HairProgress(value: progress, height: 8),
                 ),
               ],
             ),
@@ -571,13 +571,13 @@ class ItemBubble extends StatelessWidget {
                 borderRadius: AppRadius.controlSmallAll,
                 border: Border.all(
                   color: context.colors.divider,
-                  width: AppRadius.pixelBorder,
+                  width: AppRadius.hairline,
                 ),
               ),
               // Тип, который приложение узнало, получает свою иконку —
               // архив, документ, исходник. Здесь до сих пор стояла
               // материаловская «страница», единственная на весь экран.
-              child: PixelIcon(
+              child: HairIcon(
                 fileGlyphFor(item.fileName),
                 size: 24,
                 color: context.colors.accent,
@@ -715,13 +715,13 @@ class ItemBubble extends StatelessWidget {
                 children: [
                   for (final tag in known)
                     ListTile(
-                      leading: PixelIcon(
+                      leading: HairIcon(
                         'label',
                         size: 18,
                         color: context.colors.accent,
                       ),
                       title: Text(tag),
-                      trailing: PixelCheckbox(
+                      trailing: HairCheckbox(
                         value: item.labels.contains(tag),
                         onChanged: (_) {
                           store.toggleLabel(item, tag);
@@ -753,7 +753,7 @@ class ItemBubble extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        PixelButton(
+                        HairButton(
                           label: tr(context).save,
                           expand: false,
                           compact: true,
@@ -874,7 +874,7 @@ class ItemBubble extends StatelessWidget {
         borderRadius: AppRadius.cardSmallAll,
         side: BorderSide(
           color: context.colors.divider,
-          width: AppRadius.pixelBorder,
+          width: AppRadius.hairline,
         ),
       ),
       items: [
@@ -1121,7 +1121,7 @@ class _GifBadge extends StatelessWidget {
               'GIF',
               // Короткая акцентная метка — ровно тот случай, для которого
               // пиксельный шрифт и оставлен.
-              style: context.text.pixelLabel.copyWith(
+              style: context.text.buttonLabel.copyWith(
                 fontSize: 6,
                 color: colors.onAccent,
               ),

@@ -20,11 +20,11 @@ import '../core/theme/app_colors_ext.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
 import '../core/theme/app_typography.dart';
-import 'pixel/pixel_button.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_route.dart';
+import 'hair/hair_button.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_controls.dart';
+import 'hair/hair_icons.dart';
+import 'hair/hair_route.dart';
 import 'admin_page.dart';
 import 'format.dart';
 import 'onboarding_screen.dart';
@@ -150,11 +150,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _card(String title, String subtitle, VoidCallback onTap,
       [String? slug]) {
     return _wrap(
-      PixelTile(
+      HairTile(
         icon: _slugIcon(slug),
         title: title,
         subtitle: subtitle,
-        trailing: PixelIcon(
+        trailing: HairIcon(
           'chevron',
           size: 16,
           color: context.colors.textTertiary,
@@ -187,7 +187,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _accountCard(BuildContext context, AppState app) {
     return _wrap(
-      PixelCard(
+      HairCard(
         padding: EdgeInsets.zero,
         child: Column(
           children: [
@@ -201,7 +201,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _open(String title, List<Widget> Function(BuildContext) body) {
     final app = AppScope.of(context);
-    pixelPush(context, (ctx) => Scaffold(
+    hairPush(context, (ctx) => Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListenableBuilder(
         listenable: Listenable.merge([app.settings, app.auth, app.cloud]),
@@ -323,7 +323,7 @@ class _SettingsPageState extends State<SettingsPage> {
         subtitle: s.chatBgImage == null ? t.pickPhoto : null,
         trailing: s.chatBgImage == null
             ? null
-            : PixelButton(
+            : HairButton(
                 label: t.removePhoto,
                 expand: false,
                 compact: true,
@@ -386,7 +386,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required ValueChanged<double> onChanged,
   }) {
     return _wrap(
-      PixelCard(
+      HairCard(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
@@ -727,7 +727,7 @@ class _SettingsPageState extends State<SettingsPage> {
       AppSpacing.page,
       AppSpacing.xs,
     ),
-    child: PixelSectionHeader(title: s.toUpperCase()),
+    child: HairSectionHeader(title: s.toUpperCase()),
   );
 
   /// Строка-переключатель. Пиксельный свитч вместо материалового: у
@@ -741,11 +741,11 @@ class _SettingsPageState extends State<SettingsPage> {
     required ValueChanged<bool>? onChanged,
   }) {
     return _wrap(
-      PixelTile(
+      HairTile(
         icon: icon,
         title: title,
         subtitle: subtitle,
-        trailing: PixelSwitch(value: value, onChanged: onChanged),
+        trailing: HairSwitch(value: value, onChanged: onChanged),
         onTap: onChanged == null ? null : () => onChanged(!value),
       ),
     );
@@ -759,7 +759,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required VoidCallback onTap,
   }) {
     return _wrap(
-      PixelCard(
+      HairCard(
         onTap: onTap,
         accent: selected,
         padding: const EdgeInsets.symmetric(
@@ -770,7 +770,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Expanded(child: Text(title, style: style ?? context.text.tileTitle)),
             AppSpacing.wGapMd,
-            PixelRadio(selected: selected, onTap: onTap),
+            HairRadio(selected: selected, onTap: onTap),
           ],
         ),
       ),
@@ -786,7 +786,7 @@ class _SettingsPageState extends State<SettingsPage> {
     VoidCallback? onTap,
   }) {
     return _wrap(
-      PixelTile(
+      HairTile(
         icon: icon,
         title: title,
         subtitle: subtitle,

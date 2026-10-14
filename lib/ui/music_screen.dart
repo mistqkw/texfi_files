@@ -7,7 +7,7 @@ import '../core/models.dart';
 import '../core/player_service.dart';
 import '../core/settings.dart';
 import 'album_art.dart';
-import 'pixel/pixel_icons.dart';
+import 'hair/hair_icons.dart';
 import 'audio_player_screen.dart';
 import 'format.dart';
 import 'terminal.dart';
@@ -41,7 +41,7 @@ class _MusicScreenState extends State<MusicScreen> {
             listenable: app.player,
             builder: (context, _) => IconButton(
               tooltip: t.shuffle,
-              icon: PixelIcon(
+              icon: HairIcon(
                 'shuffle',
                 size: 18,
                 color: app.player.shuffle
@@ -61,7 +61,7 @@ class _MusicScreenState extends State<MusicScreen> {
                   PlayerRepeatMode.all => t.repeatAll,
                   PlayerRepeatMode.one => t.repeatOne,
                 },
-                icon: PixelIcon(
+                icon: HairIcon(
                   mode == PlayerRepeatMode.one ? 'repeatone' : 'repeat',
                   size: 18,
                   color: mode == PlayerRepeatMode.off
@@ -139,7 +139,7 @@ class _MusicScreenState extends State<MusicScreen> {
                               0,
                               volume: app.settings.playerVolume,
                             ),
-                      icon: PixelIcon(
+                      icon: HairIcon(
                         'note',
                         size: 18,
                         color: context.colors.accent,

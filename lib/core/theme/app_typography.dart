@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'app_colors_ext.dart';
 
-/// Типографика собрана из двух шрифтов:
+/// Типографика дизайна «hairline»:
 ///
-///  * **Press Start 2P** — только акцентные элементы: заголовки экранов и
-///    секций, короткие метки кнопок, крупные числа. Шрифт очень широкий и
-///    нечитаемый в длинных строках.
-///  * **Гротеск** (по умолчанию Inter) — весь текст, который читают ради
-///    смысла: содержимое сообщений, имена файлов, подписи, списки.
+///  * **Unbounded** — заголовки и крупные числа;
+///  * **JetBrains Mono** — подписи, метки кнопок, номера секций (капслок,
+///    разрядка);
+///  * **Гротеск** (по умолчанию Inter) — весь текст, который читают:
+///    сообщения, имена файлов, списки.
 ///
-/// Оба лежат в `assets/fonts` и объявлены в pubspec, а не тянутся
-/// `google_fonts` по сети: приложение работает в локальной сети без
-/// интернета, и шрифт, на котором держится вся стилистика, не может
-/// зависеть от связи.
-const String pixelFontFamily = 'PressStart2P';
+/// Все шрифты лежат в `assets/fonts`, а не тянутся по сети: приложение
+/// работает в локальной сети без интернета.
+const String displayFontFamily = 'Unbounded';
+const String monoFontFamily = 'JetBrainsMono';
 
 /// Гротеск по умолчанию. Пользователь может заменить его в настройках —
 /// но только для основного текста, не для акцентных элементов.
@@ -33,27 +32,41 @@ TextTheme buildAppTextTheme({
 }) {
   const tabular = [FontFeature.tabularFigures()];
 
-  TextStyle pixel({
+  TextStyle display({
     required double size,
     required Color color,
-    double height = 1.4,
+    double height = 1.15,
+    FontWeight weight = FontWeight.w600,
+    double spacing = -0.4,
     List<FontFeature> features = const [],
   }) {
     return TextStyle(
-      fontFamily: pixelFontFamily,
-      // Press Start 2P не содержит кириллицы. Без явного запасного
-      // семейства каждая платформа подставляет своё: на этой машине
-      // подвернулся похожий пиксельный шрифт, на Android будет Roboto, на
-      // Windows — Segoe. Прибиваем к бандловому гротеску, чтобы русские
-      // заголовки выглядели одинаково везде.
+      fontFamily: displayFontFamily,
+      // В Unbounded нет ни «₽», ни части знаков — их дорисует гротеск.
       fontFamilyFallback: [sansFamily],
       fontSize: size,
+      fontWeight: weight,
       color: color,
       height: height,
-      // Press Start 2P моноширинный и несёт собственный трекинг —
-      // дополнительный letterSpacing разваливает слово.
-      letterSpacing: 0,
+      letterSpacing: spacing,
       fontFeatures: features,
+    );
+  }
+
+  TextStyle mono({
+    required double size,
+    required Color color,
+    double height = 1.3,
+    double spacing = 1.1,
+  }) {
+    return TextStyle(
+      fontFamily: monoFontFamily,
+      fontFamilyFallback: [sansFamily],
+      fontSize: size,
+      fontWeight: FontWeight.w500,
+      color: color,
+      height: height,
+      letterSpacing: spacing,
     );
   }
 
@@ -75,25 +88,32 @@ TextTheme buildAppTextTheme({
   }
 
   return TextTheme(
-    // Крупные акцентные числа — объём переданного, счётчик устройств.
-    displayMedium: pixel(
-      size: 22,
+    // Крупные числа — объём переданного, счётчик устройств.
+    displayMedium: display(
+      size: 28,
+      weight: FontWeight.w800,
+      color: colors.textPrimary,
+      height: 1.1,
+      spacing: -0.8,
+      features: tabular,
+    ),
+    displaySmall: display(
+      size: 18,
       color: colors.textPrimary,
       height: 1.2,
       features: tabular,
     ),
-    displaySmall: pixel(
-      size: 14,
-      color: colors.textPrimary,
-      height: 1.3,
-      features: tabular,
-    ),
     // Заголовок экрана.
-    headlineMedium: pixel(size: 13, color: colors.textPrimary),
-    // Заголовок секции.
-    headlineSmall: pixel(size: 9, color: colors.accent, height: 1.5),
+    headlineMedium: display(
+      size: 22,
+      weight: FontWeight.w800,
+      color: colors.textPrimary,
+      spacing: -0.6,
+    ),
+    // Заголовок секции — подпись mono, капслок.
+    headlineSmall: mono(size: 11, color: colors.textSecondary, height: 1.5),
     // Метка кнопки.
-    labelLarge: pixel(size: 9, color: colors.textPrimary, height: 1.3),
+    labelLarge: mono(size: 11, color: colors.textPrimary),
     labelMedium: sans(
       size: 12.5,
       weight: FontWeight.w500,

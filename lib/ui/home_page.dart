@@ -25,18 +25,17 @@ import '../core/theme/app_motion.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles_ext.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_controls.dart';
-import 'pixel/pixel_icons.dart';
-import 'pixel/pixel_burst.dart';
-import 'pixel/pixel_entrance.dart';
-import 'pixel/pixel_button.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_controls.dart';
+import 'hair/hair_icons.dart';
+import 'hair/hair_burst.dart';
+import 'hair/hair_entrance.dart';
+import 'hair/hair_button.dart';
 import 'selection_paint.dart';
-import 'pixel/pixel_route.dart';
-import 'pixel/pixel_progress.dart';
-import 'pixel/pixel_snow.dart';
-import 'pixel/pixel_wordmark.dart';
-import 'pixel/pixel_shadow.dart';
+import 'hair/hair_route.dart';
+import 'hair/hair_progress.dart';
+import 'hair/hair_snow.dart';
+import 'hair/hair_wordmark.dart';
 import 'peers_page.dart';
 import 'smooth_scroll.dart';
 import 'remote_keyboard_page.dart';
@@ -221,7 +220,7 @@ class _HomePageState extends State<HomePage> {
     // Текст уходит мгновенно, поэтому вспышку частиц здесь не показываем —
     // она бы срабатывала на каждое сообщение и быстро надоела. Курсор
     // отбивает такт только когда адресат действительно был.
-    if (_target != null) PixelWordmark.blink();
+    if (_target != null) HairWordmark.blink();
     _scrollToBottom();
   }
 
@@ -334,7 +333,7 @@ class _HomePageState extends State<HomePage> {
             tween: Tween<double>(end: v),
             duration: kProgressCatchUp,
             builder: (_, shown, _) =>
-                PixelTransferRow(title: name, value: v == 0 ? null : shown),
+                HairTransferRow(title: name, value: v == 0 ? null : shown),
           ),
         ),
       ),
@@ -349,8 +348,8 @@ class _HomePageState extends State<HomePage> {
             // Момент прибытия: вспышка частиц с галочкой, вибро-квитанция и
             // короткая серия миганий курсора в логотипе — файл дошёл, и это
             // видно, а не только записано строкой в ленте.
-            if (mounted) PixelBurst.show(context);
-            PixelWordmark.blink();
+            if (mounted) HairBurst.show(context);
+            HairWordmark.blink();
             Haptics.sent();
             _toast(t.sentName(name));
             // Записываем в свою ленту как исходящее.
@@ -619,7 +618,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: AppRadius.cardMediumAll,
           border: Border.all(
             color: colors.divider,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
         child: Row(
@@ -633,7 +632,7 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  PixelWordmark(size: _kTitleSize, leading: _kTitleLeading),
+                  HairWordmark(size: _kTitleSize, leading: _kTitleLeading),
                   const SizedBox(height: _kTitleGap),
                   Text(
                     status,
@@ -647,13 +646,13 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            PixelIconButton(
+            HairIconButton(
               icon: 'search',
               tooltip: t.searchHint,
               onPressed: () => setState(() => _searching = !_searching),
             ),
             _devicesButton(context, online),
-            PixelIconButton(
+            HairIconButton(
               icon: 'gear',
               tooltip: t.ttSettings,
               onPressed: () => _openMenu(context),
@@ -680,12 +679,12 @@ class _HomePageState extends State<HomePage> {
           borderRadius: AppRadius.cardMediumAll,
           border: Border.all(
             color: colors.accent,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
         child: Row(
           children: [
-            PixelIconButton(
+            HairIconButton(
               icon: 'close',
               size: 16,
               tooltip: t.cancel,
@@ -702,19 +701,19 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            PixelIconButton(
+            HairIconButton(
               icon: 'label',
               size: 17,
               tooltip: t.labels,
               onPressed: _selected.isEmpty ? null : _labelSelected,
             ),
-            PixelIconButton(
+            HairIconButton(
               icon: 'folder',
               size: 17,
               tooltip: t.moveToFolder,
               onPressed: _selected.isEmpty ? null : _moveSelected,
             ),
-            PixelIconButton(
+            HairIconButton(
               icon: 'trash',
               size: 17,
               color: colors.danger,
@@ -789,12 +788,12 @@ class _HomePageState extends State<HomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final g in groups)
-                PixelTile(
+                HairTile(
                   icon: 'folder',
                   title: g,
                   onTap: () => Navigator.pop(sheet, g),
                 ),
-              PixelTile(
+              HairTile(
                 icon: 'close',
                 title: t.removeFromGroup,
                 onTap: () => Navigator.pop(sheet, ''),
@@ -826,7 +825,7 @@ class _HomePageState extends State<HomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final tag in known)
-                PixelTile(
+                HairTile(
                   icon: 'label',
                   title: tag,
                   onTap: () => Navigator.pop(sheet, tag),
@@ -851,7 +850,7 @@ class _HomePageState extends State<HomePage> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        PixelIconButton(
+        HairIconButton(
           icon: 'device',
           tooltip: t.ttDevices,
           onPressed: () {
@@ -871,7 +870,7 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Text(
                 '$online',
-                style: context.text.pixelLabel.copyWith(
+                style: context.text.buttonLabel.copyWith(
                   fontSize: 7,
                   color: colors.onAccent,
                 ),
@@ -889,7 +888,7 @@ class _HomePageState extends State<HomePage> {
   /// пользователь ничего не набирал.
   Future<void> _openPage(WidgetBuilder builder) async {
     FocusScope.of(context).unfocus();
-    await pixelPush(context, builder);
+    await hairPush(context, builder);
     if (mounted) FocusScope.of(context).unfocus();
   }
 
@@ -910,7 +909,7 @@ class _HomePageState extends State<HomePage> {
               // экрана, а не спрятан в меню отдельного сообщения.
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: PixelTile(
+                child: HairTile(
                   icon: 'check',
                   title: t.select,
                   onTap: () {
@@ -929,7 +928,7 @@ class _HomePageState extends State<HomePage> {
               ])
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: PixelTile(
+                  child: HairTile(
                     icon: e.$1,
                     title: e.$2,
                     onTap: () {
@@ -1014,11 +1013,11 @@ class _HomePageState extends State<HomePage> {
         AppSpacing.md,
         0,
       ),
-      child: PixelCard(
+      child: HairCard(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: Row(
           children: [
-            PixelIcon('search', size: 16, color: colors.accent),
+            HairIcon('search', size: 16, color: colors.accent),
             AppSpacing.wGapMd,
             Expanded(
               child: TextField(
@@ -1039,7 +1038,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            PixelIconButton(
+            HairIconButton(
               icon: 'close',
               size: 14,
               onPressed: () => setState(() {
@@ -1134,7 +1133,7 @@ class _HomePageState extends State<HomePage> {
     final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: PixelCard(
+      child: HairCard(
         accent: selected,
         background: selected ? colors.accent : null,
         padding: const EdgeInsets.symmetric(
@@ -1145,7 +1144,7 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PixelIcon(
+            HairIcon(
               icon,
               size: 13,
               color: selected ? colors.onAccent : colors.accent,
@@ -1173,7 +1172,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             // Крупный простой силуэт: на пустом экране он единственный
             // объект, и мелкая иконка тут читается как случайный мусор.
-            PixelIcon('star', size: 76, color: colors.accent),
+            HairIcon('star', size: 76, color: colors.accent),
             AppSpacing.gapXl,
             Text(t.emptyTitle, style: context.text.screenTitle),
             AppSpacing.gapMd,
@@ -1334,7 +1333,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           );
-          return animate ? PixelEntrance(child: row) : row;
+          return animate ? HairEntrance(child: row) : row;
         },
       ),
     );
@@ -1552,7 +1551,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: PixelCard(
+                    child: HairCard(
                       // Активный самоуничтожающийся режим подсвечивает саму
                       // карточку: иконка-таймер внутри слишком мелкая,
                       // чтобы заметить её до отправки.
@@ -1566,7 +1565,7 @@ class _HomePageState extends State<HomePage> {
                         // сползает ниже плейсхолдера.
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          PixelIconButton(
+                          HairIconButton(
                             icon: 'plus',
                             size: 18,
                             tooltip: t.messageHint,
@@ -1597,13 +1596,13 @@ class _HomePageState extends State<HomePage> {
                               padding: const EdgeInsets.only(
                                 right: AppSpacing.xs,
                               ),
-                              child: PixelIcon(
+                              child: HairIcon(
                                 'clock',
                                 size: 14,
                                 color: colors.accent,
                               ),
                             ),
-                          PixelIconButton(
+                          HairIconButton(
                             icon: 'mic',
                             size: 18,
                             onPressed: _startRecord,
@@ -1743,7 +1742,7 @@ class _HomePageState extends State<HomePage> {
     final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: PixelCard(
+      child: HairCard(
         accent: selected,
         background: selected ? colors.accent : null,
         padding: const EdgeInsets.symmetric(
@@ -1757,7 +1756,7 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PixelIcon(
+            HairIcon(
               icon,
               size: 13,
               color: selected ? colors.onAccent : colors.accent,
@@ -1961,9 +1960,10 @@ class _SendButtonState extends State<_SendButton>
       onTap: widget.onPressed,
       child: Tooltip(
         message: widget.tooltip ?? '',
-        child: PixelShadowBox(
-          shadowColor: colors.accentShadow,
-          pressed: _pressed,
+        child: AnimatedScale(
+          scale: _pressed ? 0.94 : 1,
+          duration: AppMotion.fast,
+          curve: AppMotion.standard,
           child: AnimatedBuilder(
             animation: _flash,
             builder: (context, _) {
@@ -1975,14 +1975,10 @@ class _SendButtonState extends State<_SendButton>
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   color: Color.lerp(colors.accent, Colors.white, lit * 0.85),
-                  borderRadius: AppRadius.controlSmallAll,
-                  border: Border.all(
-                    color: colors.accent,
-                    width: AppRadius.pixelBorder,
-                  ),
                 ),
-                child: PixelIcon('send', size: 20, color: colors.onAccent),
+                child: HairIcon('send', size: 20, color: colors.onAccent),
               );
             },
           ),
@@ -2087,7 +2083,7 @@ class _BackgroundLayerState extends State<_BackgroundLayer> {
       }
     }
     if (widget.snow) {
-      layers.add(Positioned.fill(child: PixelSnow(speed: widget.snowSpeed)));
+      layers.add(Positioned.fill(child: HairSnow(speed: widget.snowSpeed)));
     }
     if (layers.isEmpty) return const SizedBox.shrink();
     return RepaintBoundary(
@@ -2126,7 +2122,7 @@ class _SelectableRow extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: AppSpacing.md),
-              child: PixelCheckbox(
+              child: HairCheckbox(
                 value: selected,
                 // Обрабатывает вся строка — отдельный обработчик у галочки
                 // означал бы две зоны с разным поведением.
@@ -2184,7 +2180,7 @@ class _NewNameFieldState extends State<_NewNameField> {
           ),
         ),
         AppSpacing.wGapSm,
-        PixelButton(
+        HairButton(
           label: tr(context).save,
           expand: false,
           compact: true,

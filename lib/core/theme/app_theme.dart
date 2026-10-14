@@ -8,9 +8,8 @@ import 'app_typography.dart';
 
 /// Сборка ThemeData поверх палитры.
 ///
-/// Карточки и кнопки рисуют рамку и тень сами (см. PixelShadowBox), поэтому
-/// материаловские elevation/surfaceTint здесь везде погашены: иначе поверх
-/// сплошной ретро-тени ложится ещё и мягкая, и край двоится.
+/// Карточки и кнопки рисуют рамку сами (тонкая линия, без тени), поэтому
+/// материаловские elevation/surfaceTint здесь везде погашены.
 abstract final class AppTheme {
   static ThemeData build({
     required Brightness brightness,
@@ -42,8 +41,8 @@ abstract final class AppTheme {
       canvasColor: colors.background,
       textTheme: text,
       fontFamily: sansFamily,
-      // Материаловская «клякса» под пальцем чужеродна блочным элементам:
-      // отклик на нажатие даёт PixelShadowBox, просаживая элемент в тень.
+      // Чернильная волна Material не вяжется с линейным стилем: отклик на
+      // нажатие даёт сам элемент (рамка и цвет).
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       appBarTheme: AppBarTheme(
@@ -62,7 +61,7 @@ abstract final class AppTheme {
           borderRadius: AppRadius.cardMediumAll,
           side: BorderSide(
             color: colors.divider,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
       ),
@@ -73,7 +72,7 @@ abstract final class AppTheme {
           borderRadius: AppRadius.cardMediumAll,
           side: BorderSide(
             color: colors.divider,
-            width: AppRadius.pixelBorder,
+            width: AppRadius.hairline,
           ),
         ),
         titleTextStyle: text.headlineMedium,
@@ -94,11 +93,11 @@ abstract final class AppTheme {
         contentTextStyle: text.bodyMedium,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.controlSmallAll,
-          side: BorderSide(color: colors.accent, width: AppRadius.pixelBorder),
+          side: BorderSide(color: colors.accent, width: AppRadius.hairline),
         ),
       ),
       sliderTheme: SliderThemeData(
-        trackHeight: 8,
+        trackHeight: 3,
         activeTrackColor: colors.accent,
         inactiveTrackColor: colors.surfaceVariant,
         thumbColor: colors.textPrimary,
@@ -107,18 +106,18 @@ abstract final class AppTheme {
         // пальцем здесь всё равно отключена.
         overlayColor: colors.divider,
         overlayShape: SliderComponentShape.noOverlay,
-        thumbShape: const PixelSliderThumb(),
-        trackShape: const PixelSliderTrack(),
+        thumbShape: const HairSliderThumb(),
+        trackShape: const HairSliderTrack(),
         tickMarkShape: SliderTickMarkShape.noTickMark,
         showValueIndicator: ShowValueIndicator.never,
       ),
       dividerTheme: DividerThemeData(
         color: colors.divider,
-        thickness: AppRadius.pixelBorder,
-        space: AppRadius.pixelBorder,
+        thickness: AppRadius.hairline,
+        space: AppRadius.hairline,
       ),
       // Material-переключатели в интерфейсе не используются (для них есть
-      // пиксельные версии), но плагины и системные диалоги могут их
+      // собственные версии), но плагины и системные диалоги могут их
       // показать — пусть хотя бы попадают в палитру.
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStatePropertyAll(colors.textPrimary),
@@ -133,7 +132,7 @@ abstract final class AppTheme {
 
   static OutlineInputBorder _fieldBorder(Color color) => OutlineInputBorder(
     borderRadius: AppRadius.controlSmallAll,
-    borderSide: BorderSide(color: color, width: AppRadius.pixelBorder),
+    borderSide: BorderSide(color: color, width: AppRadius.hairline),
   );
 }
 

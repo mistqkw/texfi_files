@@ -2,60 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:texfi_files/ui/pixel/pixel_icons.dart';
+import 'package:texfi_files/ui/hair/hair_icons.dart';
 import 'package:texfi_files/core/theme/app_theme.dart';
 import 'package:texfi_files/ui/audio_player_screen.dart' show isPlayPauseKey;
 import 'package:texfi_files/ui/selection_paint.dart';
-import 'package:texfi_files/ui/pixel/pixel_progress.dart';
+import 'package:texfi_files/ui/hair/hair_progress.dart';
 
 void main() {
-  group('Реестр пиксельных глифов', () {
-    // Имена глифов — строки, поэтому опечатка в вызове не ловится
-    // компилятором и молча рисует пустое место. Этот тест ловит обратную
-    // ошибку: кривую сетку в самом реестре.
-    // Единая сетка — то, за счёт чего набор выглядит нарисованным, а не
-    // собранным из разных источников. Инвариант держится тестом, потому
-    // что нарушить его правкой одной иконки слишком легко.
-    test('весь интерфейсный набор — на сетке gridSize x gridSize', () {
-      expect(PixelGlyphs.all, isNotEmpty);
-      PixelGlyphs.all.forEach((name, rows) {
-        expect(
-          rows.length,
-          PixelGlyphs.gridSize,
-          reason: 'глиф $name: ${rows.length} строк вместо '
-              '${PixelGlyphs.gridSize}',
-        );
-        for (final row in rows) {
-          expect(
-            row.length,
-            PixelGlyphs.gridSize,
-            reason: 'глиф $name: строка "$row" не той длины',
-          );
-        }
-      });
-    });
-
-    test('крупный знак приложения — квадратный', () {
-      expect(PixelGlyphs.mark, isNotEmpty);
-      for (final row in PixelGlyphs.mark) {
-        expect(row.length, PixelGlyphs.mark.length);
-      }
-    });
-
-    test('интерфейсные глифы — одноцветные', () {
-      // 'o' (светлая вставка) есть только у крупного знака: внутри иконки
-      // размером 20px второй тон превращается в грязь.
-      PixelGlyphs.all.forEach((name, rows) {
-        for (final row in rows) {
-          expect(
-            RegExp(r'^[.#]+$').hasMatch(row),
-            isTrue,
-            reason: 'глиф $name: недопустимый символ в "$row"',
-          );
-        }
-      });
-    });
-
+  group('Реестр иконок', () {
     test('иконки, на которые ссылается интерфейс, существуют', () {
       // Имена глифов — строки, поэтому опечатка не ловится компилятором и
       // молча рисует пустое место.
@@ -64,13 +18,13 @@ void main() {
         'search', 'trash', 'copy', 'share', 'download', 'file', 'folder',
         'image', 'video', 'note', 'text', 'phone', 'laptop', 'device', 'star',
         'gear', 'wifi', 'shield', 'lock', 'globe', 'contrast', 'clock', 'qr',
-        'warn', 'exchange', 'node', 'label', 'archive', 'pdf', 'code',
+        'warn', 'exchange', 'label', 'archive', 'pdf', 'code',
         'play', 'pause', 'next', 'prev', 'shuffle', 'repeat', 'repeatone',
         'rewind', 'forward', 'info',
       ];
       for (final name in used) {
         expect(
-          PixelGlyphs.all.containsKey(name),
+          HairGlyphs.all.containsKey(name),
           isTrue,
           reason: 'глиф "$name" отсутствует в реестре',
         );
@@ -78,16 +32,16 @@ void main() {
     });
   });
 
-  testWidgets('PixelIcon рисуется и занимает заданный размер', (tester) async {
+  testWidgets('HairIcon рисуется и занимает заданный размер', (tester) async {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
         child: Center(
-          child: PixelIcon('mark', size: 48, color: Color(0xFF4A7DFB)),
+          child: HairIcon('mark', size: 48, color: Color(0xFF4A7DFB)),
         ),
       ),
     );
-    expect(tester.getSize(find.byType(PixelIcon)), const Size(48, 48));
+    expect(tester.getSize(find.byType(HairIcon)), const Size(48, 48));
   });
 
   group('Полоса передачи', () {
@@ -99,7 +53,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: SizedBox(width: 200, child: PixelProgress(value: null)),
+            body: SizedBox(width: 200, child: HairProgress(value: null)),
           ),
         ),
       );
@@ -109,7 +63,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: SizedBox(width: 200, child: PixelProgress(value: 0.4)),
+            body: SizedBox(width: 200, child: HairProgress(value: 0.4)),
           ),
         ),
       );
@@ -124,7 +78,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               width: 300,
-              child: PixelTransferRow(title: 'holiday.zip', value: 0.426),
+              child: HairTransferRow(title: 'holiday.zip', value: 0.426),
             ),
           ),
         ),
@@ -152,7 +106,7 @@ void main() {
       for (final name in const [
         'backup.zip', 'manual.pdf', 'main.dart', 'notes.md', 'x.bin',
       ]) {
-        expect(PixelGlyphs.all.containsKey(fileGlyphFor(name)), isTrue);
+        expect(HairGlyphs.all.containsKey(fileGlyphFor(name)), isTrue);
       }
     });
   });
@@ -230,7 +184,7 @@ void main() {
     });
   });
 
-  group('Пиксельный ползунок', () {
+  group('Ползунок', () {
     // Кастомные SliderTrackShape/ComponentShape падают уже на отрисовке,
     // а живут они в настройках, куда в тестах не дойти иначе.
     testWidgets('рисуется в обеих темах и на краях диапазона',

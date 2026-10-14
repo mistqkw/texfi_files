@@ -5,22 +5,25 @@ import 'package:flutter/material.dart';
 /// Материаловский slide здесь не годится: он тащит страницу вбок, и 2px
 /// бордеры карточек на время движения размазываются в серую кашу. Fade со
 /// сменой масштаба на 4% сохраняет чёткость краёв на всей дистанции.
-class PixelPageRoute<T> extends PageRouteBuilder<T> {
-  PixelPageRoute({required WidgetBuilder builder, super.settings})
+class HairPageRoute<T> extends PageRouteBuilder<T> {
+  HairPageRoute({required WidgetBuilder builder, super.settings})
     : super(
-        transitionDuration: const Duration(milliseconds: 180),
-        reverseTransitionDuration: const Duration(milliseconds: 140),
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
         pageBuilder: (context, _, _) => builder(context),
-        transitionsBuilder: (context, animation, _, child) {
+        transitionsBuilder: (context, animation, secondary, child) {
           final curved = CurvedAnimation(
             parent: animation,
             curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic,
           );
+          // Появляется с лёгким сдвигом вправо; уходящий экран чуть
+          // приглушается.
           return FadeTransition(
             opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+            child: SlideTransition(
+              position: Tween<Offset>(begin: const Offset(0.025, 0), end: Offset.zero)
+                  .animate(curved),
               child: child,
             ),
           );
@@ -29,6 +32,6 @@ class PixelPageRoute<T> extends PageRouteBuilder<T> {
 }
 
 /// Удобный помощник — чтобы вызовы не тянули за собой конструктор целиком.
-Future<T?> pixelPush<T>(BuildContext context, WidgetBuilder builder) {
-  return Navigator.of(context).push<T>(PixelPageRoute<T>(builder: builder));
+Future<T?> hairPush<T>(BuildContext context, WidgetBuilder builder) {
+  return Navigator.of(context).push<T>(HairPageRoute<T>(builder: builder));
 }

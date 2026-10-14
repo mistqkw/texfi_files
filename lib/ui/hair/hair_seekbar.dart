@@ -3,32 +3,27 @@ import 'package:flutter/material.dart';
 import '../../core/haptics.dart';
 import '../../core/theme/app_colors_ext.dart';
 
-/// Полоса перемотки, набранная из ячеек.
-///
-/// Материаловский Slider с круглой ручкой и «волной» под пальцем — самая
-/// заметная чужеродная деталь в плеере. Здесь ручка квадратная, дорожка
-/// блочная, а перемотка работает и по нажатию в точку, и протяжкой.
-class PixelSeekBar extends StatefulWidget {
-  const PixelSeekBar({
+/// Полоса перемотки: тонкая дорожка и круглая ручка. Работает и по
+/// нажатию в точку, и протяжкой.
+class HairSeekBar extends StatefulWidget {
+  const HairSeekBar({
     super.key,
     required this.position,
     required this.duration,
     required this.onSeek,
-    this.cells = 32,
     this.height = 14,
   });
 
   final Duration position;
   final Duration duration;
   final ValueChanged<Duration> onSeek;
-  final int cells;
   final double height;
 
   @override
-  State<PixelSeekBar> createState() => _PixelSeekBarState();
+  State<HairSeekBar> createState() => _HairSeekBarState();
 }
 
-class _PixelSeekBarState extends State<PixelSeekBar> {
+class _HairSeekBarState extends State<HairSeekBar> {
   /// Пока палец на полосе, показываем его позицию, а не приходящую от
   /// плеера: иначе ручка дёргается назад между кадрами перемотки.
   double? _dragged;
@@ -80,7 +75,6 @@ class _PixelSeekBarState extends State<PixelSeekBar> {
             child: CustomPaint(
               painter: _SeekPainter(
                 fraction: _fraction,
-                cells: widget.cells,
                 fill: colors.accent,
                 empty: colors.surfaceVariant,
                 knob: colors.textPrimary,
@@ -96,44 +90,44 @@ class _PixelSeekBarState extends State<PixelSeekBar> {
 class _SeekPainter extends CustomPainter {
   const _SeekPainter({
     required this.fraction,
-    required this.cells,
     required this.fill,
     required this.empty,
     required this.knob,
   });
 
   final double fraction;
-  final int cells;
   final Color fill;
   final Color empty;
   final Color knob;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const gap = 1.0;
-    final cell = (size.width - gap * (cells - 1)) / cells;
-    if (cell <= 0) return;
-    final filled = fraction * cells;
-    final paint = Paint();
-
-    for (var i = 0; i < cells; i++) {
-      final d = filled - i;
-      paint.color = d >= 1 ? fill : (d <= 0 ? empty : Color.lerp(empty, fill, d)!);
-      canvas.drawRect(
-        Rect.fromLTWH(i * (cell + gap), size.height * 0.25, cell, size.height * 0.5),
-        paint,
+    const track = 3.0;
+    const r = 6.0;
+    final y = size.height / 2;
+    final x = (fraction * (size.width - 2 * r) + r).clamp(r, size.width - r);
+    final radius = const Radius.circular(track / 2);
+    canvas
+      ..drawRRect(
+        RRect.fromLTRBR(0, y - track / 2, size.width, y + track / 2, radius),
+        Paint()..color = empty,
+      )
+      ..drawRRect(
+        RRect.fromLTRBR(0, y - track / 2, x, y + track / 2, radius),
+        Paint()..color = fill,
+      )
+      ..drawCircle(Offset(x, y), r, Paint()..color = knob)
+      ..drawCircle(
+        Offset(x, y),
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = empty,
       );
-    }
-
-    // Квадратная ручка во всю высоту — она же и есть указатель позиции.
-    final x = (fraction * (size.width - cell)).clamp(0.0, size.width - cell);
-    canvas.drawRect(
-      Rect.fromLTWH(x.floorToDouble(), 0, cell.clamp(3.0, 8.0), size.height),
-      paint..color = knob,
-    );
   }
 
   @override
   bool shouldRepaint(_SeekPainter old) =>
-      old.fraction != fraction || old.fill != fill || old.knob != knob;
+      old.fraction != fraction || old.fill != fill || old.knob != knob || old.empty != empty;
 }

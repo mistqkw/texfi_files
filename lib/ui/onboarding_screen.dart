@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_motion.dart';
 import '../core/theme/app_spacing.dart';
-import 'pixel/pixel_button.dart';
-import 'pixel/pixel_card.dart';
-import 'pixel/pixel_icons.dart';
+import 'hair/hair_button.dart';
+import 'hair/hair_card.dart';
+import 'hair/hair_icons.dart';
 import '../core/theme/app_colors_ext.dart';
 import '../app.dart';
 import '../l10n/app_strings.dart';
 import 'terminal.dart';
 
 class _Slide {
-  /// Имя глифа из [PixelGlyphs].
+  /// Имя глифа из [HairGlyphs].
   final String icon;
   final String title;
   final String text;
@@ -94,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   AnimatedOpacity(
                     opacity: last ? 0 : 1,
                     duration: AppMotion.normal,
-                    child: PixelButton(
+                    child: HairButton(
                       label: t.skip,
                       expand: false,
                       compact: true,
@@ -122,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: PixelButton(
+              child: HairButton(
                 label: last ? t.start : t.next,
                 onPressed: _next,
               ),
@@ -228,9 +228,9 @@ class _SlideView extends StatelessWidget {
   /// круга — та же врезанная подпись, что и у блоков в ленте.
   Widget _slideIcon() {
     return Builder(
-      builder: (context) => PixelCard(
+      builder: (context) => HairCard(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: PixelIcon(slide.icon, size: 96, color: context.colors.accent),
+        child: HairIcon(slide.icon, size: 96, color: context.colors.accent),
       ),
     );
   }

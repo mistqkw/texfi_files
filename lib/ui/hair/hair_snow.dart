@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-/// Пиксельный снегопад поверх фона.
+/// Тихий снегопад поверх фона.
 ///
 /// Реализация намеренно скупая: один [Ticker], один [CustomPainter] и
 /// заранее выделенный массив частиц, который переиспользуется — улетевшая
@@ -12,10 +12,9 @@ import 'package:flutter/scheduler.dart';
 /// и становятся главной причиной просадок; здесь на кадр приходится только
 /// арифметика над готовым массивом.
 ///
-/// Снежинки — квадраты в 1–3 логических пикселя без сглаживания: круглая
-/// точка выбивалась бы из пиксельной стилистики.
-class PixelSnow extends StatefulWidget {
-  const PixelSnow({super.key, required this.speed, this.color});
+/// Снежинки — мягкие точки в 0.5–1.5 логических пикселя.
+class HairSnow extends StatefulWidget {
+  const HairSnow({super.key, required this.speed, this.color});
 
   /// 0 — медленно, 1 — средне, 2 — быстро.
   final int speed;
@@ -23,10 +22,10 @@ class PixelSnow extends StatefulWidget {
   final Color? color;
 
   @override
-  State<PixelSnow> createState() => _PixelSnowState();
+  State<HairSnow> createState() => _HairSnowState();
 }
 
-class _PixelSnowState extends State<PixelSnow>
+class _HairSnowState extends State<HairSnow>
     with SingleTickerProviderStateMixin {
   /// Плотность подобрана на глаз: заметный снег, но на порядок меньше
   /// частиц, чем в типовых реализациях «на виджетах».
@@ -115,7 +114,7 @@ class _Flake {
   double _phase = 0;
 
   void _respawnParams() {
-    size = 1 + _rnd.nextInt(3).toDouble();
+    size = 1.5 + _rnd.nextInt(3).toDouble();
     // Крупные снежинки падают быстрее — дешёвый намёк на глубину.
     fall = 0.6 + size * 0.25 + _rnd.nextDouble() * 0.3;
     drift = (_rnd.nextDouble() - 0.5) * 0.25;
@@ -150,11 +149,13 @@ class _SnowPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Одна Paint на весь проход: создание Paint в цикле — заметная доля
     // времени кадра при семидесяти частицах.
-    final paint = Paint()..color = color.withValues(alpha: 0.75);
+    final paint = Paint()..color = color.withValues(alpha: 0.6);
     for (final f in flakes) {
-      final px = (f.x * size.width).floorToDouble();
-      final py = (f.y * size.height).floorToDouble();
-      canvas.drawRect(Rect.fromLTWH(px, py, f.size, f.size), paint);
+      canvas.drawCircle(
+        Offset(f.x * size.width, f.y * size.height),
+        f.size * 0.5,
+        paint,
+      );
     }
   }
 
