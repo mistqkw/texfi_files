@@ -1317,7 +1317,7 @@ class _TexfiSignInPageState extends State<_TexfiSignInPage> {
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(AppSpacing.page),
           children: [
-            PixelCard(
+            HairCard(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1338,14 +1338,14 @@ class _TexfiSignInPageState extends State<_TexfiSignInPage> {
               ),
             ),
             AppSpacing.gapLg,
-            PixelButton(
+            HairButton(
               label: t.texfiSignIn,
               onPressed: _busy
                   ? null
                   : () => _run(() => acc.signIn(_email.text, _password.text)),
             ),
             AppSpacing.gapMd,
-            PixelButton(
+            HairButton(
               label: t.texfiSignUp,
               primary: false,
               onPressed: _busy

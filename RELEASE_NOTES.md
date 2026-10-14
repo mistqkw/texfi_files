@@ -1,5 +1,18 @@
 TexFi files — your own local "Saved Messages" for Android, Linux and Windows.
 
+## What's new in 1.7.0
+
+- 🎨 **New "hairline" design.** The pixel look is gone entirely: thin 1px lines
+  instead of shadows, one blue accent, Unbounded for headings and JetBrains
+  Mono for labels. Icons are now line icons, and the app mark is drawn with
+  lines.
+- ✨ **Calmer motion.** Screens fade in with a slight slide, switches and radio
+  buttons glide, progress bars and the seek bar are thin and smooth, the
+  device search is expanding rings, and a transfer ends with a ring and a
+  check mark. The launch screen draws the mark line by line.
+- ⚙️ **Controls rebuilt** on the same kit: checkboxes, switches, radios and
+  tiles in settings now match the rest of the app.
+
 ## What's new in 1.6.1
 
 - 🐛 **Fixes 1.6.0 breaking everything on some networks.** Setting up the TexFi
