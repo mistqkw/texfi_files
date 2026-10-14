@@ -74,7 +74,7 @@ Or let the site pick the file for your machine:
 - Voice messages, recorded as m4a, kept separate from music.
 - Share or forward anything to Telegram or wherever, through the normal system
   share sheet.
-- A built‑in player and music library — pixel‑art transport controls, a block
+- A built‑in player and music library — line‑icon transport controls, a thin
   seek bar, album art, a mini‑player, and a playlist of everything you've
   saved. Video gets thumbnails.
 - MPRIS on Linux, so the player shows up in GNOME Shell/KDE Plasma media
@@ -84,13 +84,15 @@ Or let the site pick the file for your machine:
 - Type on your phone, watch it appear on your computer.
 - Full‑text search across saved messages and file names.
 - Pin things, archive the noise, filter the timeline.
-- Pixel‑art design throughout, the same visual language as the rest of the
-  TexFi apps (f0kus, m0ney): blocky cards with an offset shadow, custom
-  checkboxes/switches/radios, a P2P‑node icon, no Material left anywhere.
+- The "hairline" design throughout, the same visual language as the rest of
+  the TexFi apps (f0kus, m0ney): 1px lines instead of shadows, one blue
+  accent, Unbounded headings and JetBrains Mono labels, line icons, custom
+  checkboxes/switches/radios, a P2P‑node mark drawn in lines, and calm
+  fade‑and‑slide motion.
 - Haptics on taps and sends, matching the rest of the ecosystem — toggle it
   off in Settings if you'd rather not.
 - Custom background: your own photo behind the feed, adjustable blur and dim,
-  plus an optional pixel snowfall.
+  plus an optional soft snowfall.
 - Four languages: English, Русский, Deutsch, Polski, switchable on the fly.
 - Background receive on Android, smooth scrolling on desktop.
 - A short animated onboarding walks you through it on first launch.
